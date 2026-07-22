@@ -21,6 +21,11 @@ export default defineConfig({
         cwd: 'apps/plugged',
         cache: false,
       },
+      'catalog:seed:plugged': {
+        command: 'node catalog-seed.ts',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
     },
   },
   staged: {

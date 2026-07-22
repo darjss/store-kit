@@ -8,11 +8,11 @@ import {
   productImage,
   productVariant,
   productVariantImage,
-} from '../schema/catalog'
+} from '../schema/catalog.ts'
 
-const slugSchema = v.pipe(v.string(), v.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))
+export const slugSchema = v.pipe(v.string(), v.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))
 const urlSchema = v.pipe(v.string(), v.url())
-const nonNegativeIntegerSchema = v.pipe(v.number(), v.integer(), v.minValue(0))
+export const nonNegativeIntegerSchema = v.pipe(v.number(), v.integer(), v.minValue(0))
 const jsonRecordSchema = v.custom<Record<string, unknown>>(
   input => typeof input === 'object' && input !== null && !Array.isArray(input),
 )

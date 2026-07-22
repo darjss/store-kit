@@ -11,12 +11,13 @@
   "d1_databases": [
     {
       "binding": "DB",
+      "database_name": "plugged",
       "migrations_dir": "../../packages/db/migrations",
       "migrations_pattern": "../../packages/db/migrations/*/migration.sql",
     },
   ],
   "kv_namespaces": [{ "binding": "CACHE" }, { "binding": "AUTH_KV" }],
-  "r2_buckets": [{ "binding": "MEDIA" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "plugged-media" }],
   "observability": {
     "enabled": true,
   },
