@@ -98,31 +98,28 @@ export const productListFiltersSchema = v.object({
 })
 
 export type ProductStatus = v.InferOutput<typeof productStatusSchema>
-export type ProductDetailValue = v.InferOutput<typeof productDetailValueSchema>
-export type ProductDetails = v.InferOutput<typeof productDetailsSchema>
-export type VariantOptions = v.InferOutput<typeof variantOptionsSchema>
 export type ProductListFilters = v.InferOutput<typeof productListFiltersSchema>
 
 export type Brand = v.InferOutput<typeof selectBrandSchema>
-export type NewBrand = v.InferOutput<typeof insertBrandSchema>
+export type NewBrand = typeof brand.$inferInsert
 export type BrandUpdate = v.InferOutput<typeof updateBrandSchema>
 
 export type Category = v.InferOutput<typeof selectCategorySchema>
-export type NewCategory = v.InferOutput<typeof insertCategorySchema>
+export type NewCategory = typeof category.$inferInsert
 export type CategoryUpdate = v.InferOutput<typeof updateCategorySchema>
 
 export type Product = v.InferOutput<typeof selectProductSchema>
-export type NewProduct = v.InferOutput<typeof insertProductSchema>
+export type NewProduct = typeof product.$inferInsert
 export type ProductUpdate = v.InferOutput<typeof updateProductSchema>
 
 export type ProductImage = v.InferOutput<typeof selectProductImageSchema>
-export type NewProductImage = v.InferOutput<typeof insertProductImageSchema>
+export type NewProductImage = typeof productImage.$inferInsert
 export type ProductImageUpdate = v.InferOutput<typeof updateProductImageSchema>
 
 export type ProductVariant = v.InferOutput<typeof selectProductVariantSchema>
-export type NewProductVariant = v.InferOutput<typeof insertProductVariantSchema>
+export type NewProductVariant = typeof productVariant.$inferInsert
 export type ProductVariantUpdate = v.InferOutput<typeof updateProductVariantSchema>
 
 export type ProductVariantImage = v.InferOutput<typeof selectProductVariantImageSchema>
-export type NewProductVariantImage = v.InferOutput<typeof insertProductVariantImageSchema>
+export type NewProductVariantImage = typeof productVariantImage.$inferInsert
 export type ProductVariantImageUpdate = v.InferOutput<typeof updateProductVariantImageSchema>
