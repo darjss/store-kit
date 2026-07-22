@@ -1,4 +1,5 @@
 export { api } from './client'
+export { mediaUrl } from './media'
 export {
   brandListOptions,
   categoryListOptions,
