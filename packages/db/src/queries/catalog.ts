@@ -22,11 +22,15 @@ export const listPublishedProducts = async (filters: ProductListFilters = {}) =>
   }
 
   if (filters.query) {
-    const search = `%${filters.query.toLowerCase()}%`
+    const search = `%${filters.query
+      .toLowerCase()
+      .replaceAll('\\', '\\\\')
+      .replaceAll('%', '\\%')
+      .replaceAll('_', '\\_')}%`
     conditions.push(sql`(
-      lower(${product.name}) like ${search}
-      or lower(coalesce(${product.description}, '')) like ${search}
-      or lower(coalesce(${brand.name}, '')) like ${search}
+      lower(${product.name}) like ${search} escape '\\'
+      or lower(coalesce(${product.description}, '')) like ${search} escape '\\'
+      or lower(coalesce(${brand.name}, '')) like ${search} escape '\\'
     )`)
   }
 

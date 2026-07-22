@@ -23,8 +23,8 @@ export const brand = sqliteTable(
     name: text('name').notNull(),
     description: text('description'),
     websiteUrl: text('website_url'),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   table => [uniqueIndex('brand_slug_unique').on(table.slug)],
 )
@@ -40,8 +40,8 @@ export const category = sqliteTable(
     description: text('description'),
     sortOrder: integer('sort_order').notNull().default(0),
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   table => [
     uniqueIndex('category_slug_unique').on(table.slug),
@@ -68,8 +68,8 @@ export const product = sqliteTable(
       .default('draft'),
     featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
     details: text('details', { mode: 'json' }).$type<ProductDetails>(),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   table => [
     uniqueIndex('product_slug_unique').on(table.slug),
@@ -96,7 +96,7 @@ export const productImage = sqliteTable(
     r2Key: text('r2_key').notNull(),
     alt: text('alt'),
     sortOrder: integer('sort_order').notNull().default(0),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
   },
   table => [
     uniqueIndex('product_image_product_id_sort_order_unique').on(table.productId, table.sortOrder),
@@ -120,8 +120,8 @@ export const productVariant = sqliteTable(
     stockQuantity: integer('stock_quantity').notNull().default(0),
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
     sortOrder: integer('sort_order').notNull().default(0),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   table => [
     uniqueIndex('product_variant_sku_unique').on(table.sku),
