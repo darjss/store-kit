@@ -1,6 +1,12 @@
 import { catalogQuery } from '@store-kit/storefront'
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/solid-query'
+import { QueryCache, QueryClient, QueryClientProvider, useQuery } from '@tanstack/solid-query'
 import { Match, Switch } from 'solid-js'
+
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: error => console.error('Query failed:', error),
+  }),
+})
 
 function CatalogResult() {
   const query = useQuery(() => catalogQuery.findAllProducts({ limit: 1 }))
@@ -35,8 +41,6 @@ function CatalogResult() {
 }
 
 export function CatalogProof() {
-  const queryClient = new QueryClient()
-
   return (
     <QueryClientProvider client={queryClient}>
       <CatalogResult />
