@@ -53,22 +53,25 @@
       "images": [
         {
           "id": "40000000-0000-4000-8000-000000000001",
-          "sourcePath": "./images/aster-graphite.svg",
+          "source": "data/images/aster-graphite.svg",
           "r2Key": "catalog/products/aster-modular-iem/graphite.svg",
+          "contentType": "image/svg+xml",
           "alt": "Graphite Aster in-ear monitors with braided cable",
           "sortOrder": 10
         },
         {
           "id": "40000000-0000-4000-8000-000000000002",
-          "sourcePath": "./images/aster-copper.svg",
+          "source": "data/images/aster-copper.svg",
           "r2Key": "catalog/products/aster-modular-iem/copper.svg",
+          "contentType": "image/svg+xml",
           "alt": "Copper Aster in-ear monitors with braided cable",
           "sortOrder": 20
         },
         {
           "id": "40000000-0000-4000-8000-000000000003",
-          "sourcePath": "./images/aster-kit.svg",
+          "source": "data/images/aster-kit.svg",
           "r2Key": "catalog/products/aster-modular-iem/included-kit.svg",
+          "contentType": "image/svg+xml",
           "alt": "Aster carrying case, cable, and ear tip set",
           "sortOrder": 30
         }
@@ -152,8 +155,9 @@
       "images": [
         {
           "id": "40000000-0000-4000-8000-000000000004",
-          "sourcePath": "./images/node-mini.svg",
+          "source": "data/images/node-mini.svg",
           "r2Key": "catalog/products/node-mini-usb-c-dac/silver.svg",
+          "contentType": "image/svg+xml",
           "alt": "Silver Node Mini USB-C DAC and braided lead",
           "sortOrder": 10
         }
