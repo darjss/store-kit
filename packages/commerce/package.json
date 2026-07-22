@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/operations/system-status.ts"
+    ".": "./src/operations/system-status.ts",
+    "./catalog": "./src/catalog/operations.ts"
   },
   "dependencies": {
-    "better-result": "^2.10.0"
+    "@store-kit/db": "workspace:*",
+    "better-result": "^2.10.0",
+    "valibot": "^1.4.2"
   }
 }
