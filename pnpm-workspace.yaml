@@ -14,6 +14,11 @@ minimumReleaseAgeExclude:
   - miniflare@4.20260721.0
   - wrangler@4.113.0
 catalog:
+  '@tanstack/solid-query': ^5.101.3
+  better-result: ^2.10.0
+  solid-js: ^1.9.14
+  tailwindcss: ^4.3.3
+  typebox: 1.0.76
   vite: npm:@voidzero-dev/vite-plus-core@^0.2.5
   vite-plus: ^0.2.5
 overrides:

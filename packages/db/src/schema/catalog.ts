@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
   check,
+  foreignKey,
   index,
   integer,
   primaryKey,
@@ -23,8 +24,8 @@ export const brand = sqliteTable(
     name: text('name').notNull(),
     description: text('description'),
     websiteUrl: text('website_url'),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   table => [uniqueIndex('brand_slug_unique').on(table.slug)],
 )
@@ -40,8 +41,8 @@ export const category = sqliteTable(
     description: text('description'),
     sortOrder: integer('sort_order').notNull().default(0),
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   table => [
     uniqueIndex('category_slug_unique').on(table.slug),
@@ -68,8 +69,8 @@ export const product = sqliteTable(
       .default('draft'),
     featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
     details: text('details', { mode: 'json' }).$type<ProductDetails>(),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   table => [
     uniqueIndex('product_slug_unique').on(table.slug),
@@ -78,8 +79,19 @@ export const product = sqliteTable(
       table.featured,
       table.createdAt,
     ),
-    index('product_category_id_status_index').on(table.categoryId, table.status),
-    index('product_brand_id_status_index').on(table.brandId, table.status),
+    index('product_category_id_status_featured_created_at_index').on(
+      table.categoryId,
+      table.status,
+      table.featured,
+      table.createdAt,
+    ),
+    index('product_brand_id_status_featured_created_at_index').on(
+      table.brandId,
+      table.status,
+      table.featured,
+      table.createdAt,
+    ),
+    index('product_status_created_at_index').on(table.status, table.createdAt),
     check('product_status_check', sql`${table.status} in ('draft', 'active', 'archived')`),
   ],
 )
@@ -96,10 +108,11 @@ export const productImage = sqliteTable(
     r2Key: text('r2_key').notNull(),
     alt: text('alt'),
     sortOrder: integer('sort_order').notNull().default(0),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
   },
   table => [
     uniqueIndex('product_image_product_id_sort_order_unique').on(table.productId, table.sortOrder),
+    uniqueIndex('product_image_id_product_id_unique').on(table.id, table.productId),
   ],
 )
 
@@ -120,15 +133,21 @@ export const productVariant = sqliteTable(
     stockQuantity: integer('stock_quantity').notNull().default(0),
     active: integer('active', { mode: 'boolean' }).notNull().default(true),
     sortOrder: integer('sort_order').notNull().default(0),
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
   },
   table => [
     uniqueIndex('product_variant_sku_unique').on(table.sku),
+    uniqueIndex('product_variant_id_product_id_unique').on(table.id, table.productId),
     index('product_variant_product_id_active_sort_order_index').on(
       table.productId,
       table.active,
       table.sortOrder,
+    ),
+    index('product_variant_product_id_active_price_mnt_index').on(
+      table.productId,
+      table.active,
+      table.priceMnt,
     ),
     check('product_variant_price_mnt_check', sql`${table.priceMnt} >= 0`),
     check(
@@ -142,17 +161,24 @@ export const productVariant = sqliteTable(
 export const productVariantImage = sqliteTable(
   'product_variant_image',
   {
-    variantId: text('variant_id')
-      .notNull()
-      .references(() => productVariant.id, { onDelete: 'cascade' }),
-    imageId: text('image_id')
-      .notNull()
-      .references(() => productImage.id, { onDelete: 'cascade' }),
+    productId: text('product_id').notNull(),
+    variantId: text('variant_id').notNull(),
+    imageId: text('image_id').notNull(),
   },
   table => [
     primaryKey({
       name: 'product_variant_image_variant_id_image_id_pk',
       columns: [table.variantId, table.imageId],
     }),
+    foreignKey({
+      name: 'product_variant_image_variant_product_fk',
+      columns: [table.variantId, table.productId],
+      foreignColumns: [productVariant.id, productVariant.productId],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'product_variant_image_image_product_fk',
+      columns: [table.imageId, table.productId],
+      foreignColumns: [productImage.id, productImage.productId],
+    }).onDelete('cascade'),
   ],
 )

@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@store-kit/db": "workspace:*",
-    "better-result": "^2.10.0",
-    "valibot": "^1.4.2"
+    "better-result": "catalog:",
+    "typebox": "catalog:"
   }
 }

@@ -1,5 +1,6 @@
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-orm/valibot'
-import * as v from 'valibot'
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-orm/typebox'
+import { Type } from 'typebox'
+import type { Static } from 'typebox'
 
 import {
   brand,
@@ -8,30 +9,25 @@ import {
   productImage,
   productVariant,
   productVariantImage,
-} from '../schema/catalog'
+} from '../schema/catalog.ts'
 
-const slugSchema = v.pipe(v.string(), v.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))
-const urlSchema = v.pipe(v.string(), v.url())
-const nonNegativeIntegerSchema = v.pipe(v.number(), v.integer(), v.minValue(0))
-const jsonRecordSchema = v.custom<Record<string, unknown>>(
-  input => typeof input === 'object' && input !== null && !Array.isArray(input),
-)
+export const slugSchema = Type.String({ pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' })
+const urlSchema = Type.String({ format: 'uri' })
+export const nonNegativeIntegerSchema = Type.Integer({ minimum: 0 })
 
-export const productStatusSchema = v.picklist(['draft', 'active', 'archived'])
-export const productDetailValueSchema = v.union([
-  v.string(),
-  v.number(),
-  v.boolean(),
-  v.array(v.string()),
+export const productStatusSchema = Type.Union([
+  Type.Literal('draft'),
+  Type.Literal('active'),
+  Type.Literal('archived'),
 ])
-export const productDetailsSchema = v.intersect([
-  jsonRecordSchema,
-  v.record(v.string(), productDetailValueSchema),
+export const productDetailValueSchema = Type.Union([
+  Type.String(),
+  Type.Number(),
+  Type.Boolean(),
+  Type.Array(Type.String()),
 ])
-export const variantOptionsSchema = v.intersect([
-  jsonRecordSchema,
-  v.record(v.string(), v.string()),
-])
+export const productDetailsSchema = Type.Record(Type.String(), productDetailValueSchema)
+export const variantOptionsSchema = Type.Record(Type.String(), Type.String())
 
 const brandRefinements = {
   slug: () => slugSchema,
@@ -88,38 +84,48 @@ export const selectProductVariantImageSchema = createSelectSchema(productVariant
 export const insertProductVariantImageSchema = createInsertSchema(productVariantImage)
 export const updateProductVariantImageSchema = createUpdateSchema(productVariantImage)
 
-export const productListFiltersSchema = v.object({
-  category: v.optional(slugSchema),
-  brand: v.optional(slugSchema),
-  featured: v.optional(v.boolean()),
-  query: v.optional(v.string()),
-  limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100))),
-  offset: v.optional(nonNegativeIntegerSchema),
+export const productListFiltersSchema = Type.Object({
+  category: Type.Optional(slugSchema),
+  brand: Type.Optional(slugSchema),
+  featured: Type.Optional(Type.Boolean()),
+  query: Type.Optional(Type.String()),
+  minPrice: Type.Optional(nonNegativeIntegerSchema),
+  maxPrice: Type.Optional(nonNegativeIntegerSchema),
+  sort: Type.Optional(
+    Type.Union([
+      Type.Literal('featured'),
+      Type.Literal('recent'),
+      Type.Literal('price-asc'),
+      Type.Literal('price-desc'),
+    ]),
+  ),
+  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+  offset: Type.Optional(nonNegativeIntegerSchema),
 })
 
-export type ProductStatus = v.InferOutput<typeof productStatusSchema>
-export type ProductListFilters = v.InferOutput<typeof productListFiltersSchema>
+export type ProductStatus = Static<typeof productStatusSchema>
+export type ProductListFilters = Static<typeof productListFiltersSchema>
 
-export type Brand = v.InferOutput<typeof selectBrandSchema>
+export type Brand = Static<typeof selectBrandSchema>
 export type NewBrand = typeof brand.$inferInsert
-export type BrandUpdate = v.InferOutput<typeof updateBrandSchema>
+export type BrandUpdate = Static<typeof updateBrandSchema>
 
-export type Category = v.InferOutput<typeof selectCategorySchema>
+export type Category = Static<typeof selectCategorySchema>
 export type NewCategory = typeof category.$inferInsert
-export type CategoryUpdate = v.InferOutput<typeof updateCategorySchema>
+export type CategoryUpdate = Static<typeof updateCategorySchema>
 
-export type Product = v.InferOutput<typeof selectProductSchema>
+export type Product = Static<typeof selectProductSchema>
 export type NewProduct = typeof product.$inferInsert
-export type ProductUpdate = v.InferOutput<typeof updateProductSchema>
+export type ProductUpdate = Static<typeof updateProductSchema>
 
-export type ProductImage = v.InferOutput<typeof selectProductImageSchema>
+export type ProductImage = Static<typeof selectProductImageSchema>
 export type NewProductImage = typeof productImage.$inferInsert
-export type ProductImageUpdate = v.InferOutput<typeof updateProductImageSchema>
+export type ProductImageUpdate = Static<typeof updateProductImageSchema>
 
-export type ProductVariant = v.InferOutput<typeof selectProductVariantSchema>
+export type ProductVariant = Static<typeof selectProductVariantSchema>
 export type NewProductVariant = typeof productVariant.$inferInsert
-export type ProductVariantUpdate = v.InferOutput<typeof updateProductVariantSchema>
+export type ProductVariantUpdate = Static<typeof updateProductVariantSchema>
 
-export type ProductVariantImage = v.InferOutput<typeof selectProductVariantImageSchema>
+export type ProductVariantImage = Static<typeof selectProductVariantImageSchema>
 export type NewProductVariantImage = typeof productVariantImage.$inferInsert
-export type ProductVariantImageUpdate = v.InferOutput<typeof updateProductVariantImageSchema>
+export type ProductVariantImageUpdate = Static<typeof updateProductVariantImageSchema>

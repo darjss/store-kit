@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title description">
+  <title id="title">Node Mini USB-C DAC</title>
+  <desc id="description">A compact silver USB-C headphone adapter with an aluminum body and short black braided lead.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef1f1" />
+      <stop offset="1" stop-color="#c8d0d1" />
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fafafa" />
+      <stop offset="0.35" stop-color="#c9cecf" />
+      <stop offset="0.7" stop-color="#858e91" />
+      <stop offset="1" stop-color="#e2e5e5" />
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#273033" flood-opacity="0.22" />
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#background)" />
+  <ellipse cx="600" cy="674" rx="430" ry="72" fill="#536065" opacity="0.13" />
+  <g transform="translate(228 255) rotate(-8 372 190)" filter="url(#shadow)">
+    <rect x="178" y="86" width="405" height="224" rx="52" fill="url(#metal)" stroke="#757f82" stroke-width="5" />
+    <rect x="198" y="107" width="365" height="182" rx="38" fill="none" stroke="#fff" stroke-opacity="0.7" stroke-width="4" />
+    <circle cx="554" cy="198" r="41" fill="#24292b" />
+    <circle cx="554" cy="198" r="25" fill="#090b0c" stroke="#6e7779" stroke-width="5" />
+    <circle cx="271" cy="151" r="7" fill="#5c8d78" />
+    <path d="M178 198 C95 198 77 141 13 141" fill="none" stroke="#24292b" stroke-width="28" stroke-linecap="round" />
+    <path d="M178 198 C95 198 77 141 13 141" fill="none" stroke="#687073" stroke-width="5" stroke-dasharray="10 12" stroke-linecap="round" />
+    <rect x="-52" y="111" width="92" height="60" rx="17" fill="#545c5f" />
+    <rect x="-81" y="120" width="40" height="42" rx="8" fill="url(#metal)" />
+    <path d="M-71 132 H-51 M-71 150 H-51" stroke="#596164" stroke-width="4" stroke-linecap="round" />
+    <path d="M300 218 H421" stroke="#6c7476" stroke-width="6" stroke-linecap="round" />
+    <path d="M331 245 H390" stroke="#92999b" stroke-width="4" stroke-linecap="round" />
+  </g>
+</svg>

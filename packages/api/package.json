@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@store-kit/commerce": "workspace:*",
-    "better-result": "^2.10.0",
+    "better-result": "catalog:",
     "elysia": "^1.4.29"
   },
   "devDependencies": {

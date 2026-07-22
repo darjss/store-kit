@@ -8,7 +8,7 @@ This plan must deliver:
 
 - the final MVP catalog schema
 - D1 migrations
-- Drizzle relations and generated Valibot schemas
+- Drizzle relations and generated TypeBox schemas
 - storefront catalog queries and commerce operations
 - serialized Better Result routes through Elysia and Eden
 - named TanStack Solid Query option factories that use `useQuery`
@@ -223,7 +223,7 @@ Use `sqliteTable`, foreign keys, unique indexes, useful filter indexes, and data
 
 Do not add indexes without a query in this plan.
 
-### Generated Valibot schemas
+### Generated TypeBox schemas
 
 Generate base schemas with:
 
@@ -232,7 +232,7 @@ import {
   createInsertSchema,
   createSelectSchema,
   createUpdateSchema,
-} from "drizzle-orm/valibot";
+} from "drizzle-orm/typebox";
 ```
 
 Refine the generated schemas only where the database type is not enough, such as slugs, URLs, JSON option values, and public list filters.
@@ -422,7 +422,7 @@ The seed format contains:
 Add a small command in `@store-kit/tooling` that:
 
 1. reads the seed JSON
-2. validates it with shared Valibot input schemas
+2. validates it with shared TypeBox input schemas
 3. uploads referenced local image files to the Plugged R2 bucket
 4. applies deterministic catalog inserts or updates to D1
 5. prints counts for brands, categories, products, variants, images, and variant-image links
@@ -470,7 +470,7 @@ Also run the new migration and seed tasks.
 ## Implementation sequence
 
 1. Add the six Drizzle tables, relations, and real invariant checks.
-2. Add generated Valibot schemas and inferred types.
+2. Add generated TypeBox schemas and inferred types.
 3. Generate and inspect the D1 migration.
 4. Apply the migration to Plugged local D1.
 5. Add the four concrete catalog queries.

@@ -240,7 +240,9 @@ A simple serialized option map is acceptable:
 
 Do not build an enterprise option and attribute engine.
 
-Use Drizzle's built-in Valibot schema generation through `drizzle-orm/valibot`. Do not install `drizzle-valibot`.
+Use Drizzle's built-in TypeBox schema generation through `drizzle-orm/typebox`. Do not install a separate Drizzle schema package.
+
+Keep reusable TypeBox schemas with their current owners. A shared schema package is not justified yet: the seed tool already consumes the database-owned catalog schemas, while store configuration has no second consumer.
 
 Discount codes and promotional pricing are later features.
 
@@ -375,7 +377,7 @@ These libraries are approved when the corresponding feature uses them:
 - Cloudflare Workers adapter and Wrangler
 - Elysia and Eden
 - Drizzle ORM and Drizzle Kit
-- Valibot
+- TypeBox
 - Better Result
 - Better Auth
 - Tailwind CSS 4
@@ -407,7 +409,7 @@ Use Eden for calls from the storefront and admin to the Store Kit API. Use Ky on
 
 Do not add:
 
-- Zod beside Valibot
+- Zod beside TypeBox
 - Neverthrow beside Better Result
 - ts-pattern beside Dismatch
 - Lodash or Remeda beside es-toolkit
