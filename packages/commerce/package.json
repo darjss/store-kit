@@ -1,0 +1,12 @@
+{
+  "name": "@store-kit/commerce",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/operations/system-status.ts"
+  },
+  "dependencies": {
+    "better-result": "^2.10.0"
+  }
+}

@@ -1,3 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+
 # Pre-approve build scripts for the packages C3 itself installs that need
 # them: `workerd` downloads the platform binary, `esbuild` and `sharp`
 # (via miniflare) download/build native bindings. Without these, pnpm 11+
@@ -10,16 +14,12 @@ minimumReleaseAgeExclude:
   - miniflare@4.20260721.0
   - wrangler@4.113.0
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
-  vite-plus: latest
+  vite: npm:@voidzero-dev/vite-plus-core@^0.2.5
+  vite-plus: ^0.2.5
 overrides:
   vite: "catalog:"
-  vitest: "catalog:"
 peerDependencyRules:
   allowAny:
     - vite
-    - vitest
   allowedVersions:
     vite: "*"
-    vitest: "*"

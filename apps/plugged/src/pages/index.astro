@@ -1,0 +1,16 @@
+---
+import { parseStoreConfig } from "@store-kit/config";
+import { FoundationStatus } from "../components/FoundationStatus";
+import Layout from "../layouts/Layout.astro";
+import store from "../../store.json";
+
+const config = parseStoreConfig(store);
+---
+
+<Layout title={`${config.name} · Store Kit`}>
+  <main class="mx-auto max-w-2xl px-6 py-16">
+    <p class="text-sm text-neutral-600">Store Kit foundation</p>
+    <h1 class="mt-2 text-3xl font-semibold">{config.name}</h1>
+    <FoundationStatus client:only="solid-js" />
+  </main>
+</Layout>

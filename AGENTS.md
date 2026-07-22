@@ -8,6 +8,10 @@ astro dev --background
 
 Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
 
+## Tests
+
+Tests must exercise real behavior. Never add mocks, stubs, fake implementations, placeholder assertions, or tests that only prove the mock setup. If a useful test cannot run against the real implementation, do not add that test.
+
 ## Documentation
 
 Full documentation: https://docs.astro.build

@@ -1,0 +1,17 @@
+{
+  "name": "@store-kit/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@store-kit/commerce": "workspace:*",
+    "better-result": "^2.10.0",
+    "elysia": "^1.4.29"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  }
+}
