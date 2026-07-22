@@ -9,8 +9,8 @@
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",
     "@store-kit/api": "workspace:*",
-    "@tanstack/solid-query": "^5.101.3",
-    "better-result": "^2.10.0",
-    "solid-js": "^1.9.14"
+    "@tanstack/solid-query": "catalog:",
+    "better-result": "catalog:",
+    "solid-js": "catalog:"
   }
 }

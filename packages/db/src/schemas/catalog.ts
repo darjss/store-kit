@@ -88,14 +88,26 @@ export const selectProductVariantImageSchema = createSelectSchema(productVariant
 export const insertProductVariantImageSchema = createInsertSchema(productVariantImage)
 export const updateProductVariantImageSchema = createUpdateSchema(productVariantImage)
 
-export const productListFiltersSchema = v.object({
-  category: v.optional(slugSchema),
-  brand: v.optional(slugSchema),
-  featured: v.optional(v.boolean()),
-  query: v.optional(v.string()),
-  limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100))),
-  offset: v.optional(nonNegativeIntegerSchema),
-})
+export const productListFiltersSchema = v.pipe(
+  v.object({
+    category: v.optional(slugSchema),
+    brand: v.optional(slugSchema),
+    featured: v.optional(v.boolean()),
+    query: v.optional(v.string()),
+    minPrice: v.optional(nonNegativeIntegerSchema),
+    maxPrice: v.optional(nonNegativeIntegerSchema),
+    sort: v.optional(v.picklist(['featured', 'recent', 'price-asc', 'price-desc'])),
+    limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(100))),
+    offset: v.optional(nonNegativeIntegerSchema),
+  }),
+  v.check(
+    filters =>
+      filters.minPrice === undefined ||
+      filters.maxPrice === undefined ||
+      filters.minPrice <= filters.maxPrice,
+    'Minimum price cannot exceed maximum price.',
+  ),
+)
 
 export type ProductStatus = v.InferOutput<typeof productStatusSchema>
 export type ProductListFilters = v.InferOutput<typeof productListFiltersSchema>

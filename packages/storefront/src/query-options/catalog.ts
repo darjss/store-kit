@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/solid-query'
 
 import { api } from '../client'
-import { deserializeResult } from '../result'
+import { unwrapEdenResult } from '../result'
 
 type ProductListRequest = NonNullable<Parameters<typeof api.api.products.get>[0]>
 export type ProductListFilters = NonNullable<ProductListRequest['query']>
@@ -14,66 +14,44 @@ const normalizeProductListFilters = (filters: ProductListFilters) => {
     ...(filters.brand === undefined ? {} : { brand: filters.brand }),
     ...(filters.featured === undefined ? {} : { featured: filters.featured }),
     ...(query ? { query } : {}),
+    ...(filters.minPrice === undefined ? {} : { minPrice: filters.minPrice }),
+    ...(filters.maxPrice === undefined ? {} : { maxPrice: filters.maxPrice }),
+    ...(filters.sort === undefined ? {} : { sort: filters.sort }),
     limit: filters.limit ?? 24,
     offset: filters.offset ?? 0,
   }
 }
 
-export const productListOptions = (filters: ProductListFilters) => {
+const findAllProducts = (filters: ProductListFilters = {}) => {
   const normalizedFilters = normalizeProductListFilters(filters)
 
   return queryOptions({
     queryKey: ['catalog', 'products', 'list', normalizedFilters] as const,
-    queryFn: async () => {
-      const response = await api.api.products.get({ query: normalizedFilters })
-
-      if (response.error) {
-        throw response.error
-      }
-
-      return deserializeResult(response.data)
-    },
+    queryFn: async () => unwrapEdenResult(await api.api.products.get({ query: normalizedFilters })),
   })
 }
 
-export const productDetailOptions = (slug: string) =>
+const findProductBySlug = (slug: string) =>
   queryOptions({
     queryKey: ['catalog', 'products', 'detail', slug] as const,
-    queryFn: async () => {
-      const response = await api.api.products({ slug }).get()
-
-      if (response.error) {
-        throw response.error
-      }
-
-      return deserializeResult(response.data)
-    },
+    queryFn: async () => unwrapEdenResult(await api.api.products({ slug }).get()),
   })
 
-export const categoryListOptions = () =>
+const findAllCategories = () =>
   queryOptions({
     queryKey: ['catalog', 'categories', 'list'] as const,
-    queryFn: async () => {
-      const response = await api.api.categories.get()
-
-      if (response.error) {
-        throw response.error
-      }
-
-      return deserializeResult(response.data)
-    },
+    queryFn: async () => unwrapEdenResult(await api.api.categories.get()),
   })
 
-export const brandListOptions = () =>
+const findAllBrands = () =>
   queryOptions({
     queryKey: ['catalog', 'brands', 'list'] as const,
-    queryFn: async () => {
-      const response = await api.api.brands.get()
-
-      if (response.error) {
-        throw response.error
-      }
-
-      return deserializeResult(response.data)
-    },
+    queryFn: async () => unwrapEdenResult(await api.api.brands.get()),
   })
+
+export const catalogQuery = {
+  findAllProducts,
+  findProductBySlug,
+  findAllCategories,
+  findAllBrands,
+}

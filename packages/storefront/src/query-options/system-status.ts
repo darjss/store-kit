@@ -1,18 +1,10 @@
 import { queryOptions } from '@tanstack/solid-query'
 
 import { api } from '../client'
-import { deserializeResult } from '../result'
+import { unwrapEdenResult } from '../result'
 
 export const systemStatusOptions = () =>
   queryOptions({
     queryKey: ['system', 'status'],
-    queryFn: async () => {
-      const response = await api.api.system.status.get()
-
-      if (response.error) {
-        throw response.error
-      }
-
-      return deserializeResult(response.data)
-    },
+    queryFn: async () => unwrapEdenResult(await api.api.system.status.get()),
   })

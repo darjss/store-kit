@@ -1,9 +1,9 @@
-import { productListOptions } from '@store-kit/storefront'
+import { catalogQuery } from '@store-kit/storefront'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/solid-query'
 import { Match, Switch } from 'solid-js'
 
 function CatalogResult() {
-  const query = useQuery(() => productListOptions({ limit: 1 }))
+  const query = useQuery(() => catalogQuery.findAllProducts({ limit: 1 }))
 
   return (
     <section class="mt-8 space-y-2" aria-labelledby="catalog-proof-heading">

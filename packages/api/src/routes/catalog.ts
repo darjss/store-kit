@@ -14,6 +14,9 @@ const productListQuery = t.Object({
   brand: t.Optional(t.String({ pattern: slugPattern })),
   featured: t.Optional(t.BooleanString()),
   query: t.Optional(t.String()),
+  minPrice: t.Optional(t.Integer({ minimum: 0 })),
+  maxPrice: t.Optional(t.Integer({ minimum: 0 })),
+  sort: t.Optional(t.UnionEnum(['featured', 'recent', 'price-asc', 'price-desc'])),
   limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
   offset: t.Optional(t.Integer({ minimum: 0 })),
 })

@@ -22,7 +22,7 @@ export default defineConfig({
         cache: false,
       },
       'catalog:seed:plugged': {
-        command: 'node catalog-seed.ts',
+        command: 'node --experimental-strip-types catalog-seed.ts',
         cwd: 'packages/tooling',
         cache: false,
       },

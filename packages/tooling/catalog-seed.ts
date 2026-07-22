@@ -475,7 +475,7 @@ const buildSql = (seed: CatalogSeed) => {
         const imageId = imageIds.get(imageKey)
         if (!imageId) throw new Error(`Missing validated image key: ${imageKey}`)
         statements.push(
-          `INSERT INTO product_variant_image (variant_id, image_id) VALUES (${sqlText(variant.id)}, ${sqlText(imageId)}) ON CONFLICT(variant_id, image_id) DO NOTHING;`,
+          `INSERT INTO product_variant_image (product_id, variant_id, image_id) VALUES (${sqlText(product.id)}, ${sqlText(variant.id)}, ${sqlText(imageId)}) ON CONFLICT(variant_id, image_id) DO UPDATE SET product_id = excluded.product_id;`,
         )
       }
     }
