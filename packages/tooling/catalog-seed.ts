@@ -10,7 +10,9 @@ import {
   slugSchema,
   variantOptionsSchema,
 } from '@store-kit/db/schemas'
-import * as v from 'valibot'
+import { Type } from 'typebox'
+import type { Static } from 'typebox'
+import { Value } from 'typebox/value'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const pluggedDirectory = resolve(projectRoot, 'apps/plugged')
@@ -21,93 +23,82 @@ const generatedSqlPath = resolve(pluggedDirectory, '.wrangler/catalog.seed.sql')
 const d1Binding = 'DB'
 const r2Bucket = 'plugged-media'
 
-const identifierSchema = v.pipe(v.string(), v.uuid())
-const nonEmptyStringSchema = v.pipe(v.string(), v.minLength(1))
-const nullableStringSchema = v.optional(v.nullable(nonEmptyStringSchema))
-const safeRelativePathSchema = v.pipe(
-  nonEmptyStringSchema,
-  v.check(
-    path => !isAbsolute(path) && !path.split(/[\\/]/).includes('..'),
-    'Path must be relative and cannot contain a parent segment.',
-  ),
-)
-const r2KeySchema = v.pipe(
-  nonEmptyStringSchema,
-  v.check(
-    key => !key.startsWith('/') && !key.includes('\\') && !key.split('/').includes('..'),
-    'R2 key must be relative, use forward slashes, and cannot contain a parent segment.',
-  ),
-)
-const imageContentTypeSchema = v.picklist([
-  'image/avif',
-  'image/gif',
-  'image/jpeg',
-  'image/png',
-  'image/svg+xml',
-  'image/webp',
+const identifierSchema = Type.String({ format: 'uuid' })
+const nonEmptyStringSchema = Type.String({ minLength: 1 })
+const nullableStringSchema = Type.Optional(Type.Union([nonEmptyStringSchema, Type.Null()]))
+const imageContentTypeSchema = Type.Union([
+  Type.Literal('image/avif'),
+  Type.Literal('image/gif'),
+  Type.Literal('image/jpeg'),
+  Type.Literal('image/png'),
+  Type.Literal('image/svg+xml'),
+  Type.Literal('image/webp'),
 ])
+const strictObject = <Properties extends Parameters<typeof Type.Object>[0]>(
+  properties: Properties,
+) => Type.Object(properties, { additionalProperties: false })
 
-const brandSeedSchema = v.strictObject({
+const brandSeedSchema = strictObject({
   id: identifierSchema,
   slug: slugSchema,
   name: nonEmptyStringSchema,
   description: nullableStringSchema,
-  websiteUrl: v.optional(v.nullable(v.pipe(v.string(), v.url()))),
+  websiteUrl: Type.Optional(Type.Union([Type.String({ format: 'uri' }), Type.Null()])),
 })
 
-const categorySeedSchema = v.strictObject({
+const categorySeedSchema = strictObject({
   id: identifierSchema,
   slug: slugSchema,
   name: nonEmptyStringSchema,
   description: nullableStringSchema,
   sortOrder: nonNegativeIntegerSchema,
-  active: v.boolean(),
+  active: Type.Boolean(),
 })
 
-const imageSeedSchema = v.strictObject({
+const imageSeedSchema = strictObject({
   id: identifierSchema,
-  source: safeRelativePathSchema,
-  r2Key: r2KeySchema,
+  source: nonEmptyStringSchema,
+  r2Key: nonEmptyStringSchema,
   contentType: imageContentTypeSchema,
   alt: nullableStringSchema,
   sortOrder: nonNegativeIntegerSchema,
 })
 
-const variantSeedSchema = v.strictObject({
+const variantSeedSchema = strictObject({
   id: identifierSchema,
   sku: nonEmptyStringSchema,
   name: nonEmptyStringSchema,
   options: variantOptionsSchema,
   priceMnt: nonNegativeIntegerSchema,
-  compareAtPriceMnt: v.optional(v.nullable(nonNegativeIntegerSchema)),
+  compareAtPriceMnt: Type.Optional(Type.Union([nonNegativeIntegerSchema, Type.Null()])),
   stockQuantity: nonNegativeIntegerSchema,
-  active: v.boolean(),
+  active: Type.Boolean(),
   sortOrder: nonNegativeIntegerSchema,
-  imageKeys: v.array(r2KeySchema),
+  imageKeys: Type.Array(nonEmptyStringSchema),
 })
 
-const productSeedSchema = v.strictObject({
+const productSeedSchema = strictObject({
   id: identifierSchema,
   slug: slugSchema,
-  brandSlug: v.optional(slugSchema),
-  categorySlug: v.optional(slugSchema),
+  brandSlug: Type.Optional(slugSchema),
+  categorySlug: Type.Optional(slugSchema),
   name: nonEmptyStringSchema,
   shortDescription: nullableStringSchema,
   description: nullableStringSchema,
   status: productStatusSchema,
-  featured: v.boolean(),
-  details: v.optional(v.nullable(productDetailsSchema)),
-  images: v.array(imageSeedSchema),
-  variants: v.pipe(v.array(variantSeedSchema), v.minLength(1)),
+  featured: Type.Boolean(),
+  details: Type.Optional(Type.Union([productDetailsSchema, Type.Null()])),
+  images: Type.Array(imageSeedSchema),
+  variants: Type.Array(variantSeedSchema, { minItems: 1 }),
 })
 
-const pluggedCatalogSeedSchema = v.strictObject({
-  brands: v.array(brandSeedSchema),
-  categories: v.array(categorySeedSchema),
-  products: v.array(productSeedSchema),
+const pluggedCatalogSeedSchema = strictObject({
+  brands: Type.Array(brandSeedSchema),
+  categories: Type.Array(categorySeedSchema),
+  products: Type.Array(productSeedSchema),
 })
 
-type CatalogSeed = v.InferOutput<typeof pluggedCatalogSeedSchema>
+type CatalogSeed = Static<typeof pluggedCatalogSeedSchema>
 
 const findDuplicate = (values: string[]) => {
   const seen = new Set<string>()
@@ -213,14 +204,41 @@ const parseSeed = async () => {
     )
   }
 
-  const result = v.safeParse(pluggedCatalogSeedSchema, input)
-  if (!result.success) {
+  if (!Value.Check(pluggedCatalogSeedSchema, input)) {
+    const errors = Value.Errors(pluggedCatalogSeedSchema, input).map(
+      ({ instancePath, message }) => ({ path: instancePath, message }),
+    )
     throw new Error(
-      `Catalog seed does not match the required shape:\n${JSON.stringify(v.flatten(result.issues), null, 2)}`,
+      `Catalog seed does not match the required shape:\n${JSON.stringify(errors, null, 2)}`,
     )
   }
-  validateReferences(result.output)
-  return result.output
+
+  const seed = Value.Parse(pluggedCatalogSeedSchema, input)
+  for (const product of seed.products) {
+    for (const image of product.images) {
+      if (isAbsolute(image.source) || image.source.split(/[\\/]/).includes('..')) {
+        throw new Error('Path must be relative and cannot contain a parent segment.')
+      }
+      if (
+        image.r2Key.startsWith('/') ||
+        image.r2Key.includes('\\') ||
+        image.r2Key.split('/').includes('..')
+      ) {
+        throw new Error(
+          'R2 key must be relative, use forward slashes, and cannot contain a parent segment.',
+        )
+      }
+    }
+    for (const key of product.variants.flatMap(variant => variant.imageKeys)) {
+      if (key.startsWith('/') || key.includes('\\') || key.split('/').includes('..')) {
+        throw new Error(
+          'R2 key must be relative, use forward slashes, and cannot contain a parent segment.',
+        )
+      }
+    }
+  }
+  validateReferences(seed)
+  return seed
 }
 
 const assetPath = (source: string) => {

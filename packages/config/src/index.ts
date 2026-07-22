@@ -1,14 +1,19 @@
-import * as v from 'valibot'
+import { Type } from 'typebox'
+import type { Static } from 'typebox'
+import { Value } from 'typebox/value'
 
 export const STORE_LOCALE = 'mn-MN'
 export const STORE_CURRENCY = 'MNT'
 
-export const storeConfigSchema = v.object({
-  id: v.string(),
-  name: v.string(),
-  publicBaseUrl: v.pipe(v.string(), v.url()),
-})
+export const storeConfigSchema = Type.Object(
+  {
+    id: Type.String(),
+    name: Type.String(),
+    publicBaseUrl: Type.String({ format: 'uri' }),
+  },
+  { additionalProperties: false },
+)
 
-export type StoreConfig = v.InferOutput<typeof storeConfigSchema>
+export type StoreConfig = Static<typeof storeConfigSchema>
 
-export const parseStoreConfig = (input: unknown) => v.parse(storeConfigSchema, input)
+export const parseStoreConfig = (input: unknown) => Value.Parse(storeConfigSchema, input)

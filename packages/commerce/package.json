@@ -10,6 +10,6 @@
   "dependencies": {
     "@store-kit/db": "workspace:*",
     "better-result": "catalog:",
-    "valibot": "catalog:"
+    "typebox": "catalog:"
   }
 }

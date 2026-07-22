@@ -1,7 +1,6 @@
 import { queryOptions } from '@tanstack/solid-query'
 
-import { api } from '../client'
-import { unwrapEdenResult } from '../result'
+import { api, resultRequest } from '../client'
 
 type ProductListRequest = NonNullable<Parameters<typeof api.api.products.get>[0]>
 export type ProductListFilters = NonNullable<ProductListRequest['query']>
@@ -27,26 +26,26 @@ const findAllProducts = (filters: ProductListFilters = {}) => {
 
   return queryOptions({
     queryKey: ['catalog', 'products', 'list', normalizedFilters] as const,
-    queryFn: async () => unwrapEdenResult(await api.api.products.get({ query: normalizedFilters })),
+    queryFn: () => resultRequest(api.api.products.get({ query: normalizedFilters })),
   })
 }
 
 const findProductBySlug = (slug: string) =>
   queryOptions({
     queryKey: ['catalog', 'products', 'detail', slug] as const,
-    queryFn: async () => unwrapEdenResult(await api.api.products({ slug }).get()),
+    queryFn: () => resultRequest(api.api.products({ slug }).get()),
   })
 
 const findAllCategories = () =>
   queryOptions({
     queryKey: ['catalog', 'categories', 'list'] as const,
-    queryFn: async () => unwrapEdenResult(await api.api.categories.get()),
+    queryFn: () => resultRequest(api.api.categories.get()),
   })
 
 const findAllBrands = () =>
   queryOptions({
     queryKey: ['catalog', 'brands', 'list'] as const,
-    queryFn: async () => unwrapEdenResult(await api.api.brands.get()),
+    queryFn: () => resultRequest(api.api.brands.get()),
   })
 
 export const catalogQuery = {

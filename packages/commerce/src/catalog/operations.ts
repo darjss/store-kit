@@ -7,7 +7,7 @@ import {
 import { productListFiltersSchema } from '@store-kit/db/schemas'
 import type { ProductListFilters } from '@store-kit/db/schemas'
 import { Result } from 'better-result'
-import * as v from 'valibot'
+import { Value } from 'typebox/value'
 
 import { createProductNotFound } from './errors'
 import type { ProductNotFound } from './errors'
@@ -15,12 +15,19 @@ import type { ProductNotFound } from './errors'
 export type ProductDetail = NonNullable<Awaited<ReturnType<typeof findPublishedProductBySlug>>>
 
 export const listCatalogProducts = async (filters: ProductListFilters = {}) => {
-  const normalizedFilters = v.parse(productListFiltersSchema, {
+  const normalizedFilters = Value.Parse(productListFiltersSchema, {
     ...filters,
     query: filters.query?.trim() || undefined,
     limit: filters.limit ?? 24,
     offset: filters.offset ?? 0,
   })
+  if (
+    normalizedFilters.minPrice !== undefined &&
+    normalizedFilters.maxPrice !== undefined &&
+    normalizedFilters.minPrice > normalizedFilters.maxPrice
+  ) {
+    throw new Error('Minimum price cannot exceed maximum price.')
+  }
   return Result.ok(await listPublishedProducts(normalizedFilters))
 }
 

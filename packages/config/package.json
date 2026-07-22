@@ -7,6 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "valibot": "catalog:"
+    "typebox": "catalog:"
   }
 }

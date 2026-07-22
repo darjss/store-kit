@@ -1,10 +1,9 @@
 import { queryOptions } from '@tanstack/solid-query'
 
-import { api } from '../client'
-import { unwrapEdenResult } from '../result'
+import { api, resultRequest } from '../client'
 
 export const systemStatusOptions = () =>
   queryOptions({
     queryKey: ['system', 'status'],
-    queryFn: async () => unwrapEdenResult(await api.api.system.status.get()),
+    queryFn: () => resultRequest(api.api.system.status.get()),
   })

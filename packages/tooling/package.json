@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "@store-kit/db": "workspace:*",
-    "valibot": "catalog:"
+    "typebox": "catalog:"
   }
 }

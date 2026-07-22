@@ -18,7 +18,7 @@ catalog:
   better-result: ^2.10.0
   solid-js: ^1.9.14
   tailwindcss: ^4.3.3
-  valibot: ^1.4.2
+  typebox: 1.0.76
   vite: npm:@voidzero-dev/vite-plus-core@^0.2.5
   vite-plus: ^0.2.5
 overrides:

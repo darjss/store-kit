@@ -25,7 +25,7 @@ Do not implement catalog management, checkout, authentication, payments, Telegra
 - Do not create generic repository, controller, or service abstractions.
 - Do not add tests for imaginary edge cases.
 - Add only one contract test when it proves the serialized Result boundary.
-- Infer TypeScript types from Drizzle, Valibot, Elysia, Eden, and Better Result.
+- Infer TypeScript types from Drizzle, TypeBox, Elysia, Eden, and Better Result.
 - Do not use `as any`.
 - Use Vite+ for package management and validation.
 - Keep Plugged visually empty during bootstrap. Do not move the old Plugged UI yet.
@@ -77,7 +77,7 @@ For bootstrap, define only:
 
 The platform is Mongolia-only. Use `mn-MN` and `MNT` as shared constants, not per-store configuration.
 
-Use Valibot for the schema and infer the TypeScript type from it.
+Use TypeBox for the schema and infer the TypeScript type from it.
 
 Do not add catalog, payment, delivery, or theme configuration yet.
 
@@ -87,7 +87,7 @@ Own:
 
 - the Cloudflare D1-backed Drizzle client
 - Drizzle table schemas
-- generated Valibot schemas
+- generated TypeBox schemas
 - domain-sized database query files
 
 The database client can import `env.DB` from `cloudflare:workers` and export `db` directly. Query files import that shared server-only client:
@@ -98,13 +98,13 @@ import { db } from "../client";
 
 Do not pass `db` through every operation and do not add a `createDatabase(env.DB)` call in routes.
 
-Use Drizzle's built-in Valibot integration:
+Use Drizzle's built-in TypeBox integration:
 
 ```ts
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-orm/valibot";
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from "drizzle-orm/typebox";
 ```
 
-Do not install `drizzle-valibot`.
+Do not install a separate Drizzle schema package.
 
 Do not create commerce tables during bootstrap. The first real schema belongs to the catalog implementation plan.
 
@@ -281,7 +281,7 @@ Foundation dependencies include:
 - Tailwind CSS 4 and `@tailwindcss/vite`
 - Elysia and Eden
 - Drizzle ORM and Drizzle Kit
-- Valibot
+- TypeBox
 - Better Result
 - TanStack Solid Query
 - Zaidan-selected Kobalte dependencies
