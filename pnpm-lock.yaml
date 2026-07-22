@@ -111,6 +111,9 @@ importers:
       drizzle-orm:
         specifier: 1.0.0-rc.4
         version: 1.0.0-rc.4(@cloudflare/workers-types@5.20260721.1)(@sinclair/typebox@0.34.52)(valibot@1.4.2)(zod@4.4.3)
+      valibot:
+        specifier: ^1.4.2
+        version: 1.4.2
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260721.1

@@ -4,6 +4,25 @@ import formatConfig from './oxfmt.config'
 import lintConfig from './oxlint.config'
 
 export default defineConfig({
+  run: {
+    tasks: {
+      'db:generate': {
+        command: 'vp exec drizzle-kit generate --config drizzle.config.ts',
+        cwd: 'packages/db',
+        cache: false,
+      },
+      'db:migrate:plugged:local': {
+        command: 'vp exec wrangler d1 migrations apply DB --local',
+        cwd: 'apps/plugged',
+        cache: false,
+      },
+      'db:migrate:plugged:remote-only': {
+        command: 'vp exec wrangler d1 migrations apply DB --remote',
+        cwd: 'apps/plugged',
+        cache: false,
+      },
+    },
+  },
   staged: {
     '*': 'vp check --fix',
   },
