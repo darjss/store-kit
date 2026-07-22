@@ -1,6 +1,8 @@
 import { env } from 'cloudflare:workers'
 import { drizzle } from 'drizzle-orm/d1'
 
+import { catalogRelations } from './relations/catalog'
+
 declare global {
   namespace Cloudflare {
     interface Env {
@@ -9,4 +11,4 @@ declare global {
   }
 }
 
-export const db = drizzle(env.DB)
+export const db = drizzle(env.DB, { relations: catalogRelations })

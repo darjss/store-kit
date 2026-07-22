@@ -8,7 +8,13 @@
     "directory": "./dist",
     "binding": "ASSETS",
   },
-  "d1_databases": [{ "binding": "DB" }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "migrations_dir": "../../packages/db/migrations",
+      "migrations_pattern": "../../packages/db/migrations/*/migration.sql",
+    },
+  ],
   "kv_namespaces": [{ "binding": "CACHE" }, { "binding": "AUTH_KV" }],
   "r2_buckets": [{ "binding": "MEDIA" }],
   "observability": {

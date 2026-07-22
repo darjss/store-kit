@@ -1,0 +1,123 @@
+@startuml catalog-schema
+!pragma layout smetana
+
+left to right direction
+hide circle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam backgroundColor #FAFAF9
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam ArrowColor #525252
+skinparam EntityBorderColor #404040
+skinparam EntityBackgroundColor #FFFFFF
+skinparam EntityHeaderBackgroundColor #E7E5E4
+skinparam EntityFontColor #171717
+skinparam NoteBackgroundColor #FEF3C7
+skinparam NoteBorderColor #D97706
+
+title Store Kit — Catalog schema
+caption Mongolia-only MVP · MNT is fixed · variants own price and stock
+
+entity "brand" as brand #FEF3C7 {
+  * id : text <<PK>>
+  --
+  * slug : text <<UQ>>
+  * name : text
+  description : text?
+  website_url : text?
+  * created_at : timestamp
+  * updated_at : timestamp
+}
+
+entity "category" as category #DCFCE7 {
+  * id : text <<PK>>
+  --
+  * slug : text <<UQ>>
+  * name : text
+  description : text?
+  * sort_order : integer = 0
+  * active : boolean = true
+  * created_at : timestamp
+  * updated_at : timestamp
+}
+
+entity "product" as product #DBEAFE {
+  * id : text <<PK>>
+  --
+  * slug : text <<UQ>>
+  brand_id : text? <<FK>>
+  category_id : text? <<FK>>
+  * name : text
+  short_description : text?
+  description : text?
+  * status : draft | active | archived
+  * featured : boolean = false
+  details : JSON?
+  * created_at : timestamp
+  * updated_at : timestamp
+}
+
+entity "product_image" as product_image #F3E8FF {
+  * id : text <<PK>>
+  --
+  * product_id : text <<FK>>
+  * r2_key : text
+  alt : text?
+  * sort_order : integer = 0
+  * created_at : timestamp
+}
+
+entity "product_variant" as product_variant #FFEDD5 {
+  * id : text <<PK>>
+  --
+  * product_id : text <<FK>>
+  * sku : text <<UQ>>
+  * name : text
+  * options : JSON = {}
+  * price_mnt : integer >= 0
+  compare_at_price_mnt : integer? >= 0
+  * stock_quantity : integer >= 0
+  * active : boolean = true
+  * sort_order : integer = 0
+  * created_at : timestamp
+  * updated_at : timestamp
+}
+
+entity "product_variant_image" as product_variant_image #F5F5F4 {
+  * variant_id : text <<PK, FK>>
+  * image_id : text <<PK, FK>>
+}
+
+brand |o--o{ product : "optional brand"
+category |o--o{ product : "optional category"
+product ||--|{ product_variant : "priced and stocked by"
+product ||--o{ product_image : "ordered images"
+product_variant ||--o{ product_variant_image
+product_image ||--o{ product_variant_image
+
+note bottom of product
+  No price, currency, or stock columns.
+  details is a small typed JSON object for
+  store-specific facts, not a filter engine.
+end note
+
+note bottom of product_variant
+  Every product has at least one variant.
+  A product without choices uses options = {}.
+  No reservations, warehouses, or option tables.
+end note
+
+note right of product_image
+  Lowest sort_order is the primary image.
+  Store R2 keys, not environment-specific URLs.
+  Unlinked images are the shared product gallery.
+end note
+
+note bottom of product_variant_image
+  A linked image can serve several variants.
+  Example: Red / S, Red / M, and Red / L.
+  Fall back to shared images when no links exist.
+end note
+
+@enduml
