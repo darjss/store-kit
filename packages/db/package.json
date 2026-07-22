@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/client.ts",
+    "./queries": "./src/queries/catalog.ts",
     "./schema": "./src/schema/catalog.ts",
     "./schemas": "./src/schemas/catalog.ts"
   },
