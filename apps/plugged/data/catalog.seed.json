@@ -1,0 +1,203 @@
+{
+  "brands": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "slug": "plugged-lab",
+      "name": "Plugged Lab",
+      "description": "Portable audio selected and tested by Plugged."
+    }
+  ],
+  "categories": [
+    {
+      "id": "20000000-0000-4000-8000-000000000001",
+      "slug": "in-ear-monitors",
+      "name": "In-ear monitors",
+      "description": "Wired earphones for everyday listening and stage monitoring.",
+      "sortOrder": 10,
+      "active": true
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000002",
+      "slug": "portable-audio",
+      "name": "Portable audio",
+      "description": "Compact sources and accessories for listening on the move.",
+      "sortOrder": 20,
+      "active": true
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000003",
+      "slug": "legacy-audio",
+      "name": "Legacy audio",
+      "description": "Discontinued catalog items kept for historical records.",
+      "sortOrder": 90,
+      "active": false
+    }
+  ],
+  "products": [
+    {
+      "id": "30000000-0000-4000-8000-000000000001",
+      "slug": "aster-modular-iem",
+      "brandSlug": "plugged-lab",
+      "categorySlug": "in-ear-monitors",
+      "name": "Aster Modular IEM",
+      "shortDescription": "A balanced dual-driver earphone with an interchangeable plug.",
+      "description": "The Aster combines a dynamic bass driver with a balanced-armature treble driver. Its detachable cable is available with a 3.5 mm plug or a USB-C plug with an integrated DAC.",
+      "status": "active",
+      "featured": true,
+      "details": {
+        "driverConfiguration": "1 dynamic + 1 balanced armature",
+        "impedanceOhms": 24,
+        "detachableCable": true,
+        "included": ["Carrying case", "Silicone ear tips", "Foam ear tips"]
+      },
+      "images": [
+        {
+          "id": "40000000-0000-4000-8000-000000000001",
+          "sourcePath": "./images/aster-graphite.svg",
+          "r2Key": "catalog/products/aster-modular-iem/graphite.svg",
+          "alt": "Graphite Aster in-ear monitors with braided cable",
+          "sortOrder": 10
+        },
+        {
+          "id": "40000000-0000-4000-8000-000000000002",
+          "sourcePath": "./images/aster-copper.svg",
+          "r2Key": "catalog/products/aster-modular-iem/copper.svg",
+          "alt": "Copper Aster in-ear monitors with braided cable",
+          "sortOrder": 20
+        },
+        {
+          "id": "40000000-0000-4000-8000-000000000003",
+          "sourcePath": "./images/aster-kit.svg",
+          "r2Key": "catalog/products/aster-modular-iem/included-kit.svg",
+          "alt": "Aster carrying case, cable, and ear tip set",
+          "sortOrder": 30
+        }
+      ],
+      "variants": [
+        {
+          "id": "50000000-0000-4000-8000-000000000001",
+          "sku": "PL-ASTER-GR-35",
+          "name": "Graphite / 3.5 mm",
+          "options": {
+            "color": "Graphite",
+            "connector": "3.5 mm"
+          },
+          "priceMnt": 189000,
+          "compareAtPriceMnt": 219000,
+          "stockQuantity": 12,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": ["catalog/products/aster-modular-iem/graphite.svg"]
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000002",
+          "sku": "PL-ASTER-CP-35",
+          "name": "Copper / 3.5 mm",
+          "options": {
+            "color": "Copper",
+            "connector": "3.5 mm"
+          },
+          "priceMnt": 189000,
+          "stockQuantity": 7,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": ["catalog/products/aster-modular-iem/copper.svg"]
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000003",
+          "sku": "PL-ASTER-GR-USBC",
+          "name": "Graphite / USB-C",
+          "options": {
+            "color": "Graphite",
+            "connector": "USB-C"
+          },
+          "priceMnt": 229000,
+          "stockQuantity": 4,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": []
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000004",
+          "sku": "PL-ASTER-CP-USBC",
+          "name": "Copper / USB-C",
+          "options": {
+            "color": "Copper",
+            "connector": "USB-C"
+          },
+          "priceMnt": 229000,
+          "stockQuantity": 0,
+          "active": false,
+          "sortOrder": 40,
+          "imageKeys": ["catalog/products/aster-modular-iem/copper.svg"]
+        }
+      ]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000002",
+      "slug": "node-mini-usb-c-dac",
+      "brandSlug": "plugged-lab",
+      "categorySlug": "portable-audio",
+      "name": "Node Mini USB-C DAC",
+      "shortDescription": "A pocket-size USB-C DAC with a 3.5 mm headphone output.",
+      "description": "Node Mini adds a clean headphone output to phones, tablets, and laptops. Its aluminum shell and short braided lead are designed for daily carry.",
+      "status": "active",
+      "featured": false,
+      "details": {
+        "input": "USB-C",
+        "output": "3.5 mm",
+        "maximumSampleRate": "32-bit / 384 kHz",
+        "weightGrams": 12
+      },
+      "images": [
+        {
+          "id": "40000000-0000-4000-8000-000000000004",
+          "sourcePath": "./images/node-mini.svg",
+          "r2Key": "catalog/products/node-mini-usb-c-dac/silver.svg",
+          "alt": "Silver Node Mini USB-C DAC and braided lead",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "50000000-0000-4000-8000-000000000005",
+          "sku": "PL-NODE-MINI",
+          "name": "Default",
+          "options": {},
+          "priceMnt": 99000,
+          "stockQuantity": 18,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        }
+      ]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000003",
+      "slug": "arc-mmcx-cable",
+      "brandSlug": "plugged-lab",
+      "name": "Arc MMCX Cable",
+      "shortDescription": "A retired four-core replacement cable with MMCX connectors.",
+      "status": "archived",
+      "featured": false,
+      "details": {
+        "connector": "MMCX",
+        "lengthMeters": 1.2
+      },
+      "images": [],
+      "variants": [
+        {
+          "id": "50000000-0000-4000-8000-000000000006",
+          "sku": "PL-ARC-MMCX",
+          "name": "Default",
+          "options": {},
+          "priceMnt": 69000,
+          "stockQuantity": 0,
+          "active": false,
+          "sortOrder": 10,
+          "imageKeys": []
+        }
+      ]
+    }
+  ]
+}
