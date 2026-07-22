@@ -6,7 +6,8 @@
           "run": "onType",
           "fixKind": "safe_fix",
           "typeAware": true,
-          "unusedDisableDirectives": "deny"
+          "unusedDisableDirectives": "deny",
+          "disableNestedConfig": false
         }
       }
     },
@@ -82,6 +83,9 @@
           "language_server": {
             "name": "oxfmt"
           }
+        },
+        {
+          "code_action": "source.fixAll.oxc"
         }
       ],
       "code_action": "source.fixAll.oxc"
@@ -200,6 +204,9 @@
           "language_server": {
             "name": "oxfmt"
           }
+        },
+        {
+          "code_action": "source.fixAll.oxc"
         }
       ]
     },
@@ -213,6 +220,9 @@
           "language_server": {
             "name": "oxfmt"
           }
+        },
+        {
+          "code_action": "source.fixAll.oxc"
         }
       ]
     },
@@ -242,5 +252,16 @@
         }
       ]
     }
-  }
+  },
+  "format_on_save": "on",
+  "prettier": {
+    "allowed": false
+  },
+  "formatter": [
+    {
+      "language_server": {
+        "name": "oxfmt"
+      }
+    }
+  ]
 }

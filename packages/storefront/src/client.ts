@@ -1,6 +1,6 @@
-import { treaty } from "@elysiajs/eden";
-import type { App } from "@store-kit/api";
+import { treaty } from '@elysiajs/eden'
+import type { App } from '@store-kit/api'
 
-const origin = globalThis.location?.origin ?? "http://localhost";
+const origin = globalThis.location?.origin ?? 'http://localhost'
 
-export const api = treaty<App>(origin);
+export const api = treaty<App>(origin)

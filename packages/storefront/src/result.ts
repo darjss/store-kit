@@ -1,4 +1,5 @@
-import { Result, type SerializedResult } from "better-result";
+import { Result } from 'better-result'
+import type { SerializedResult } from 'better-result'
 
 export const deserializeResult = <Value, Failure>(serialized: SerializedResult<Value, Failure>) =>
-  Result.deserialize<Value, Failure>(serialized);
+  Result.deserialize<Value, Failure>(serialized)

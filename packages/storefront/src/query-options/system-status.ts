@@ -1,17 +1,18 @@
-import { queryOptions } from "@tanstack/solid-query";
-import { api } from "../client";
-import { deserializeResult } from "../result";
+import { queryOptions } from '@tanstack/solid-query'
+
+import { api } from '../client'
+import { deserializeResult } from '../result'
 
 export const systemStatusOptions = () =>
   queryOptions({
-    queryKey: ["system", "status"],
+    queryKey: ['system', 'status'],
     queryFn: async () => {
-      const response = await api.api.system.status.get();
+      const response = await api.api.system.status.get()
 
       if (response.error) {
-        throw response.error;
+        throw response.error
       }
 
-      return deserializeResult(response.data);
+      return deserializeResult(response.data)
     },
-  });
+  })

@@ -1,10 +1,10 @@
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/solid-query";
-import { systemStatusOptions } from "@store-kit/storefront";
-import { Button } from "@store-kit/ui";
-import { Match, Switch } from "solid-js";
+import { systemStatusOptions } from '@store-kit/storefront'
+import { Button } from '@store-kit/ui'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/solid-query'
+import { Match, Switch } from 'solid-js'
 
 function SystemResult() {
-  const query = useQuery(systemStatusOptions);
+  const query = useQuery(systemStatusOptions)
 
   return (
     <section class="mt-8 space-y-4" aria-labelledby="system-result-heading">
@@ -16,9 +16,9 @@ function SystemResult() {
         <Match when={query.isPending}>
           <p>Loading system status…</p>
         </Match>
-        <Match when={query.error}>{(error) => <p>Request failed: {error().message}</p>}</Match>
+        <Match when={query.error}>{error => <p>Request failed: {error().message}</p>}</Match>
         <Match when={query.data}>
-          {(result) => (
+          {result => (
             <pre class="overflow-auto rounded-md bg-neutral-100 p-4 text-sm">
               {JSON.stringify(result(), null, 2)}
             </pre>
@@ -30,15 +30,15 @@ function SystemResult() {
         Refresh
       </Button>
     </section>
-  );
+  )
 }
 
 export function FoundationStatus() {
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient()
 
   return (
     <QueryClientProvider client={queryClient}>
       <SystemResult />
     </QueryClientProvider>
-  );
+  )
 }

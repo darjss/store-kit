@@ -1,16 +1,27 @@
-import { defineConfig } from "vite-plus";
+import { defineConfig } from 'vite-plus'
+
+import formatConfig from './oxfmt.config'
+import lintConfig from './oxlint.config'
 
 export default defineConfig({
   staged: {
-    "*": "vp check --fix",
+    '*': 'vp check --fix',
   },
   fmt: {
-    ignorePatterns: ["**/worker-configuration.d.ts"],
+    ...formatConfig,
+    ignorePatterns: [...(formatConfig.ignorePatterns ?? []), '**/worker-configuration.d.ts'],
   },
   lint: {
-    ignorePatterns: ["**/worker-configuration.d.ts"],
-    jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
-    rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+    ...lintConfig,
+    ignorePatterns: [...(lintConfig.ignorePatterns ?? []), '**/worker-configuration.d.ts'],
+    jsPlugins: [
+      ...(lintConfig.jsPlugins ?? []),
+      { name: 'vite-plus', specifier: 'vite-plus/oxlint-plugin' },
+    ],
+    rules: {
+      ...lintConfig.rules,
+      'vite-plus/prefer-vite-plus-imports': 'error',
+    },
     options: { typeAware: true, typeCheck: true },
   },
-});
+})
