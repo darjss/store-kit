@@ -96,9 +96,15 @@ importers:
 
   packages/commerce:
     dependencies:
+      '@store-kit/db':
+        specifier: workspace:*
+        version: link:../db
       better-result:
         specifier: ^2.10.0
         version: 2.10.0
+      valibot:
+        specifier: ^1.4.2
+        version: 1.4.2
 
   packages/config:
     dependencies:
