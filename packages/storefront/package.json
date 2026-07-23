@@ -10,7 +10,6 @@
     "./checkout": "./src/checkout.tsx",
     "./form": "./src/form/index.ts",
     "./format": "./src/format.ts",
-    "./media": "./src/media.ts",
     "./orders/order-status": "./src/orders/order-status.tsx",
     "./purchase": "./src/purchase.ts",
     "./query-client": "./src/query-client.ts",

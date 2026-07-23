@@ -1,4 +1,5 @@
 import type { PublicImage } from '@store-kit/contracts'
+import { transform as cloudflareTransform } from 'unpic/providers/cloudflare'
 
 export type ProductImageMetadata = PublicImage
 
@@ -34,3 +35,11 @@ export const productImageLayouts = {
 } as const
 
 export type ProductImageLayout = keyof typeof productImageLayouts
+
+const localMediaTransformer: typeof cloudflareTransform = source => source.toString()
+
+export const productImageTransformer = (url: string) =>
+  url.startsWith('/media/') ? localMediaTransformer : cloudflareTransform
+
+export const productImageOptions = (url: string) =>
+  url.startsWith('/media/') ? undefined : { domain: new URL(url).hostname }

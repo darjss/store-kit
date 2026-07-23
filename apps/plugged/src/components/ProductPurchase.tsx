@@ -1,17 +1,16 @@
 /* oxlint-disable tailwindcss/no-unknown-classes */
 import type { ProductDetail } from '@store-kit/commerce/catalog'
+import type { PublicImage } from '@store-kit/contracts'
 import { addCartItem, openCart } from '@store-kit/storefront/cart/store'
 import { formatMnt } from '@store-kit/storefront/format'
 import { clampPurchaseQuantity, maximumPurchaseQuantity } from '@store-kit/storefront/purchase'
+import { Button, ButtonGroup, ButtonGroupText, RadioGroup, RadioGroupItem } from '@store-kit/ui'
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js'
 
 import { ProductImage } from './ProductImage'
 
-const actionClass =
-  'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
-type ProductPurchaseData = Omit<ProductDetail, 'images'> & {
-  images: (Omit<ProductDetail['images'][number], 'r2Key'> & { url: string })[]
-}
+type ProductPurchaseImage = PublicImage & Pick<ProductDetail['images'][number], 'id'>
+type ProductPurchaseData = Omit<ProductDetail, 'images'> & { images: ProductPurchaseImage[] }
 
 export function ProductPurchase(props: { product: ProductPurchaseData }) {
   const initial =
@@ -98,65 +97,69 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
       </div>
       <fieldset class="bg-paper m-0 border-0 p-4">
         <legend class="text-xl font-black">Сонголт</legend>
-        <For each={props.product.variants}>
-          {variant => (
-            <label
-              class="border-ink has-focus-visible:outline-acid mb-2 grid min-h-14.5 cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 border-3 p-3 has-focus-visible:outline-4 has-focus-visible:outline-offset-3"
-              classList={{
-                'bg-acid': variant.id === variantId(),
-                'opacity-60 line-through': variant.stockQuantity === 0,
-              }}
-            >
-              <input
-                type="radio"
-                name="variant"
-                value={variant.id}
-                checked={variant.id === variantId()}
-                disabled={variant.stockQuantity === 0}
-                onChange={() => chooseVariant(variant.id)}
-              />
-              <span>{variant.name}</span>
-              <strong>{formatMnt(variant.priceMnt)}</strong>
-              <small class="col-2">
-                {variant.stockQuantity === 0
-                  ? 'Дууссан'
-                  : variant.stockQuantity <= 3
-                    ? 'Цөөн үлдсэн'
-                    : 'Бэлэн'}
-              </small>
-            </label>
-          )}
-        </For>
+        <RadioGroup value={variantId()} onChange={chooseVariant}>
+          <For each={props.product.variants}>
+            {variant => (
+              <label
+                class="border-ink has-focus-visible:outline-acid mb-2 grid min-h-14.5 cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 border-3 p-3 has-focus-visible:outline-4 has-focus-visible:outline-offset-3"
+                classList={{
+                  'bg-acid': variant.id === variantId(),
+                  'opacity-60 line-through': variant.stockQuantity === 0,
+                }}
+                for={`variant-${variant.id}`}
+              >
+                <RadioGroupItem
+                  id={`variant-${variant.id}`}
+                  value={variant.id}
+                  disabled={variant.stockQuantity === 0}
+                />
+                <span>{variant.name}</span>
+                <strong>{formatMnt(variant.priceMnt)}</strong>
+                <small class="col-2">
+                  {variant.stockQuantity === 0
+                    ? 'Дууссан'
+                    : variant.stockQuantity <= 3
+                      ? 'Цөөн үлдсэн'
+                      : 'Бэлэн'}
+                </small>
+              </label>
+            )}
+          </For>
+        </RadioGroup>
       </fieldset>
       <div class="border-ink bg-paper-clean sticky bottom-0 z-10 flex min-w-0 gap-3 border-t-4 p-4 max-[340px]:flex-col max-md:bottom-[calc(68px+env(safe-area-inset-bottom))] max-md:flex-wrap max-md:p-2">
-        <div class="border-ink flex border-3 max-[340px]:self-start" aria-label="Тоо ширхэг">
-          <button
-            class="bg-paper w-12 border-0 font-black max-md:w-11"
+        <ButtonGroup class="max-[340px]:self-start" aria-label="Тоо ширхэг">
+          <Button
+            class="border-ink bg-paper h-auto w-12 rounded-none border-3 font-black max-md:w-11"
             type="button"
+            variant="outline"
             onClick={() => setQuantity(value => Math.max(1, value - 1))}
             aria-label="Нэгээр хасах"
           >
             −
-          </button>
-          <output class="grid min-w-10 place-items-center font-black">{quantity()}</output>
-          <button
-            class="bg-paper w-12 border-0 font-black max-md:w-11"
+          </Button>
+          <ButtonGroupText class="border-ink bg-paper min-w-10 justify-center border-y-3 font-black">
+            <output>{quantity()}</output>
+          </ButtonGroupText>
+          <Button
+            class="border-ink bg-paper h-auto w-12 rounded-none border-3 font-black max-md:w-11"
             type="button"
+            variant="outline"
             disabled={quantity() >= maximumQuantity()}
             onClick={() => setQuantity(value => Math.min(maximumQuantity(), value + 1))}
             aria-label={`Нэгээр нэмэх. Дээд хэмжээ ${maximumQuantity()}`}
           >
             +
-          </button>
-        </div>
-        <button
-          class={`${actionClass} flex-1 max-md:p-2 max-md:text-[0.82rem]`}
+          </Button>
+        </ButtonGroup>
+        <Button
+          class="border-ink bg-orange text-ink min-h-12.5 flex-1 cursor-pointer rounded-none border-3 px-4 py-3 font-black transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none max-md:p-2 max-md:text-[0.82rem]"
           type="button"
-          disabled={!selected() || selected()!.stockQuantity === 0}
+          disabled={!selected() || selected()?.stockQuantity === 0}
           onClick={add}
         >
-          Сагсанд нэмэх · {selected() ? formatMnt(selected()!.priceMnt * quantity()) : formatMnt(0)}
-        </button>
+          Сагсанд нэмэх · {formatMnt((selected()?.priceMnt ?? 0) * quantity())}
+        </Button>
       </div>
       <p class="sr-only" aria-live="polite">
         {announcement()}
