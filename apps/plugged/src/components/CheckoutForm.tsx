@@ -1,12 +1,27 @@
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
-import type { CheckoutCreated, CheckoutError } from '@store-kit/contracts/checkout'
+import type { CheckoutCreated, CheckoutError, CheckoutInput } from '@store-kit/contracts/checkout'
+import { checkoutInputSchema } from '@store-kit/contracts/checkout'
 import { cartItems, cartLineInputs, clearCart, openCart } from '@store-kit/storefront/cart/store'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { cartQuery } from '@store-kit/storefront/query-options/cart'
 import { checkoutMutation } from '@store-kit/storefront/query-options/checkout'
+import {
+  Button,
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+  Input,
+  NativeSelect,
+  NativeSelectOption,
+  RadioGroup,
+  RadioGroupItem,
+  Textarea,
+} from '@store-kit/ui'
 import { createForm } from '@tanstack/solid-form'
 import { QueryClientProvider, createMutation, createQuery } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
+import { Value } from 'typebox/value'
 
 const districts = [
   'Багануур',
@@ -24,9 +39,31 @@ const fieldErrorId = (name: string) => `${name}-error`
 const actionClass =
   'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
 const formBandClass =
-  "mb-4 border-4 border-ink bg-paper-clean p-[clamp(1rem,2vw,2rem)] [&>h2]:font-display [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8] [&_label]:mb-4 [&_label]:grid [&_label]:gap-1 [&_label]:font-extrabold [&_input:not([type='radio'])]:min-h-12.5 [&_input:not([type='radio'])]:w-full [&_input:not([type='radio'])]:rounded-none [&_input:not([type='radio'])]:border-3 [&_input:not([type='radio'])]:border-ink [&_input:not([type='radio'])]:bg-white [&_input:not([type='radio'])]:p-3 [&_select]:min-h-12.5 [&_select]:w-full [&_select]:rounded-none [&_select]:border-3 [&_select]:border-ink [&_select]:bg-white [&_select]:p-3 [&_textarea]:min-h-25 [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-none [&_textarea]:border-3 [&_textarea]:border-ink [&_textarea]:bg-white [&_textarea]:p-3"
+  'mb-4 border-4 border-ink bg-paper-clean p-[clamp(1rem,2vw,2rem)] [&>h2]:font-display [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8] [&_[data-slot=field]]:mb-4'
 const errorPanelClass =
   'mb-4 border-4 border-warning bg-paper-clean p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:border-ink [&_button]:bg-acid [&_button]:px-3 [&_button]:py-2 [&_button]:font-black'
+const formFieldByContractPath = {
+  '/customer/name': 'name',
+  '/customer/phone': 'phone',
+  '/delivery/district': 'district',
+  '/delivery/khoroo': 'khoroo',
+  '/delivery/address': 'address',
+  '/delivery/notes': 'notes',
+  '/paymentMethod': 'paymentMethod',
+} as const
+const validationMessageByContractPath: Record<keyof typeof formFieldByContractPath, string> = {
+  '/customer/name': 'Нэрээ оруулна уу.',
+  '/customer/phone': 'Утасны дугаараа шалгана уу.',
+  '/delivery/district': 'Дүүргээ сонгоно уу.',
+  '/delivery/khoroo': 'Хороогоо оруулна уу.',
+  '/delivery/address': 'Дэлгэрэнгүй хаягаа оруулна уу.',
+  '/delivery/notes': 'Нэмэлт тайлбар 500 тэмдэгтээс ихгүй байна.',
+  '/paymentMethod': 'Төлбөрийн аргаа сонгоно уу.',
+}
+
+type CheckoutFormValues = Omit<CheckoutInput, 'items' | 'customer' | 'delivery'> &
+  CheckoutInput['customer'] &
+  CheckoutInput['delivery']
 
 type TransportError = { _tag: 'TransportError'; message: string }
 
@@ -34,6 +71,32 @@ const qpayAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'qpay' ? order.nextAction : undefined
 const bankAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'bank_transfer' ? order.nextAction : undefined
+
+const toCheckoutInput = (value: CheckoutFormValues): CheckoutInput => ({
+  items: cartLineInputs(),
+  customer: { name: value.name, phone: value.phone },
+  delivery: {
+    district: value.district,
+    khoroo: value.khoroo,
+    address: value.address,
+    ...(value.notes ? { notes: value.notes } : {}),
+  },
+  paymentMethod: value.paymentMethod,
+})
+
+const validateCheckout = ({ value }: { value: CheckoutFormValues }) => {
+  const fields = Object.fromEntries(
+    Value.Errors(checkoutInputSchema, toCheckoutInput(value)).flatMap(issue => {
+      const path = issue.instancePath as keyof typeof formFieldByContractPath
+      const field = formFieldByContractPath[path]
+      return field ? [[field, validationMessageByContractPath[path]]] : []
+    }),
+  )
+  return Object.keys(fields).length > 0 ? { fields } : undefined
+}
+
+const validationError = (errors: unknown[]) =>
+  errors.find((item): item is string => typeof item === 'string')
 
 function FormOwner() {
   const checkout = createMutation(() => checkoutMutation.create())
@@ -53,7 +116,8 @@ function FormOwner() {
       address: '',
       notes: '',
       paymentMethod: 'qpay' as 'qpay' | 'bank_transfer',
-    },
+    } satisfies CheckoutFormValues,
+    validators: { onSubmit: validateCheckout },
     onSubmit: async ({ value }) => {
       setDomainError()
       try {
@@ -76,17 +140,7 @@ function FormOwner() {
           )
           return
         }
-        const result = await checkout.mutateAsync({
-          items: cartLineInputs(),
-          customer: { name: value.name, phone: value.phone },
-          delivery: {
-            district: value.district,
-            khoroo: value.khoroo,
-            address: value.address,
-            ...(value.notes ? { notes: value.notes } : {}),
-          },
-          paymentMethod: value.paymentMethod,
-        })
+        const result = await checkout.mutateAsync(toCheckoutInput(value))
         if (result.status === 'ok') {
           clearCart()
           setCreated(result.value)
@@ -191,7 +245,7 @@ function FormOwner() {
         <Show when={cartItems().length > 0}>
           <form
             class="grid grid-cols-12 items-start gap-8 max-md:flex max-md:flex-col"
-            aria-busy={checkout.isPending || validation.isFetching}
+            aria-busy={form.state.isSubmitting}
             onSubmit={event => {
               event.preventDefault()
               void form.handleSubmit()
@@ -206,9 +260,9 @@ function FormOwner() {
                   <h2 class="m-0">Сагсаа засна уу</h2>
                   <p>{error()?.message}</p>
                   <For each={error()?.corrections}>{correction => <p>{correction.message}</p>}</For>
-                  <button type="button" onClick={openCart}>
+                  <Button type="button" variant="outline" onClick={openCart}>
                     Сагс нээж засах →
-                  </button>
+                  </Button>
                 </section>
               </Show>
               <Show when={error()?._tag === 'CartEmpty'}>
@@ -228,146 +282,176 @@ function FormOwner() {
                 <section class={errorPanelClass} role="alert">
                   <strong>Холболт амжилтгүй.</strong>
                   <p>{error()?.message}</p>
-                  <button type="submit">Дахин оролдох</button>
+                  <Button type="submit" variant="outline" disabled={form.state.isSubmitting}>
+                    Дахин оролдох
+                  </Button>
                 </section>
               </Show>
               <section class={formBandClass}>
                 <h2>Холбоо барих</h2>
                 <form.Field name="name">
-                  {field => (
-                    <label>
-                      Нэр <span aria-hidden="true">*</span>
-                      <input
-                        name="name"
-                        required
-                        value={field().state.value}
-                        aria-invalid={Boolean(fieldError('name'))}
-                        aria-describedby={fieldError('name') ? fieldErrorId('name') : undefined}
-                        onInput={e => {
-                          field().handleChange(e.currentTarget.value)
-                          clearFieldError('name')
-                        }}
-                        onBlur={() => field().handleBlur()}
-                        autocomplete="name"
-                      />
-                      <small
-                        class="text-warning min-h-[1.2em] font-extrabold"
-                        id={fieldErrorId('name')}
-                      >
-                        {fieldError('name')}
-                      </small>
-                    </label>
-                  )}
+                  {field => {
+                    const message = () =>
+                      fieldError('name') ?? validationError(field().state.meta.errors)
+                    return (
+                      <Field>
+                        <FieldLabel for={field().name}>
+                          Нэр <span aria-hidden="true">*</span>
+                        </FieldLabel>
+                        <Input
+                          id={field().name}
+                          name={field().name}
+                          required
+                          value={field().state.value}
+                          aria-invalid={Boolean(message())}
+                          aria-describedby={message() ? fieldErrorId('name') : undefined}
+                          onInput={event => {
+                            field().handleChange(event.currentTarget.value)
+                            clearFieldError('name')
+                          }}
+                          onBlur={() => field().handleBlur()}
+                          autocomplete="name"
+                        />
+                        <FieldError id={fieldErrorId('name')}>{message()}</FieldError>
+                      </Field>
+                    )
+                  }}
                 </form.Field>
                 <form.Field name="phone">
-                  {field => (
-                    <label>
-                      Утас <span aria-hidden="true">*</span>
-                      <input
-                        name="phone"
-                        inputmode="tel"
-                        required
-                        value={field().state.value}
-                        aria-invalid={Boolean(fieldError('phone'))}
-                        aria-describedby={fieldError('phone') ? fieldErrorId('phone') : undefined}
-                        onInput={e => {
-                          field().handleChange(e.currentTarget.value)
-                          clearFieldError('phone')
-                        }}
-                        onBlur={() => field().handleBlur()}
-                        placeholder="9911 2233"
-                        autocomplete="tel"
-                      />
-                      <small
-                        class="text-warning min-h-[1.2em] font-extrabold"
-                        id={fieldErrorId('phone')}
-                      >
-                        {fieldError('phone')}
-                      </small>
-                    </label>
-                  )}
+                  {field => {
+                    const message = () =>
+                      fieldError('phone') ?? validationError(field().state.meta.errors)
+                    return (
+                      <Field>
+                        <FieldLabel for={field().name}>
+                          Утас <span aria-hidden="true">*</span>
+                        </FieldLabel>
+                        <Input
+                          id={field().name}
+                          name={field().name}
+                          inputmode="tel"
+                          required
+                          value={field().state.value}
+                          aria-invalid={Boolean(message())}
+                          aria-describedby={message() ? fieldErrorId('phone') : undefined}
+                          onInput={event => {
+                            field().handleChange(event.currentTarget.value)
+                            clearFieldError('phone')
+                          }}
+                          onBlur={() => field().handleBlur()}
+                          placeholder="9911 2233"
+                          autocomplete="tel"
+                        />
+                        <FieldError id={fieldErrorId('phone')}>{message()}</FieldError>
+                      </Field>
+                    )
+                  }}
                 </form.Field>
               </section>
               <section class={formBandClass}>
                 <h2>Улаанбаатар хүргэлт</h2>
                 <form.Field name="district">
                   {field => (
-                    <label>
-                      Дүүрэг <span aria-hidden="true">*</span>
-                      <select
-                        name="district"
+                    <Field>
+                      <FieldLabel for={field().name}>
+                        Дүүрэг <span aria-hidden="true">*</span>
+                      </FieldLabel>
+                      <NativeSelect
+                        class="w-full"
+                        id={field().name}
+                        name={field().name}
                         required
                         value={field().state.value}
-                        onChange={e =>
-                          field().handleChange(e.currentTarget.value as (typeof districts)[number])
+                        onChange={event =>
+                          field().handleChange(
+                            event.currentTarget.value as (typeof districts)[number],
+                          )
                         }
+                        onBlur={() => field().handleBlur()}
                       >
-                        <For each={districts}>{district => <option>{district}</option>}</For>
-                      </select>
-                    </label>
+                        <For each={districts}>
+                          {district => (
+                            <NativeSelectOption value={district}>{district}</NativeSelectOption>
+                          )}
+                        </For>
+                      </NativeSelect>
+                    </Field>
                   )}
                 </form.Field>
                 <form.Field name="khoroo">
-                  {field => (
-                    <label>
-                      Хороо <span aria-hidden="true">*</span>
-                      <input
-                        name="khoroo"
-                        required
-                        value={field().state.value}
-                        aria-invalid={Boolean(fieldError('khoroo'))}
-                        aria-describedby={fieldError('khoroo') ? fieldErrorId('khoroo') : undefined}
-                        onInput={e => {
-                          field().handleChange(e.currentTarget.value)
-                          clearFieldError('khoroo')
-                        }}
-                      />
-                      <small
-                        class="text-warning min-h-[1.2em] font-extrabold"
-                        id={fieldErrorId('khoroo')}
-                      >
-                        {fieldError('khoroo')}
-                      </small>
-                    </label>
-                  )}
+                  {field => {
+                    const message = () =>
+                      fieldError('khoroo') ?? validationError(field().state.meta.errors)
+                    return (
+                      <Field>
+                        <FieldLabel for={field().name}>
+                          Хороо <span aria-hidden="true">*</span>
+                        </FieldLabel>
+                        <Input
+                          id={field().name}
+                          name={field().name}
+                          required
+                          value={field().state.value}
+                          aria-invalid={Boolean(message())}
+                          aria-describedby={message() ? fieldErrorId('khoroo') : undefined}
+                          onInput={event => {
+                            field().handleChange(event.currentTarget.value)
+                            clearFieldError('khoroo')
+                          }}
+                          onBlur={() => field().handleBlur()}
+                        />
+                        <FieldError id={fieldErrorId('khoroo')}>{message()}</FieldError>
+                      </Field>
+                    )
+                  }}
                 </form.Field>
                 <form.Field name="address">
-                  {field => (
-                    <label>
-                      Дэлгэрэнгүй хаяг <span aria-hidden="true">*</span>
-                      <textarea
-                        name="address"
-                        required
-                        value={field().state.value}
-                        aria-invalid={Boolean(fieldError('address'))}
-                        aria-describedby={
-                          fieldError('address') ? fieldErrorId('address') : undefined
-                        }
-                        onInput={e => {
-                          field().handleChange(e.currentTarget.value)
-                          clearFieldError('address')
-                        }}
-                      />
-                      <small
-                        class="text-warning min-h-[1.2em] font-extrabold"
-                        id={fieldErrorId('address')}
-                      >
-                        {fieldError('address')}
-                      </small>
-                    </label>
-                  )}
+                  {field => {
+                    const message = () =>
+                      fieldError('address') ?? validationError(field().state.meta.errors)
+                    return (
+                      <Field>
+                        <FieldLabel for={field().name}>
+                          Дэлгэрэнгүй хаяг <span aria-hidden="true">*</span>
+                        </FieldLabel>
+                        <Textarea
+                          id={field().name}
+                          name={field().name}
+                          required
+                          value={field().state.value}
+                          aria-invalid={Boolean(message())}
+                          aria-describedby={message() ? fieldErrorId('address') : undefined}
+                          onInput={event => {
+                            field().handleChange(event.currentTarget.value)
+                            clearFieldError('address')
+                          }}
+                          onBlur={() => field().handleBlur()}
+                        />
+                        <FieldError id={fieldErrorId('address')}>{message()}</FieldError>
+                      </Field>
+                    )
+                  }}
                 </form.Field>
                 <form.Field name="notes">
-                  {field => (
-                    <label>
-                      Нэмэлт тайлбар <small>(заавал биш)</small>
-                      <textarea
-                        name="notes"
-                        value={field().state.value}
-                        onInput={e => field().handleChange(e.currentTarget.value)}
-                      />
-                    </label>
-                  )}
+                  {field => {
+                    const message = () => validationError(field().state.meta.errors)
+                    return (
+                      <Field>
+                        <FieldLabel for={field().name}>Нэмэлт тайлбар</FieldLabel>
+                        <FieldDescription>Заавал биш</FieldDescription>
+                        <Textarea
+                          id={field().name}
+                          name={field().name}
+                          value={field().state.value}
+                          aria-invalid={Boolean(message())}
+                          aria-describedby={message() ? fieldErrorId('notes') : undefined}
+                          onInput={event => field().handleChange(event.currentTarget.value)}
+                          onBlur={() => field().handleBlur()}
+                        />
+                        <FieldError id={fieldErrorId('notes')}>{message()}</FieldError>
+                      </Field>
+                    )
+                  }}
                 </form.Field>
                 <Show when={error()?._tag === 'DeliveryUnavailable'}>
                   <div class={errorPanelClass}>
@@ -381,40 +465,54 @@ function FormOwner() {
               >
                 <h2>Төлбөр</h2>
                 <form.Field name="paymentMethod">
-                  {field => (
-                    <div role="radiogroup">
-                      <label>
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          checked={field().state.value === 'qpay'}
-                          onChange={() => field().handleChange('qpay')}
-                        />{' '}
-                        QPay <small>QR болон банкны апп</small>
-                      </label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          checked={field().state.value === 'bank_transfer'}
-                          onChange={() => field().handleChange('bank_transfer')}
-                        />{' '}
-                        Дансаар шилжүүлэх <small>Ажилтан баталгаажуулна</small>
-                      </label>
-                    </div>
-                  )}
+                  {field => {
+                    const message = () => validationError(field().state.meta.errors)
+                    return (
+                      <Field>
+                        <RadioGroup
+                          name={field().name}
+                          required
+                          value={field().state.value}
+                          aria-invalid={Boolean(message())}
+                          aria-describedby={message() ? fieldErrorId('paymentMethod') : undefined}
+                          onChange={value =>
+                            field().handleChange(value as CheckoutFormValues['paymentMethod'])
+                          }
+                          onBlur={() => field().handleBlur()}
+                        >
+                          <FieldLabel for="payment-qpay">
+                            <RadioGroupItem id="payment-qpay" value="qpay" />
+                            <span>
+                              QPay <small>QR болон банкны апп</small>
+                            </span>
+                          </FieldLabel>
+                          <FieldLabel for="payment-bank-transfer">
+                            <RadioGroupItem id="payment-bank-transfer" value="bank_transfer" />
+                            <span>
+                              Дансаар шилжүүлэх <small>Ажилтан баталгаажуулна</small>
+                            </span>
+                          </FieldLabel>
+                        </RadioGroup>
+                        <FieldError id={fieldErrorId('paymentMethod')}>{message()}</FieldError>
+                      </Field>
+                    )
+                  }}
                 </form.Field>
                 <Show when={error()?._tag === 'PaymentSetupFailed'}>
                   <div class={errorPanelClass}>
                     <p>{error()?.message}</p>
-                    <button type="submit">Дахин оролдох</button>
+                    <Button type="submit" variant="outline" disabled={form.state.isSubmitting}>
+                      Дахин оролдох
+                    </Button>
                     <Show when={error()?.canUseBankTransfer}>
-                      <button
+                      <Button
                         type="button"
+                        variant="secondary"
+                        disabled={form.state.isSubmitting}
                         onClick={() => form.setFieldValue('paymentMethod', 'bank_transfer')}
                       >
                         Дансаар төлөх
-                      </button>
+                      </Button>
                     </Show>
                   </div>
                 </Show>
@@ -433,13 +531,17 @@ function FormOwner() {
                 )}
               </For>
               <div class="py-4">Хүргэлтийн төлбөрийг сервер баталгаажуулж нийт дүнд нэмнэ.</div>
-              <button
-                class={`${actionClass} bg-ink text-paper w-full`}
-                type="submit"
-                disabled={checkout.isPending}
-              >
-                {checkout.isPending ? 'Баталгаажуулж байна…' : 'Захиалга үүсгэх →'}
-              </button>
+              <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting] as const}>
+                {state => (
+                  <Button
+                    class={`${actionClass} bg-ink text-paper w-full`}
+                    type="submit"
+                    disabled={!state()[0] || state()[1]}
+                  >
+                    {state()[1] ? 'Баталгаажуулж байна…' : 'Захиалга үүсгэх →'}
+                  </Button>
+                )}
+              </form.Subscribe>
             </aside>
           </form>
         </Show>

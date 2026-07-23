@@ -104,6 +104,9 @@ importers:
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.3
+      typebox:
+        specifier: 'catalog:'
+        version: 1.0.76
     devDependencies:
       '@types/node':
         specifier: ^26.1.1
