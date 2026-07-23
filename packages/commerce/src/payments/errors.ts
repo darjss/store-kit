@@ -1,6 +1,7 @@
 import type {
   BankTransferClaimError,
   PaymentConfirmationError,
+  PaymentRefreshError,
   PaymentStatus,
 } from '@store-kit/contracts/payments'
 
@@ -16,6 +17,19 @@ export const paymentInsufficientStock = (variantIds: string[]) =>
     message: 'Үлдэгдэл хүрэлцэхгүй тул төлбөрийг баталсангүй.',
     variantIds,
   }) satisfies PaymentConfirmationError
+
+export const paymentVerificationFailed = () =>
+  ({
+    _tag: 'PaymentVerificationFailed',
+    message: 'QPay төлбөрийг одоогоор шалгаж чадсангүй.',
+    retryable: true,
+  }) satisfies PaymentRefreshError
+
+export const qpayInvoiceMissing = () =>
+  ({
+    _tag: 'PaymentMismatch',
+    message: 'QPay нэхэмжлэл олдсонгүй.',
+  }) satisfies PaymentRefreshError
 
 export const bankTransferClaimNotAllowed = (paymentStatus: PaymentStatus) =>
   ({

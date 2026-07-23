@@ -127,7 +127,10 @@ importers:
         version: 2.10.0
       elysia:
         specifier: ^1.4.29
-        version: 1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2(typebox@1.3.6))(file-type@22.0.1(supports-color@10.2.2))(openapi-types@12.1.3)
+        version: 1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2(typebox@1.0.76))(file-type@22.0.1(supports-color@10.2.2))(openapi-types@12.1.3)
+      typebox:
+        specifier: 'catalog:'
+        version: 1.0.76
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260721.1
@@ -5914,6 +5917,16 @@ snapshots:
 
   electron-to-chromium@1.5.394: {}
 
+  elysia@1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2(typebox@1.0.76))(file-type@22.0.1(supports-color@10.2.2))(openapi-types@12.1.3):
+    dependencies:
+      '@sinclair/typebox': 0.34.52
+      cookie: 1.1.1
+      exact-mirror: 1.2.2(typebox@1.0.76)
+      fast-decode-uri-component: 1.0.1
+      file-type: 22.0.1(supports-color@10.2.2)
+      memoirist: 0.4.0
+      openapi-types: 12.1.3
+
   elysia@1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2(typebox@1.3.6))(file-type@22.0.1(supports-color@10.2.2))(openapi-types@12.1.3):
     dependencies:
       '@sinclair/typebox': 0.34.52
@@ -6004,6 +6017,10 @@ snapshots:
       '@types/estree': 1.0.9
 
   eventemitter3@5.0.4: {}
+
+  exact-mirror@1.2.2(typebox@1.0.76):
+    optionalDependencies:
+      typebox: 1.0.76
 
   exact-mirror@1.2.2(typebox@1.3.6):
     optionalDependencies:

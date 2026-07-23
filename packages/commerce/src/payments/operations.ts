@@ -4,6 +4,8 @@ import type {
   PaymentConfirmation,
   PaymentConfirmationError,
   PaymentMethod,
+  PaymentRefresh,
+  PaymentRefreshError,
 } from '@store-kit/contracts/payments'
 import { query as dbQuery } from '@store-kit/db'
 /* oxlint-disable eslint/no-underscore-dangle */
@@ -11,16 +13,20 @@ import { Result } from 'better-result'
 import { match } from 'dismatch'
 import { matchAsync } from 'dismatch/async'
 
+import { verifyQPayCallback, verifyQPayPayment } from '../adapters/qpay'
 import {
   answerTelegramCallback,
   editTelegramMessage,
   sendBankClaimMessage,
+  sendPaidOrderMessage,
 } from '../adapters/telegram'
 import { orderOperations } from '../orders/operations'
 import {
   bankTransferClaimNotAllowed,
   paymentInsufficientStock,
   paymentMismatch,
+  paymentVerificationFailed,
+  qpayInvoiceMissing,
   staffNotificationFailed,
 } from './errors'
 
@@ -36,15 +42,17 @@ export const confirmOrderPayment = async (
   )
     return Result.err<PaymentConfirmation, PaymentConfirmationError>(paymentMismatch())
 
-  if (current.payment.status === 'paid')
+  if (current.payment.status === 'paid') {
+    const stockApplied = current.status !== 'new'
     return Result.ok<PaymentConfirmation, PaymentConfirmationError>({
       orderId,
       paymentStatus: 'paid',
-      orderStatus: current.status === 'confirmed' ? 'confirmed' : 'new',
-      stockApplied: current.status !== 'new',
-      needsStaffAction: current.status === 'new',
+      orderStatus: stockApplied ? 'confirmed' : 'new',
+      stockApplied,
+      needsStaffAction: !stockApplied,
       newlyPaid: false,
     })
+  }
 
   const paidAt = Date.now()
   const result = await dbQuery.payments.confirmAndDecrementStock({
@@ -111,8 +119,44 @@ export const confirmOrderPayment = async (
   })
 }
 
-export const findQPayOrder = (invoiceId: string) =>
-  dbQuery.payments.findByProviderInvoiceId(invoiceId)
+export const refreshQPayPayment = async (orderId: string, statusToken: string) => {
+  const order = await orderOperations.getPrivateStatus(orderId, statusToken)
+  if (order.status === 'error') return Result.err<PaymentRefresh, PaymentRefreshError>(order.error)
+
+  const invoiceId = order.value.payment?.providerInvoiceId
+  if (!invoiceId) return Result.err<PaymentRefresh, PaymentRefreshError>(qpayInvoiceMissing())
+
+  const verified = await verifyQPayPayment(invoiceId)
+  if (verified.status === 'error')
+    return Result.err<PaymentRefresh, PaymentRefreshError>(paymentVerificationFailed())
+  if (!verified.value)
+    return Result.ok<PaymentRefresh, PaymentRefreshError>({ paymentStatus: 'pending' })
+
+  const confirmation = await confirmOrderPayment(orderId, { ...verified.value, method: 'qpay' })
+  return confirmation.status === 'ok'
+    ? Result.ok<PaymentRefresh, PaymentRefreshError>(confirmation.value)
+    : Result.err<PaymentRefresh, PaymentRefreshError>(confirmation.error)
+}
+
+export const handleQPayCallback = async (paymentId: string) => {
+  const verified = await verifyQPayCallback(paymentId)
+  if (verified.status === 'error') return
+
+  const localPayment = await dbQuery.payments.findByProviderInvoiceId(verified.value.invoiceId)
+  if (!localPayment) return
+
+  const confirmation = await confirmOrderPayment(localPayment.orderId, {
+    paymentId: verified.value.paymentId,
+    amountMnt: verified.value.amountMnt,
+    method: 'qpay',
+  })
+  if (confirmation.status !== 'ok' || !confirmation.value.newlyPaid) return
+
+  const label = confirmation.value.needsStaffAction
+    ? `ЯАРАЛТАЙ: үлдэгдэл хүрэлцэхгүй · ${localPayment.orderId}`
+    : localPayment.orderId
+  await sendPaidOrderMessage(label, localPayment.amountMnt)
+}
 
 type BankTransferCallbackAction = { type: 'confirm' } | { type: 'reject' }
 
@@ -213,7 +257,8 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
 
 export const paymentOperations = {
   confirmOrderPayment,
-  findQPayOrder,
+  refreshQPayPayment,
+  handleQPayCallback,
   claimBankTransfer,
   handleBankTransferCallback,
 }

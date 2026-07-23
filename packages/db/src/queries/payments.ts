@@ -76,7 +76,10 @@ export const confirmAndDecrementStock = async (
   }
   if (currentPayment.status === 'paid') {
     const currentOrder = await db.query.order.findFirst({ where: { id: input.orderId } })
-    return { status: 'already-paid', stockApplied: currentOrder?.status === 'confirmed' }
+    return {
+      status: 'already-paid',
+      stockApplied: currentOrder !== undefined && currentOrder.status !== 'new',
+    }
   }
 
   const lines = await db
@@ -170,7 +173,10 @@ export const confirmAndDecrementStock = async (
   const paymentAfterBatch = await findByOrderId(input.orderId)
   if (paymentAfterBatch?.status === 'paid') {
     const currentOrder = await db.query.order.findFirst({ where: { id: input.orderId } })
-    return { status: 'already-paid', stockApplied: currentOrder?.status === 'confirmed' }
+    return {
+      status: 'already-paid',
+      stockApplied: currentOrder !== undefined && currentOrder.status !== 'new',
+    }
   }
   if (paymentAfterBatch) return { status: 'insufficient-stock', method: paymentAfterBatch.method }
   return { status: 'payment-mismatch' }
