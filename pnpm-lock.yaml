@@ -151,9 +151,15 @@ importers:
       '@elysiajs/eden':
         specifier: ^1.4.9
         version: 1.4.9(elysia@1.4.29(@sinclair/typebox@0.34.52)(exact-mirror@1.2.2(typebox@1.3.6))(file-type@22.0.1(supports-color@10.2.2))(openapi-types@12.1.3))
+      '@solid-primitives/storage':
+        specifier: ^4.4.0
+        version: 4.4.0(solid-js@1.9.14)
       '@store-kit/api':
         specifier: workspace:*
         version: link:../api
+      '@store-kit/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@tanstack/solid-query':
         specifier: 'catalog:'
         version: 5.101.3(solid-js@1.9.14)
@@ -1876,6 +1882,18 @@ packages:
     resolution: {integrity: sha512-LgtVaVBtB7EbmS4+M0b8xY5Iq6pUWXBsIC4VgtrFKDGDdyCaDt88sHk0fUlx1Enxm/XZnZyLXJABRoa39RjJqA==}
     peerDependencies:
       solid-js: ^1.6.12
+
+  '@solid-primitives/storage@4.4.0':
+    resolution: {integrity: sha512-+u0dpTqrUG7h+IMfmGLCx7vx2Q0Eon6paBgzcWhEP/dauElpGU3ElpZZOZgw8YKR1+J4X4ENiAL0na3VH8RWMg==}
+    peerDependencies:
+      '@tauri-apps/plugin-store': '*'
+      solid-js: ^1.6.12
+      solid-start: '*'
+    peerDependenciesMeta:
+      '@tauri-apps/plugin-store':
+        optional: true
+      solid-start:
+        optional: true
 
   '@solid-primitives/trigger@1.2.4':
     resolution: {integrity: sha512-Ju0e+ZOD7hpOp7nptJimvDSZHWFvIvF9iBWMvuwt30smX7c5wmB8Kmc0AdDuv0wOTi06PQ1J5IrP1WJbH2yUBQ==}
@@ -4980,6 +4998,11 @@ snapshots:
       solid-js: 1.9.14
 
   '@solid-primitives/static-store@0.1.4(solid-js@1.9.14)':
+    dependencies:
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.14)
+      solid-js: 1.9.14
+
+  '@solid-primitives/storage@4.4.0(solid-js@1.9.14)':
     dependencies:
       '@solid-primitives/utils': 6.4.1(solid-js@1.9.14)
       solid-js: 1.9.14

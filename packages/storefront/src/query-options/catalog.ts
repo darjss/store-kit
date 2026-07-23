@@ -10,6 +10,7 @@ const normalizeProductListFilters = (filters: ProductListFilters) => {
   return {
     ...(filters.category === undefined ? {} : { category: filters.category }),
     ...(filters.brand === undefined ? {} : { brand: filters.brand }),
+    ...(filters.useCase === undefined ? {} : { useCase: filters.useCase }),
     ...(filters.featured === undefined ? {} : { featured: filters.featured }),
     ...(query ? { query } : {}),
     ...(filters.minPrice === undefined ? {} : { minPrice: filters.minPrice }),

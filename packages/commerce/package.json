@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/operations/system-status.ts",
-    "./catalog": "./src/catalog/operations.ts"
+    "./catalog": "./src/catalog/operations.ts",
+    "./shopping": "./src/shopping/operations.ts",
+    "./shopping/errors": "./src/shopping/errors.ts"
   },
   "dependencies": {
     "@store-kit/db": "workspace:*",

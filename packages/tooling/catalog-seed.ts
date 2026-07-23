@@ -7,6 +7,7 @@ import {
   nonNegativeIntegerSchema,
   productDetailsSchema,
   productStatusSchema,
+  productUseCaseSchema,
   slugSchema,
   variantOptionsSchema,
 } from '@store-kit/db/schemas'
@@ -87,12 +88,23 @@ const productSeedSchema = strictObject({
   description: nullableStringSchema,
   status: productStatusSchema,
   featured: Type.Boolean(),
+  useCases: Type.Array(productUseCaseSchema, { uniqueItems: true }),
   details: Type.Optional(Type.Union([productDetailsSchema, Type.Null()])),
   images: Type.Array(imageSeedSchema),
   variants: Type.Array(variantSeedSchema, { minItems: 1 }),
 })
 
+const checkoutSettingsSeedSchema = strictObject({
+  deliveryFeeMnt: nonNegativeIntegerSchema,
+  bankName: nonEmptyStringSchema,
+  bankAccountName: nonEmptyStringSchema,
+  bankAccountNumber: nonEmptyStringSchema,
+  checkoutHelpText: nullableStringSchema,
+  orderConfirmationText: nullableStringSchema,
+})
+
 const pluggedCatalogSeedSchema = strictObject({
+  checkoutSettings: checkoutSettingsSeedSchema,
   brands: Type.Array(brandSeedSchema),
   categories: Type.Array(categorySeedSchema),
   products: Type.Array(productSeedSchema),
@@ -325,6 +337,41 @@ const buildSql = (seed: CatalogSeed) => {
     seed.products.flatMap(product => product.images.map(image => [image.r2Key, image.id] as const)),
   )
 
+  statements.push(
+    upsert(
+      'checkout_settings',
+      [
+        'id',
+        'delivery_fee_mnt',
+        'bank_name',
+        'bank_account_name',
+        'bank_account_number',
+        'checkout_help_text',
+        'order_confirmation_text',
+        'updated_at',
+      ],
+      [
+        sqlText('default'),
+        String(seed.checkoutSettings.deliveryFeeMnt),
+        sqlText(seed.checkoutSettings.bankName),
+        sqlText(seed.checkoutSettings.bankAccountName),
+        sqlText(seed.checkoutSettings.bankAccountNumber),
+        sqlNullableText(seed.checkoutSettings.checkoutHelpText),
+        sqlNullableText(seed.checkoutSettings.orderConfirmationText),
+        'unixepoch()',
+      ],
+      [
+        'delivery_fee_mnt',
+        'bank_name',
+        'bank_account_name',
+        'bank_account_number',
+        'checkout_help_text',
+        'order_confirmation_text',
+        'updated_at',
+      ],
+    ),
+  )
+
   for (const brand of seed.brands) {
     statements.push(
       upsert(
@@ -379,6 +426,7 @@ const buildSql = (seed: CatalogSeed) => {
           'status',
           'featured',
           'details',
+          'use_cases',
           'created_at',
           'updated_at',
         ],
@@ -393,6 +441,7 @@ const buildSql = (seed: CatalogSeed) => {
           sqlText(product.status),
           sqlBoolean(product.featured),
           product.details ? sqlJson(product.details) : 'NULL',
+          sqlText(JSON.stringify(product.useCases)),
           'unixepoch()',
           'unixepoch()',
         ],
@@ -406,6 +455,7 @@ const buildSql = (seed: CatalogSeed) => {
           'status',
           'featured',
           'details',
+          'use_cases',
           'updated_at',
         ],
       ),
