@@ -1,10 +1,21 @@
 import { Value } from 'typebox/value'
 import { expect, test } from 'vite-plus/test'
 
-import { insertOrderLineSchema, insertOrderSchema, insertPaymentSchema } from './shopping'
+import {
+  createOrderId,
+  createOrderLineId,
+  createPaymentId,
+  defaultCheckoutSettingsId,
+} from '../ids'
+import {
+  insertCheckoutSettingsSchema,
+  insertOrderLineSchema,
+  insertOrderSchema,
+  insertPaymentSchema,
+} from './shopping'
 
 const order = {
-  id: 'order-1',
+  id: createOrderId(),
   number: 'P-1001',
   statusTokenHash: 'hash',
   status: 'new',
@@ -21,7 +32,7 @@ const order = {
 } as const
 
 const line = {
-  id: 'line-1',
+  id: createOrderLineId(),
   orderId: order.id,
   productName: 'Aster',
   variantName: 'Graphite',
@@ -33,7 +44,7 @@ const line = {
 } as const
 
 const payment = {
-  id: 'payment-1',
+  id: createPaymentId(),
   orderId: order.id,
   method: 'bank_transfer',
   status: 'pending',
@@ -48,4 +59,21 @@ test('shopping schemas accept integer MNT snapshots and controlled states', () =
   expect(Value.Check(insertPaymentSchema, payment)).toBe(true)
   expect(Value.Check(insertPaymentSchema, { ...payment, method: 'cash' })).toBe(false)
   expect(Value.Check(insertPaymentSchema, { ...payment, amountMnt: 10.5 })).toBe(false)
+  expect(Value.Check(insertOrderSchema, { ...order, id: createPaymentId() })).toBe(false)
+})
+
+test('checkout settings require the singleton cfg TypeID when an ID is supplied', () => {
+  const settings = {
+    id: defaultCheckoutSettingsId,
+    deliveryFeeMnt: 5_000,
+    bankName: 'Bank',
+    bankAccountName: 'Plugged',
+    bankAccountNumber: '5000000000',
+    updatedAt: 1,
+  }
+
+  expect(Value.Check(insertCheckoutSettingsSchema, settings)).toBe(true)
+  expect(Value.Check(insertCheckoutSettingsSchema, { ...settings, id: createOrderId() })).toBe(
+    false,
+  )
 })

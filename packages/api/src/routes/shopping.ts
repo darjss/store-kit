@@ -13,6 +13,7 @@ import type {
   PaymentRefresh,
   PaymentRefreshError,
 } from '@store-kit/contracts/payments'
+import { entityIdPrefixes, typeIdPattern } from '@store-kit/db/ids'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
@@ -76,7 +77,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
       )
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: t.String({ pattern: typeIdPattern(entityIdPrefixes.order) }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },
@@ -90,7 +91,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
         await claimBankTransfer(params.id, headers['x-order-token'] ?? ''),
       ),
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: t.String({ pattern: typeIdPattern(entityIdPrefixes.order) }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },
@@ -129,7 +130,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
         : Result.serialize(Result.err<PaymentRefresh, PaymentRefreshError>(confirmation.error))
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: t.String({ pattern: typeIdPattern(entityIdPrefixes.order) }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },

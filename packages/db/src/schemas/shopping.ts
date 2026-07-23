@@ -4,23 +4,41 @@ import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'driz
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
 
+import {
+  checkoutSettingsIdSchema,
+  orderIdSchema,
+  orderLineIdSchema,
+  paymentIdSchema,
+  productIdSchema,
+  productVariantIdSchema,
+} from '../ids'
 import { checkoutSettings, order, orderLine, payment } from '../schema/shopping'
 import { nonNegativeIntegerSchema, variantOptionsSchema } from './catalog'
 
-const settingsRefinements = { deliveryFeeMnt: () => nonNegativeIntegerSchema }
+const settingsRefinements = {
+  id: () => checkoutSettingsIdSchema,
+  deliveryFeeMnt: () => nonNegativeIntegerSchema,
+}
 const orderRefinements = {
+  id: () => orderIdSchema,
   status: () => orderStatusSchema,
   subtotalMnt: () => nonNegativeIntegerSchema,
   deliveryFeeMnt: () => nonNegativeIntegerSchema,
   totalMnt: () => nonNegativeIntegerSchema,
 }
 const lineRefinements = {
+  id: () => orderLineIdSchema,
+  orderId: () => orderIdSchema,
+  productId: () => Type.Union([productIdSchema, Type.Null()]),
+  variantId: () => Type.Union([productVariantIdSchema, Type.Null()]),
   options: () => variantOptionsSchema,
   unitPriceMnt: () => nonNegativeIntegerSchema,
   quantity: () => Type.Integer({ minimum: 1 }),
   lineTotalMnt: () => nonNegativeIntegerSchema,
 }
 const paymentRefinements = {
+  id: () => paymentIdSchema,
+  orderId: () => orderIdSchema,
   method: () => paymentMethodSchema,
   status: () => paymentStatusSchema,
   amountMnt: () => nonNegativeIntegerSchema,

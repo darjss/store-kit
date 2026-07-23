@@ -1,14 +1,24 @@
 import { sql } from 'drizzle-orm'
 import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
+import {
+  createOrderId,
+  createOrderLineId,
+  createPaymentId,
+  defaultCheckoutSettingsId,
+  entityIdPrefixes,
+} from '../ids.ts'
 import { product, productVariant } from './catalog'
+import { typeIdCheck } from './typeid-check.ts'
 
 export type OrderLineOptions = Record<string, string>
 
 export const checkoutSettings = sqliteTable(
   'checkout_settings',
   {
-    id: text('id').primaryKey(),
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => defaultCheckoutSettingsId),
     deliveryFeeMnt: integer('delivery_fee_mnt').notNull(),
     bankName: text('bank_name').notNull(),
     bankAccountName: text('bank_account_name').notNull(),
@@ -18,7 +28,10 @@ export const checkoutSettings = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   table => [
-    check('checkout_settings_id_check', sql`${table.id} = 'default'`),
+    check(
+      'checkout_settings_id_check',
+      sql`${table.id} = ${sql.raw(`'${defaultCheckoutSettingsId}'`)}`,
+    ),
     check('checkout_settings_delivery_fee_mnt_check', sql`${table.deliveryFeeMnt} >= 0`),
   ],
 )
@@ -26,7 +39,7 @@ export const checkoutSettings = sqliteTable(
 export const order = sqliteTable(
   'customer_order',
   {
-    id: text('id').primaryKey(),
+    id: text('id').primaryKey().$defaultFn(createOrderId),
     number: text('number').notNull(),
     statusTokenHash: text('status_token_hash').notNull(),
     status: text('status', {
@@ -61,13 +74,14 @@ export const order = sqliteTable(
       'customer_order_total_check',
       sql`${table.totalMnt} = ${table.subtotalMnt} + ${table.deliveryFeeMnt}`,
     ),
+    check('customer_order_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.order)),
   ],
 )
 
 export const orderLine = sqliteTable(
   'order_line',
   {
-    id: text('id').primaryKey(),
+    id: text('id').primaryKey().$defaultFn(createOrderLineId),
     orderId: text('order_id')
       .notNull()
       .references(() => order.id, { onDelete: 'cascade' }),
@@ -90,13 +104,14 @@ export const orderLine = sqliteTable(
       'order_line_calculated_total_check',
       sql`${table.lineTotalMnt} = ${table.unitPriceMnt} * ${table.quantity}`,
     ),
+    check('order_line_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.orderLine)),
   ],
 )
 
 export const payment = sqliteTable(
   'payment',
   {
-    id: text('id').primaryKey(),
+    id: text('id').primaryKey().$defaultFn(createPaymentId),
     orderId: text('order_id')
       .notNull()
       .references(() => order.id, { onDelete: 'cascade' }),
@@ -124,5 +139,6 @@ export const payment = sqliteTable(
       sql`${table.status} in ('pending', 'claimed', 'confirming', 'paid', 'failed')`,
     ),
     check('payment_amount_mnt_check', sql`${table.amountMnt} >= 0`),
+    check('payment_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.payment)),
   ],
 )

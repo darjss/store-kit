@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 
 import { db } from '../client'
+import { defaultCheckoutSettingsId } from '../ids'
 import { product, productImage, productVariant, productVariantImage } from '../schema/catalog'
 import { order, orderLine, payment } from '../schema/shopping'
 import type { NewOrder, NewOrderLine, NewPayment } from '../schemas/shopping'
@@ -53,7 +54,7 @@ export const findCartVariants = async (items: CartLineInput[]) => {
 }
 
 export const findCheckoutSettings = () =>
-  db.query.checkoutSettings.findFirst({ where: { id: 'default' } })
+  db.query.checkoutSettings.findFirst({ where: { id: defaultCheckoutSettingsId } })
 
 export const insertOrderWithLinesAndPayment = async (aggregate: NewOrderAggregate) => {
   await db.batch([

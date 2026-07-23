@@ -7,6 +7,7 @@ import type {
   PrivateOrderError,
 } from '@store-kit/contracts'
 import { checkoutInputSchema } from '@store-kit/contracts/checkout'
+import { createOrderId, createOrderLineId, createPaymentId } from '@store-kit/db/ids'
 /* oxlint-disable eslint/no-underscore-dangle */
 import {
   findCartVariants,
@@ -129,7 +130,7 @@ export const createCheckoutOrder = async (input: unknown) => {
       corrections,
     })
 
-  const orderId = crypto.randomUUID()
+  const orderId = createOrderId()
   const orderNumber = `PLG-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
   const statusToken = `${crypto.randomUUID()}${crypto.randomUUID()}`
   const subtotalMnt = input.items.reduce(
@@ -174,7 +175,7 @@ export const createCheckoutOrder = async (input: unknown) => {
     lines: input.items.map(item => {
       const variant = byId.get(item.variantId)!
       return {
-        id: crypto.randomUUID(),
+        id: createOrderLineId(),
         orderId,
         productId: variant.productId,
         variantId: variant.variantId,
@@ -189,7 +190,7 @@ export const createCheckoutOrder = async (input: unknown) => {
       }
     }),
     payment: {
-      id: crypto.randomUUID(),
+      id: createPaymentId(),
       orderId,
       method: input.paymentMethod,
       status: 'pending',

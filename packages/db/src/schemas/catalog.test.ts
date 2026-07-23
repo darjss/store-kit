@@ -1,6 +1,7 @@
 import { Value } from 'typebox/value'
 import { expect, test } from 'vite-plus/test'
 
+import { createProductId } from '../ids'
 import {
   insertProductSchema,
   productListFiltersSchema,
@@ -28,4 +29,6 @@ test('generated product schemas keep insert and update optionality', () => {
   expect(Value.Check(updateProductSchema, {})).toBe(true)
   expect(Value.Check(updateProductSchema, { slug: 'valid-slug' })).toBe(true)
   expect(Value.Check(updateProductSchema, { slug: 'Invalid Slug' })).toBe(false)
+  expect(Value.Check(updateProductSchema, { id: createProductId() })).toBe(true)
+  expect(Value.Check(updateProductSchema, { id: 'prod_not-a-typeid' })).toBe(false)
 })

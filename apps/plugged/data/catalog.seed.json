@@ -1,13 +1,14 @@
 {
   "brands": [
     {
-      "id": "10000000-0000-4000-8000-000000000001",
+      "id": "brd_0g000000008008000000000001",
       "slug": "plugged-lab",
       "name": "Plugged Lab",
       "description": "Portable audio selected and tested by Plugged."
     }
   ],
   "checkoutSettings": {
+    "id": "cfg_00000000000000000000000001",
     "deliveryFeeMnt": 5000,
     "bankName": "Хаан банк",
     "bankAccountName": "Plugged",
@@ -17,7 +18,7 @@
   },
   "categories": [
     {
-      "id": "20000000-0000-4000-8000-000000000001",
+      "id": "cat_10000000008008000000000001",
       "slug": "in-ear-monitors",
       "name": "In-ear monitors",
       "description": "Wired earphones for everyday listening and stage monitoring.",
@@ -25,7 +26,7 @@
       "active": true
     },
     {
-      "id": "20000000-0000-4000-8000-000000000002",
+      "id": "cat_10000000008008000000000002",
       "slug": "portable-audio",
       "name": "Portable audio",
       "description": "Compact sources and accessories for listening on the move.",
@@ -33,7 +34,7 @@
       "active": true
     },
     {
-      "id": "20000000-0000-4000-8000-000000000003",
+      "id": "cat_10000000008008000000000003",
       "slug": "legacy-audio",
       "name": "Legacy audio",
       "description": "Discontinued catalog items kept for historical records.",
@@ -41,7 +42,7 @@
       "active": false
     },
     {
-      "id": "20000000-0000-4000-8000-000000000004",
+      "id": "cat_10000000008008000000000004",
       "slug": "cables",
       "name": "Cables",
       "description": "Replacement and balanced portable-audio cables.",
@@ -51,7 +52,7 @@
   ],
   "products": [
     {
-      "id": "30000000-0000-4000-8000-000000000001",
+      "id": "prod_1g000000008008000000000001",
       "slug": "aster-modular-iem",
       "brandSlug": "plugged-lab",
       "categorySlug": "in-ear-monitors",
@@ -68,7 +69,7 @@
       },
       "images": [
         {
-          "id": "40000000-0000-4000-8000-000000000001",
+          "id": "img_20000000008008000000000001",
           "source": "data/images/aster-graphite.svg",
           "r2Key": "catalog/products/aster-modular-iem/graphite.svg",
           "contentType": "image/svg+xml",
@@ -76,7 +77,7 @@
           "sortOrder": 10
         },
         {
-          "id": "40000000-0000-4000-8000-000000000002",
+          "id": "img_20000000008008000000000002",
           "source": "data/images/aster-copper.svg",
           "r2Key": "catalog/products/aster-modular-iem/copper.svg",
           "contentType": "image/svg+xml",
@@ -84,7 +85,7 @@
           "sortOrder": 20
         },
         {
-          "id": "40000000-0000-4000-8000-000000000003",
+          "id": "img_20000000008008000000000003",
           "source": "data/images/aster-kit.svg",
           "r2Key": "catalog/products/aster-modular-iem/included-kit.svg",
           "contentType": "image/svg+xml",
@@ -94,7 +95,7 @@
       ],
       "variants": [
         {
-          "id": "50000000-0000-4000-8000-000000000001",
+          "id": "var_2g000000008008000000000001",
           "sku": "PL-ASTER-GR-35",
           "name": "Graphite / 3.5 mm",
           "options": {
@@ -109,7 +110,7 @@
           "imageKeys": ["catalog/products/aster-modular-iem/graphite.svg"]
         },
         {
-          "id": "50000000-0000-4000-8000-000000000002",
+          "id": "var_2g000000008008000000000002",
           "sku": "PL-ASTER-CP-35",
           "name": "Copper / 3.5 mm",
           "options": {
@@ -123,7 +124,7 @@
           "imageKeys": ["catalog/products/aster-modular-iem/copper.svg"]
         },
         {
-          "id": "50000000-0000-4000-8000-000000000003",
+          "id": "var_2g000000008008000000000003",
           "sku": "PL-ASTER-GR-USBC",
           "name": "Graphite / USB-C",
           "options": {
@@ -137,7 +138,7 @@
           "imageKeys": []
         },
         {
-          "id": "50000000-0000-4000-8000-000000000004",
+          "id": "var_2g000000008008000000000004",
           "sku": "PL-ASTER-CP-USBC",
           "name": "Copper / USB-C",
           "options": {
@@ -154,7 +155,7 @@
       "useCases": ["first-iem", "bass", "vocals", "gaming"]
     },
     {
-      "id": "30000000-0000-4000-8000-000000000002",
+      "id": "prod_1g000000008008000000000002",
       "slug": "node-mini-usb-c-dac",
       "brandSlug": "plugged-lab",
       "categorySlug": "portable-audio",
@@ -171,7 +172,7 @@
       },
       "images": [
         {
-          "id": "40000000-0000-4000-8000-000000000004",
+          "id": "img_20000000008008000000000004",
           "source": "data/images/node-mini.svg",
           "r2Key": "catalog/products/node-mini-usb-c-dac/silver.svg",
           "contentType": "image/svg+xml",
@@ -181,7 +182,7 @@
       ],
       "variants": [
         {
-          "id": "50000000-0000-4000-8000-000000000005",
+          "id": "var_2g000000008008000000000005",
           "sku": "PL-NODE-MINI",
           "name": "Default",
           "options": {},
@@ -195,7 +196,7 @@
       "useCases": ["daily-carry", "gaming"]
     },
     {
-      "id": "30000000-0000-4000-8000-000000000003",
+      "id": "prod_1g000000008008000000000003",
       "slug": "arc-mmcx-cable",
       "brandSlug": "plugged-lab",
       "name": "Arc MMCX Cable",
@@ -209,7 +210,7 @@
       "images": [],
       "variants": [
         {
-          "id": "50000000-0000-4000-8000-000000000006",
+          "id": "var_2g000000008008000000000006",
           "sku": "PL-ARC-MMCX",
           "name": "Default",
           "options": {},
@@ -223,7 +224,7 @@
       "useCases": ["daily-carry"]
     },
     {
-      "id": "30000000-0000-4000-8000-000000000004",
+      "id": "prod_1g000000008008000000000004",
       "slug": "ember-bass-iem",
       "brandSlug": "plugged-lab",
       "categorySlug": "in-ear-monitors",
@@ -239,7 +240,7 @@
       },
       "images": [
         {
-          "id": "40000000-0000-4000-8000-000000000005",
+          "id": "img_20000000008008000000000005",
           "source": "data/images/aster-copper.svg",
           "r2Key": "catalog/products/ember-bass-iem/copper.svg",
           "contentType": "image/svg+xml",
@@ -249,7 +250,7 @@
       ],
       "variants": [
         {
-          "id": "50000000-0000-4000-8000-000000000007",
+          "id": "var_2g000000008008000000000007",
           "sku": "PL-EMBER-BA",
           "name": "Default",
           "options": {},
@@ -263,7 +264,7 @@
       "useCases": ["bass", "daily-carry"]
     },
     {
-      "id": "30000000-0000-4000-8000-000000000005",
+      "id": "prod_1g000000008008000000000005",
       "slug": "veil-vocal-iem",
       "brandSlug": "plugged-lab",
       "categorySlug": "in-ear-monitors",
@@ -279,7 +280,7 @@
       },
       "images": [
         {
-          "id": "40000000-0000-4000-8000-000000000006",
+          "id": "img_20000000008008000000000006",
           "source": "data/images/aster-graphite.svg",
           "r2Key": "catalog/products/veil-vocal-iem/graphite.svg",
           "contentType": "image/svg+xml",
@@ -289,7 +290,7 @@
       ],
       "variants": [
         {
-          "id": "50000000-0000-4000-8000-000000000008",
+          "id": "var_2g000000008008000000000008",
           "sku": "PL-VEIL-VOC",
           "name": "Default",
           "options": {},
@@ -303,7 +304,7 @@
       "useCases": ["vocals", "first-iem"]
     },
     {
-      "id": "30000000-0000-4000-8000-000000000006",
+      "id": "prod_1g000000008008000000000006",
       "slug": "node-pro-balanced-dac",
       "brandSlug": "plugged-lab",
       "categorySlug": "portable-audio",
@@ -320,7 +321,7 @@
       },
       "images": [
         {
-          "id": "40000000-0000-4000-8000-000000000007",
+          "id": "img_20000000008008000000000007",
           "source": "data/images/node-mini.svg",
           "r2Key": "catalog/products/node-pro-balanced-dac/silver.svg",
           "contentType": "image/svg+xml",
@@ -330,7 +331,7 @@
       ],
       "variants": [
         {
-          "id": "50000000-0000-4000-8000-000000000009",
+          "id": "var_2g000000008008000000000009",
           "sku": "PL-NODE-PRO",
           "name": "Default",
           "options": {},
@@ -344,7 +345,7 @@
       "useCases": ["gaming", "daily-carry"]
     },
     {
-      "id": "30000000-0000-4000-8000-000000000007",
+      "id": "prod_1g000000008008000000000007",
       "slug": "relay-2pin-cable",
       "brandSlug": "plugged-lab",
       "categorySlug": "cables",
@@ -359,7 +360,7 @@
       },
       "images": [
         {
-          "id": "40000000-0000-4000-8000-000000000008",
+          "id": "img_20000000008008000000000008",
           "source": "data/images/relay-cable.svg",
           "r2Key": "catalog/products/relay-2pin-cable/black.svg",
           "contentType": "image/svg+xml",
@@ -369,7 +370,7 @@
       ],
       "variants": [
         {
-          "id": "50000000-0000-4000-8000-000000000010",
+          "id": "var_2g00000000800800000000000g",
           "sku": "PL-RELAY-2P",
           "name": "Default",
           "options": {},

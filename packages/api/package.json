@@ -9,6 +9,7 @@
   "dependencies": {
     "@store-kit/commerce": "workspace:*",
     "@store-kit/contracts": "workspace:*",
+    "@store-kit/db": "workspace:*",
     "better-result": "catalog:",
     "elysia": "^1.4.29"
   },
