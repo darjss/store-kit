@@ -1,12 +1,15 @@
 ---
-import { transformBaseImageProps } from '@unpic/core/base'
-import { cloudflareImageTransformer } from '@store-kit/storefront/media'
-import { mediaUrl } from '~/media-url'
-import { productImageLayouts } from './product-image';
-import type { ProductImageLayout } from './product-image';
+import { Image } from '@unpic/astro/base'
+
+import {
+  productImageLayouts,
+  productImageOptions,
+  productImageTransformer,
+} from './product-image'
+import type { ProductImageLayout, ProductImageMetadata } from './product-image'
 
 interface Props {
-  image: { r2Key: string; width: number; height: number; alt: string }
+  image: ProductImageMetadata
   layout: ProductImageLayout
   class?: string
   priority?: boolean
@@ -14,23 +17,20 @@ interface Props {
 
 const { image, layout, class: className, priority = false } = Astro.props
 const config = productImageLayouts[layout]
-const isLocal = ['localhost', '127.0.0.1'].includes(Astro.url.hostname)
-const source = isLocal
-  ? new URL(`/media/${image.r2Key.split('/').map(encodeURIComponent).join('/')}`, Astro.url).toString()
-  : mediaUrl(image.r2Key)
-const imageProps = transformBaseImageProps({
-  src: source,
-  alt: image.alt,
-  width: image.width,
-  height: image.height,
-  layout: 'constrained',
-  sizes: config.sizes,
-  breakpoints: [...config.breakpoints],
-  transformer: cloudflareImageTransformer,
-  operations: { quality: 80 },
-  priority,
-  unstyled: true,
-})
 ---
 
-<img {...imageProps} width={image.width} height={image.height} class={className} />
+<Image
+  src={image.url}
+  alt={image.alt}
+  width={image.width}
+  height={image.height}
+  layout="constrained"
+  sizes={config.sizes}
+  breakpoints={[...config.breakpoints]}
+  transformer={productImageTransformer(image.url)}
+  options={productImageOptions(image.url)}
+  operations={{ quality: 80, format: 'auto', fit: 'scale-down' }}
+  priority={priority}
+  unstyled
+  class={className}
+/>

@@ -14,6 +14,7 @@ export default defineConfig({
       '@solar-icons/solid',
       '@store-kit/ui',
       '@tanstack/solid-form',
+      '@unpic/solid',
       'cmdk-solid',
       'solid-prevent-scroll',
       'solid-presence',

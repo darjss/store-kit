@@ -17,10 +17,11 @@ import {
   paymentStatusLabel,
   shouldPollOrderStatus,
 } from '@store-kit/storefront/status'
-import { Button } from '@store-kit/ui'
+import { Button, Spinner } from '@store-kit/ui'
 import { QueryClientProvider } from '@tanstack/solid-query'
 import { match } from 'dismatch'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
+import type { JSX } from 'solid-js'
 
 import { ProductImage } from './ProductImage'
 
@@ -82,6 +83,28 @@ const refreshFailureMessage = (failure: QPayRefreshFailure) =>
       'Төлбөр орсон боловч барааны үлдэгдлийг ажилтнаар шалгуулах шаардлагатай.',
     TransportError: () => 'Сүлжээний алдаа гарлаа. Дахин оролдоно уу.',
   })
+
+function OrderAction(props: {
+  children: JSX.Element
+  pending: boolean
+  pendingLabel: string
+  onClick: () => void
+}) {
+  return (
+    <Button
+      class="border-ink bg-orange text-ink mr-2 min-h-12.5 cursor-pointer gap-2 rounded-none border-3 px-4 py-3 font-black transition-transform duration-100 active:scale-[0.97] motion-reduce:transition-none"
+      type="button"
+      disabled={props.pending}
+      aria-busy={props.pending}
+      onClick={props.onClick}
+    >
+      <Show when={props.pending} fallback={props.children}>
+        <Spinner />
+        {props.pendingLabel}
+      </Show>
+    </Button>
+  )
+}
 
 function StatusContent() {
   const status = useOrderStatus()
@@ -145,24 +168,22 @@ function StatusContent() {
                 )}
               </Show>
               <Show when={shouldPollOrderStatus(order())}>
-                <Button
-                  class="border-ink bg-orange text-ink mr-2 min-h-12.5 cursor-pointer border-3 px-4 py-3 font-black transition-transform duration-100 active:scale-[0.97] motion-reduce:transition-none"
-                  type="button"
-                  disabled={status.isRefreshingStatus()}
+                <OrderAction
+                  pending={status.isRefreshingStatus()}
+                  pendingLabel="Шинэчилж байна…"
                   onClick={() => void status.refreshStatus()}
                 >
-                  {status.isRefreshingStatus() ? 'Шинэчилж байна…' : 'Төлөв шинэчлэх'}
-                </Button>
+                  Төлөв шинэчлэх
+                </OrderAction>
               </Show>
               <Show when={order().payment?.method === 'qpay' && order().payment?.status !== 'paid'}>
-                <Button
-                  class="border-ink bg-orange text-ink min-h-12.5 cursor-pointer border-3 px-4 py-3 font-black transition-transform duration-100 active:scale-[0.97] motion-reduce:transition-none"
-                  type="button"
-                  disabled={status.isRefreshingQPay()}
+                <OrderAction
+                  pending={status.isRefreshingQPay()}
+                  pendingLabel="Шалгаж байна…"
                   onClick={() => void status.refreshQPay()}
                 >
-                  {status.isRefreshingQPay() ? 'Шалгаж байна…' : 'QPay төлбөр шалгах'}
-                </Button>
+                  QPay төлбөр шалгах
+                </OrderAction>
               </Show>
               <Show
                 when={
@@ -170,14 +191,13 @@ function StatusContent() {
                   order().payment?.status === 'pending'
                 }
               >
-                <Button
-                  class="border-ink bg-orange text-ink min-h-12.5 cursor-pointer border-3 px-4 py-3 font-black transition-transform duration-100 active:scale-[0.97] motion-reduce:transition-none"
-                  type="button"
-                  disabled={status.isClaimingBankTransfer()}
+                <OrderAction
+                  pending={status.isClaimingBankTransfer()}
+                  pendingLabel="Илгээж байна…"
                   onClick={() => void status.claimBankTransfer()}
                 >
                   Би төлбөр шилжүүлсэн
-                </Button>
+                </OrderAction>
               </Show>
               <Show when={order().payment?.status === 'claimed'}>
                 <p class="text-warning inline-block -rotate-2 border-3 border-current px-2 py-1 font-black">

@@ -3,14 +3,14 @@ import { commerce } from "@store-kit/commerce";
 import { formatMnt } from "@store-kit/storefront/format";
 import { ProductPurchase } from "~/components/ProductPurchase";
 import Layout from "~/layouts/Layout.astro";
-import { mediaUrl } from "~/media-url";
+import { toPublicImage } from "~/public-image";
 
 const result = await commerce.catalog.getProduct(Astro.params.slug ?? "");
 if (result.status === "error") return new Response(null, { status: 404 });
 const product = result.value;
 const purchaseProduct = {
   ...product,
-  images: product.images.map(({ r2Key, ...image }) => ({ ...image, url: mediaUrl(r2Key) })),
+  images: product.images.map(toPublicImage),
 };
 const firstPrice = product.variants[0]?.priceMnt ?? 0;
 const useCaseLabels: Record<string, string> = { "first-iem": "АНХНЫ IEM-Д ТОХИРНО", bass: "BASS ИЛҮҮ МЭДРЭГДЭНЭ", vocals: "ХООЛОЙ ЦЭВЭР", gaming: "ТОГЛООМЫН БАЙРШИЛ", "daily-carry": "ӨДӨР ТУТМЫН АВЧ ЯВАЛТ" };

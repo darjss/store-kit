@@ -3,10 +3,14 @@ import { commerce } from "@store-kit/commerce";
 import { formatMnt } from "@store-kit/storefront/format";
 import ProductImage from "~/components/ProductImage.astro";
 import Layout from "~/layouts/Layout.astro";
+import { toPublicImage } from "~/public-image";
 
 const result = await commerce.catalog.listProducts({ limit: 8 });
 if (result.status === "error") throw new Error("Catalog could not be loaded.");
-const products = result.value.items;
+const products = result.value.items.map(product => ({
+  ...product,
+  images: product.images.map(toPublicImage),
+}));
 const lead = products[0];
 const interrupt = products[1];
 const small = products[2] ?? products[0];

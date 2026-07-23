@@ -4,6 +4,7 @@ import type { ProductListFilters } from "@store-kit/commerce/catalog";
 import { formatMnt } from "@store-kit/storefront/format";
 import ProductImage from "~/components/ProductImage.astro";
 import Layout from "~/layouts/Layout.astro";
+import { toPublicImage } from "~/public-image";
 
 const params = Astro.url.searchParams;
 const validUseCases = ["first-iem", "bass", "vocals", "gaming", "daily-carry"] as const;
@@ -21,7 +22,10 @@ const [result, categories, brands] = await Promise.all([
   commerce.catalog.listBrands(),
 ]);
 if (result.status === "error") throw new Error("Catalog could not be loaded.");
-const products = result.value.items;
+const products = result.value.items.map(product => ({
+  ...product,
+  images: product.images.map(toPublicImage),
+}));
 const labels = { "first-iem": "Анхны IEM", bass: "Bass", vocals: "Vocals", gaming: "Gaming", "daily-carry": "Daily carry" };
 const treatments = [
   "col-[1/13] grid-cols-[7fr_5fr] border-4 border-ink bg-orange",
