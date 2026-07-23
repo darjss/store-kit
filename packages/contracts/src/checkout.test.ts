@@ -30,6 +30,14 @@ test('checkout accepts the shared Ulaanbaatar request and rejects untrusted fiel
   expect(Value.Check(checkoutInputSchema, { ...checkout, totalMnt: 1 })).toBe(false)
 })
 
+test.each([
+  ['customer name', { ...checkout, customer: { ...checkout.customer, name: ' \t ' } }],
+  ['khoroo', { ...checkout, delivery: { ...checkout.delivery, khoroo: '\n ' } }],
+  ['address', { ...checkout, delivery: { ...checkout.delivery, address: '   ' } }],
+])('checkout rejects a whitespace-only required %s', (_label, input) => {
+  expect(Value.Check(checkoutInputSchema, input)).toBe(false)
+})
+
 test('checkout result exposes only serialized customer payment instructions', () => {
   const nextAction = {
     type: 'qpay',

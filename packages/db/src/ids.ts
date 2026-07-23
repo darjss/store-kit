@@ -28,7 +28,6 @@ export const categoryIdSchema = typeIdSchema(entityIdPrefixes.category)
 export const productIdSchema = typeIdSchema(entityIdPrefixes.product)
 export const productImageIdSchema = typeIdSchema(entityIdPrefixes.productImage)
 export const productVariantIdSchema = typeIdSchema(entityIdPrefixes.productVariant)
-export const checkoutSettingsIdSchema = typeIdSchema(entityIdPrefixes.checkoutSettings)
 export const orderIdSchema = typeIdSchema(entityIdPrefixes.order)
 export const orderLineIdSchema = typeIdSchema(entityIdPrefixes.orderLine)
 export const paymentIdSchema = typeIdSchema(entityIdPrefixes.payment)
@@ -37,6 +36,8 @@ export const defaultCheckoutSettingsId = TypeID.fromUUID(
   entityIdPrefixes.checkoutSettings,
   '00000000-0000-0000-0000-000000000001',
 ).toString()
+
+export const checkoutSettingsIdSchema = Type.Literal(defaultCheckoutSettingsId)
 
 const createId = <const Prefix extends EntityIdPrefix>(prefix: Prefix) => typeid(prefix).toString()
 
