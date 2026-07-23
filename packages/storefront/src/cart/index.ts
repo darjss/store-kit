@@ -9,6 +9,7 @@ export {
   closeCart,
   isCartOpen,
   openCart,
+  refreshCartItemSnapshots,
   removeCartItem,
   setCartItemQuantity,
 } from './store'

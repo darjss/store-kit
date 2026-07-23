@@ -1,0 +1,29 @@
+---
+import { getCatalogProduct } from "@store-kit/commerce/catalog";
+import { ProductPurchase } from "../../components/ProductPurchase";
+import Layout from "../../layouts/Layout.astro";
+import { publicMediaBaseUrl } from "../../media-url";
+
+const result = await getCatalogProduct(Astro.params.slug ?? "");
+if (result.status === "error") return new Response(null, { status: 404 });
+const product = result.value;
+const money = new Intl.NumberFormat("mn-MN");
+const firstPrice = product.variants[0]?.priceMnt ?? 0;
+const useCaseLabels: Record<string, string> = { "first-iem": "АНХНЫ IEM-Д ТОХИРНО", bass: "BASS ИЛҮҮ МЭДРЭГДЭНЭ", vocals: "ХООЛОЙ ЦЭВЭР", gaming: "ТОГЛООМЫН БАЙРШИЛ", "daily-carry": "ӨДӨР ТУТМЫН АВЧ ЯВАЛТ" };
+const factLabels: Record<string, string> = { driverConfiguration: "Драйвер", impedanceOhms: "Эсэргүүцэл", detachableCable: "Салдаг кабель", included: "Дагалдах", input: "Оролт", output: "Гаралт", maximumSampleRate: "Нягтаршил", weightGrams: "Жин", connector: "Холбогч", lengthMeters: "Урт" };
+---
+
+<Layout title={`${product.name} · Plugged`} description={product.shortDescription} publicPage>
+  <main class="product-detail poster-surface">
+    <div class="detail-title"><p>{product.brand?.name ?? "PLUGGED"} / {product.category?.name}</p><h1>{product.name}</h1><strong class="price">{money.format(firstPrice)} ₮-С</strong></div>
+    <div class="detail-grid">
+      <div class="detail-purchase"><ProductPurchase product={product} mediaBaseUrl={new URL(publicMediaBaseUrl, Astro.url).toString()} client:load /></div>
+      <div class="detail-info">
+        <div class="use-case-stamps">{product.useCases.map(item => <span>{useCaseLabels[item]}</span>)}</div>
+        <p class="detail-lede">{product.shortDescription}</p><p>{product.description}</p>
+        <div class="delivery-reassurance"><strong>УБ ХҮРГЭЛТ</strong><span>QPay / Дансаар</span><span>Төлбөрийн дараа үлдэгдэл баталгаажна</span></div>
+      </div>
+    </div>
+    <section class="facts-rip" aria-labelledby="facts-title"><h2 id="facts-title">ХЭРЭГТЭЙ БАРИМТ</h2><div>{Object.entries(product.details).map(([key, value]) => <dl><dt>{factLabels[key] ?? key}</dt><dd>{Array.isArray(value) ? value.join(" · ") : typeof value === "boolean" ? value ? "Тийм" : "Үгүй" : `${value}${key === "impedanceOhms" ? " Ω" : key === "weightGrams" ? " г" : ""}`}</dd></dl>)}</div></section>
+  </main>
+</Layout>

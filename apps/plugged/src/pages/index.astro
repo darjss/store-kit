@@ -1,16 +1,66 @@
 ---
-import { parseStoreConfig } from "@store-kit/config";
-import { CatalogProof } from "../components/CatalogProof";
+import { listCatalogProducts } from "@store-kit/commerce/catalog";
+import { mediaUrl } from "../media-url";
 import Layout from "../layouts/Layout.astro";
-import store from "~/store.json";
 
-const config = parseStoreConfig(store);
+const result = await listCatalogProducts({ limit: 8 });
+if (result.status === "error") throw new Error("Catalog could not be loaded.");
+const products = result.value.items;
+const lead = products[0];
+const interrupt = products[1];
+const small = products[2] ?? products[0];
+const money = new Intl.NumberFormat("mn-MN");
+const useCases = [
+  ["first-iem", "АНХНЫ IEM"], ["bass", "BASS"], ["vocals", "VOCALS"], ["gaming", "GAMING"], ["daily-carry", "DAILY CARRY"],
+];
+const imageOf = (product: (typeof products)[number] | undefined) => product?.images[0];
+const priceOf = (product: (typeof products)[number] | undefined) => product?.variants[0]?.priceMnt ?? 0;
 ---
 
-<Layout title={`${config.name} · Store Kit`}>
-  <main class="mx-auto max-w-2xl px-6 py-16">
-    <p class="text-sm text-neutral-600">Store Kit foundation</p>
-    <h1 class="mt-2 text-3xl font-semibold">{config.name}</h1>
-    <CatalogProof client:only="solid-js" />
+<Layout title="Plugged · Portable audio, Ulaanbaatar" publicPage>
+  <main>
+    <section class="product-wall page-rail poster-surface" aria-labelledby="wall-title">
+      <div class="wall-type" aria-hidden="true">PLUGGED</div>
+      <div class="wall-decoration tape-one" aria-hidden="true"></div>
+      <div class="wall-decoration registration" aria-hidden="true"></div>
+      <div class="wall-decoration wall-stamp" aria-hidden="true"></div>
+      <div class="wall-block wall-block-orange"></div><div class="wall-block wall-block-cobalt"></div>
+      <h1 id="wall-title" class="sr-only">Plugged portable audio шинэ бараа</h1>
+      {lead && <article class="wall-product wall-lead">
+        <a href={`/products/${lead.slug}`} class="wall-image-link">
+          {imageOf(lead) && <img class="product-cutout product-cutout--lead" src={mediaUrl(imageOf(lead)!.r2Key)} alt={imageOf(lead)!.alt} width="900" height="700" fetchpriority="high" />}
+        </a>
+        <div class="wall-copy"><p class="fit-label">АНХНЫ IEM / BASS</p><h2><a href={`/products/${lead.slug}`}>{lead.name}</a></h2><p>{lead.shortDescription}</p><strong class="price">{money.format(priceOf(lead))} ₮</strong><span class="stock-stamp">БЭЛЭН</span></div>
+      </article>}
+      {interrupt && <article class="wall-product wall-interrupt">
+        <a href={`/products/${interrupt.slug}`}>{imageOf(interrupt) && <img class="product-cutout" src={mediaUrl(imageOf(interrupt)!.r2Key)} alt={imageOf(interrupt)!.alt} width="640" height="480" loading="eager" decoding="async" />}</a>
+        <div class="wall-copy"><p class="fit-label">DAILY CARRY</p><h2><a href={`/products/${interrupt.slug}`}>{interrupt.name}</a></h2><strong class="price">{money.format(priceOf(interrupt))} ₮</strong></div>
+      </article>}
+      {small && <a class="wall-small" href={`/products/${small.slug}`}><span>HOT DROP</span><strong>{small.name}</strong><b>{money.format(priceOf(small))} ₮</b></a>}
+      <nav class="use-case-rail" aria-label="Хэрэглээгээр сонгох">{useCases.map(([slug, label]) => <a href={`/products?useCase=${slug}`}>{label}</a>)}</nav>
+    </section>
+
+    <div class="signal-ticker" aria-label="Дэлгүүрийн үйлчилгээ"><div class="ticker-track"><span class="ticker-copy">УЛААНБААТАР ХҮРГЭЛТ ◆ QPAY ◆ БАНКНЫ ШИЛЖҮҮЛЭГ ◆ ШИНЭ DROP ◆ </span><span class="ticker-copy" aria-hidden="true">УЛААНБААТАР ХҮРГЭЛТ ◆ QPAY ◆ БАНКНЫ ШИЛЖҮҮЛЭГ ◆ ШИНЭ DROP ◆ </span></div></div>
+
+    <section class="drop-stream page-rail">
+      <div class="drop-heading"><p>ЧИХЭНД ОЙР.<br />ХОТЫН ДУУНААС <em>ЦЭВЭР.</em></p><a href="/products">БҮХ БАРАА →</a></div>
+      <div class="drop-products">
+        {products.slice(0, 4).map((product, index) => <article class={`drop-item drop-item-${index + 1}`}>
+          <a href={`/products/${product.slug}`} class="drop-image">{imageOf(product) && <img src={mediaUrl(imageOf(product)!.r2Key)} alt={imageOf(product)!.alt} width="620" height="480" loading="lazy" decoding="async" />}</a>
+          <div><p>{product.useCases.slice(0, 2).join(" / ")}</p><h2><a href={`/products/${product.slug}`}>{product.name}</a></h2><strong>{money.format(priceOf(product))} ₮</strong></div>
+        </article>)}
+      </div>
+    </section>
+
+    <section class="type-routes"><a href="/products?category=in-ear-monitors"><span>IEM</span><strong>Чихэвч / эхний сонголт</strong></a><a href="/products?category=portable-audio"><span>DAC</span><strong>Утаснаас цэвэр гаралт</strong></a><a href="/products?category=cables"><span>CABLE</span><strong>Солих / холбох</strong></a></section>
   </main>
+  <script>
+    import { animate, stagger } from "motion";
+
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      animate(".wall-block", { clipPath: ["inset(0 100% 0 0)", "inset(0 0 0 0)"] }, { duration: .24, ease: [0.16, 1, 0.3, 1] });
+      animate(".wall-lead .product-cutout", { transform: ["translateY(32px) rotate(-9deg)", "translateY(0) rotate(-5deg)"] }, { duration: .32, delay: .18, ease: [0.16, 1, 0.3, 1] });
+      animate(".wall-copy .price, .stock-stamp", { scale: [1.12, 1] }, { duration: .16, delay: stagger(.055, { start: .42 }) });
+    }
+  </script>
 </Layout>

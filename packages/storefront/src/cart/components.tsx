@@ -48,7 +48,7 @@ function Trigger(props: ParentProps) {
 
 function Content(props: ParentProps) {
   useCart()
-  return <Sheet.Content>{props.children}</Sheet.Content>
+  return <Sheet.Content showCloseButton={false}>{props.children}</Sheet.Content>
 }
 
 export type CartItemsProps = {
@@ -57,12 +57,12 @@ export type CartItemsProps = {
 
 function Items(props: CartItemsProps) {
   useCart()
-  return <For each={cartItems}>{props.children}</For>
+  return <For each={cartItems()}>{props.children}</For>
 }
 
 function Empty(props: ParentProps) {
   useCart()
-  return <Show when={cartItems.length === 0}>{props.children}</Show>
+  return <Show when={cartItems().length === 0}>{props.children}</Show>
 }
 
 export const Cart = { Root, Trigger, Content, Items, Empty }

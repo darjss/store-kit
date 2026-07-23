@@ -1,12 +1,21 @@
 ---
 import { STORE_LOCALE } from "@store-kit/config";
+import { StoreChrome } from "../components/StoreChrome";
 import "../styles/global.css";
 
 interface Props {
   title: string;
+  description?: string;
+  publicPage?: boolean;
 }
 
-const { title } = Astro.props;
+const { title, description = "Улаанбаатарын portable audio дэлгүүр.", publicPage = false } = Astro.props;
+if (publicPage) {
+  Astro.response.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+  Astro.response.headers.set("Cloudflare-CDN-Cache-Control", "public, max-age=60, stale-while-revalidate=300, stale-if-error=86400");
+} else {
+  Astro.response.headers.set("Cache-Control", "private, no-store");
+}
 ---
 
 <!doctype html>
@@ -14,11 +23,22 @@ const { title } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#eeeadf" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f05c13" />
     <title>{title}</title>
   </head>
   <body>
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="Plugged нүүр">
+        <img src="/brand/plugged-logo.webp" width="640" height="640" alt="" fetchpriority="high" />
+        <span>PLUGGED<sup>®</sup></span>
+      </a>
+      <nav aria-label="Дэлгүүрийн цэс"><a href="/products?category=in-ear-monitors">IEM</a><a href="/products?category=portable-audio">DAC</a><a href="/products?category=cables">CABLE</a></nav>
+      <a class="header-shop" href="/products">SHOP →</a>
+    </header>
     <slot />
+    <footer class="site-footer"><strong>PLUGGED / ULAANBAATAR</strong><p>QPay · Дансаар шилжүүлэх · Хот дотор хүргэлт</p></footer>
+    <StoreChrome client:load />
   </body>
 </html>
