@@ -1,10 +1,25 @@
 import { defineRelations } from 'drizzle-orm'
 
-import * as schema from '../schema/catalog'
+import * as catalogSchema from '../schema/catalog'
+import * as shoppingSchema from '../schema/shopping'
+
+const schema = { ...catalogSchema, ...shoppingSchema }
 
 export const catalogRelations = defineRelations(
   schema,
-  ({ one, many, brand, category, product, productImage, productVariant, productVariantImage }) => ({
+  ({
+    one,
+    many,
+    brand,
+    category,
+    product,
+    productImage,
+    productVariant,
+    productVariantImage,
+    order,
+    orderLine,
+    payment,
+  }) => ({
     brand: {
       products: many.product({ from: brand.id, to: product.brandId }),
     },
@@ -49,6 +64,18 @@ export const catalogRelations = defineRelations(
         from: productVariant.id,
         to: productVariantImage.variantId,
       }),
+    },
+    order: {
+      lines: many.orderLine({ from: order.id, to: orderLine.orderId }),
+      payment: one.payment({ from: order.id, to: payment.orderId }),
+    },
+    orderLine: {
+      order: one.order({ from: orderLine.orderId, to: order.id, optional: false }),
+      product: one.product({ from: orderLine.productId, to: product.id }),
+      variant: one.productVariant({ from: orderLine.variantId, to: productVariant.id }),
+    },
+    payment: {
+      order: one.order({ from: payment.orderId, to: order.id, optional: false }),
     },
     productVariantImage: {
       variant: one.productVariant({

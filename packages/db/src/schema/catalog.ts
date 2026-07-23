@@ -13,6 +13,7 @@ import {
 export type ProductDetailValue = string | number | boolean | string[]
 export type ProductDetails = Record<string, ProductDetailValue>
 export type VariantOptions = Record<string, string>
+export type ProductUseCase = 'first-iem' | 'bass' | 'vocals' | 'gaming' | 'daily-carry'
 
 export const brand = sqliteTable(
   'brand',
@@ -69,6 +70,7 @@ export const product = sqliteTable(
       .default('draft'),
     featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
     details: text('details', { mode: 'json' }).$type<ProductDetails>(),
+    useCases: text('use_cases', { mode: 'json' }).$type<ProductUseCase[]>().notNull().default([]),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },

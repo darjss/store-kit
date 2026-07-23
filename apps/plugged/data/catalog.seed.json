@@ -134,7 +134,8 @@
           "sortOrder": 40,
           "imageKeys": ["catalog/products/aster-modular-iem/copper.svg"]
         }
-      ]
+      ],
+      "useCases": ["first-iem", "bass", "vocals", "gaming"]
     },
     {
       "id": "30000000-0000-4000-8000-000000000002",
@@ -174,7 +175,8 @@
           "sortOrder": 10,
           "imageKeys": []
         }
-      ]
+      ],
+      "useCases": ["daily-carry", "gaming"]
     },
     {
       "id": "30000000-0000-4000-8000-000000000003",
@@ -201,7 +203,16 @@
           "sortOrder": 10,
           "imageKeys": []
         }
-      ]
+      ],
+      "useCases": ["daily-carry"]
     }
-  ]
+  ],
+  "checkoutSettings": {
+    "deliveryFeeMnt": 5000,
+    "bankName": "Khan Bank",
+    "bankAccountName": "Plugged",
+    "bankAccountNumber": "0000000000",
+    "checkoutHelpText": "Төлбөрийн талаар тусламж хэрэгтэй бол бидэнтэй холбогдоно уу.",
+    "orderConfirmationText": "Захиалгыг төлбөр баталгаажсаны дараа бэлтгэнэ."
+  }
 }
