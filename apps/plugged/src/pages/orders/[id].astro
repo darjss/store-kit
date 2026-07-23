@@ -1,0 +1,9 @@
+---
+import { OrderStatus } from "../../components/OrderStatus";
+import Layout from "../../layouts/Layout.astro";
+
+const orderId = Astro.params.id ?? "";
+---
+<Layout title="Захиалгын төлөв · Plugged">
+  <main id="main-content" class="order-page poster-surface"><OrderStatus orderId={orderId} client:load /></main>
+</Layout>

@@ -1,0 +1,41 @@
+---
+import { listCatalogBrands, listCatalogCategories, listCatalogProducts } from "@store-kit/commerce/catalog";
+import type { ProductListFilters } from "@store-kit/commerce/catalog";
+import { mediaUrl } from "../../media-url";
+import Layout from "../../layouts/Layout.astro";
+
+const params = Astro.url.searchParams;
+const validUseCases = ["first-iem", "bass", "vocals", "gaming", "daily-carry"] as const;
+const useCaseValue = params.get("useCase");
+const filters: ProductListFilters = {
+  ...(params.get("category") ? { category: params.get("category")! } : {}),
+  ...(params.get("brand") ? { brand: params.get("brand")! } : {}),
+  ...(validUseCases.includes(useCaseValue as (typeof validUseCases)[number]) ? { useCase: useCaseValue as (typeof validUseCases)[number] } : {}),
+  ...(params.get("query") ? { query: params.get("query")! } : {}),
+  limit: 50,
+};
+const [result, categories, brands] = await Promise.all([listCatalogProducts(filters), listCatalogCategories(), listCatalogBrands()]);
+if (result.status === "error") throw new Error("Catalog could not be loaded.");
+const products = result.value.items;
+const money = new Intl.NumberFormat("mn-MN");
+const labels = { "first-iem": "Анхны IEM", bass: "Bass", vocals: "Vocals", gaming: "Gaming", "daily-carry": "Daily carry" };
+---
+
+<Layout title="Бүх бараа · Plugged" description="IEM, portable DAC, cable сонгох." publicPage>
+  <main id="main-content" class="catalog-page poster-surface">
+    <header class="catalog-mast"><div><p>PLUGGED CATALOG / {products.length} БАРАА</p><h1>ЧАМАЙГ<br />ЮУ <em>ТАТДАГ</em> ВЭ?</h1></div><form action="/products" method="get" role="search"><label for="catalog-search">Бараа хайх</label><div><input id="catalog-search" name="query" value={params.get("query") ?? ""} placeholder="IEM, DAC, cable…" /><button type="submit">ХАЙ →</button></div></form></header>
+    <nav class="filter-rip" aria-label="Хэрэглээний шүүлтүүр"><a class:list={["all", { active: !filters.useCase }]} href="/products">Бүгд</a>{validUseCases.map(slug => <a class:list={{ active: filters.useCase === slug }} href={`/products?useCase=${slug}`}>{labels[slug]}</a>)}</nav>
+    <details class="more-filters"><summary>Төрөл / брэндээр шүүх</summary><div><a href="/products">Бүх төрөл</a>{categories.map(category => <a class:list={{ active: filters.category === category.slug }} href={`/products?category=${category.slug}`}>{category.name}</a>)}{brands.map(brand => <a class:list={{ active: filters.brand === brand.slug }} href={`/products?brand=${brand.slug}`}>{brand.name}</a>)}</div></details>
+    {products.length === 0 ? <section class="catalog-empty"><h2>ЭНД ОДОО ЮУ Ч АЛГА.</h2><p>Хайлтаа богиносгох эсвэл шүүлтүүрээ цэвэрлэнэ үү.</p><a href="/products">Бүх бараа харах →</a></section> : <section class="poster-stream" aria-label="Барааны жагсаалт">
+      {products.map((product, index) => {
+        const image = product.images[0];
+        const variant = product.variants[0];
+        const stock = product.variants.reduce((sum, item) => sum + item.stockQuantity, 0);
+        return <article class={`stream-product treatment-${index % 4}`}>
+          <a class="stream-image" href={`/products/${product.slug}`}>{image && <img src={mediaUrl(image.r2Key)} alt={image.alt} width="800" height="620" loading={index < 2 ? "eager" : "lazy"} decoding="async" />}</a>
+          <div class="stream-copy"><p class="fit-label">{product.useCases.map(item => labels[item]).join(" / ")}</p><h2><a href={`/products/${product.slug}`}>{product.name}</a></h2><p>{product.shortDescription}</p>{variant && <><strong class="price">{money.format(variant.priceMnt)} ₮</strong>{variant.compareAtPriceMnt && <del>{money.format(variant.compareAtPriceMnt)} ₮</del>}</>}<span class:list={["stock-stamp", { low: stock > 0 && stock <= 3, sold: stock === 0 }]}>{stock === 0 ? "ДУУССАН" : stock <= 3 ? "ЦӨӨН" : "БЭЛЭН"}</span><a class="product-action" href={`/products/${product.slug}`}>СОНГОХ →</a></div>
+        </article>;
+      })}
+    </section>}
+  </main>
+</Layout>

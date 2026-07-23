@@ -4,7 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./cart/components": "./src/cart/components.tsx",
+    "./cart/store": "./src/cart/store.ts",
+    "./media": "./src/media.ts",
+    "./query-client": "./src/query-client.ts",
+    "./query-options/cart": "./src/query-options/cart.ts",
+    "./query-options/catalog": "./src/query-options/catalog.ts",
+    "./query-options/shopping": "./src/query-options/shopping.ts"
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",

@@ -4,6 +4,9 @@
   "compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
   "name": "plugged",
   "main": "@astrojs/cloudflare/entrypoints/server",
+  "cache": {
+    "enabled": true,
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
@@ -19,8 +22,9 @@
   "kv_namespaces": [{ "binding": "CACHE" }, { "binding": "AUTH_KV" }],
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "plugged-media" }],
   "vars": {
-    "PUBLIC_APP_URL": "http://localhost:4321",
-    "QPAY_BASE_URL": "https://merchant-sandbox.qpay.mn",
+    "PUBLIC_APP_URL": "https://plugged.mn",
+    "PUBLIC_MEDIA_BASE_URL": "https://media.plugged.mn/",
+    "QPAY_BASE_URL": "https://merchant.qpay.mn",
   },
   "observability": {
     "enabled": true,

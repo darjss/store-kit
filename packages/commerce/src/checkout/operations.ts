@@ -1,3 +1,4 @@
+/* oxlint-disable eslint/no-underscore-dangle */
 import {
   findCartVariants,
   findCheckoutSettings,
@@ -9,7 +10,6 @@ import {
   storeTelegramMessageId,
 } from '@store-kit/db/queries/shopping'
 import { checkoutInputSchema } from '@store-kit/db/schemas/shopping'
-import type { CheckoutInput } from '@store-kit/db/schemas/shopping'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
@@ -20,13 +20,7 @@ import {
   sendBankClaimMessage,
 } from '../adapters/telegram'
 import { confirmOrderPayment } from '../payments/operations'
-
-export type CheckoutError =
-  | { _tag: 'CartEmpty'; message: string }
-  | { _tag: 'CartChanged'; message: string }
-  | { _tag: 'InvalidCheckoutDetails'; message: string; fields: { path: string; message: string }[] }
-  | { _tag: 'DeliveryUnavailable'; message: string }
-  | { _tag: 'PaymentSetupFailed'; message: string; canUseBankTransfer: boolean }
+import type { BankTransferClaimError, CartCorrection, CheckoutError } from '../shopping/errors'
 
 type CheckoutCreated = {
   orderId: string
@@ -44,21 +38,44 @@ const tokenHash = async (token: string) => {
 
 const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').replace(/^976/, '')
 
-export const createCheckoutOrder = async (input: CheckoutInput) => {
+const checkoutFieldMessage = (path: string) => {
+  if (path.startsWith('/items')) return 'Сагсны бараагаа шалгана уу.'
+  if (path === '/customer/name') return 'Нэрээ оруулна уу.'
+  if (path === '/customer/phone') return 'Монголын 8 оронтой дугаар оруулна уу.'
+  if (path === '/delivery/district') return 'Дүүргээ сонгоно уу.'
+  if (path === '/delivery/khoroo') return 'Хороогоо оруулна уу.'
+  if (path === '/delivery/address') return 'Дэлгэрэнгүй хаягаа оруулна уу.'
+  if (path === '/paymentMethod') return 'Төлбөрийн аргаа сонгоно уу.'
+  return 'Захиалгын мэдээлэл буруу байна.'
+}
+
+export const createCheckoutOrder = async (input: unknown) => {
+  if (
+    input !== null &&
+    typeof input === 'object' &&
+    'items' in input &&
+    Array.isArray(input.items) &&
+    input.items.length === 0
+  )
+    return Result.err<CheckoutCreated, CheckoutError>({
+      _tag: 'CartEmpty',
+      message: 'Таны сагс хоосон байна.',
+    })
   if (!Value.Check(checkoutInputSchema, input))
     return Result.err<CheckoutCreated, CheckoutError>({
       _tag: 'InvalidCheckoutDetails',
       message: 'Захиалгын мэдээллээ шалгана уу.',
       fields: [...Value.Errors(checkoutInputSchema, input)].map(issue => ({
         path: issue.instancePath,
-        message: issue.message,
+        message: checkoutFieldMessage(issue.instancePath),
       })),
     })
   const variantIds = new Set(input.items.map(item => item.variantId))
   if (variantIds.size !== input.items.length)
     return Result.err<CheckoutCreated, CheckoutError>({
-      _tag: 'CartChanged',
+      _tag: 'InvalidCheckoutDetails',
       message: 'Нэг барааны сонголтыг давхар оруулах боломжгүй.',
+      fields: [{ path: '/items', message: 'Нэг сонголтыг нэг удаа оруулна уу.' }],
     })
   const phone = normalizePhone(input.customer.phone)
   if (!/^[6789]\d{7}$/.test(phone))
@@ -78,19 +95,40 @@ export const createCheckoutOrder = async (input: CheckoutInput) => {
       message: 'Хүргэлтийн тохиргоо олдсонгүй.',
     })
   const byId = new Map(variants.map(variant => [variant.variantId, variant]))
-  const changed = input.items.some(item => {
+  const corrections = input.items.flatMap<CartCorrection>(item => {
     const variant = byId.get(item.variantId)
-    return (
-      !variant ||
-      !variant.active ||
-      variant.productStatus !== 'active' ||
-      variant.stockQuantity < item.quantity
-    )
+    if (!variant)
+      return [
+        {
+          _tag: 'MissingVariant',
+          variantId: item.variantId,
+          message: 'Энэ сонголт олдсонгүй. Сагснаас хасна уу.',
+        },
+      ]
+    if (!variant.active || variant.productStatus !== 'active')
+      return [
+        {
+          _tag: 'InactiveVariant',
+          variantId: item.variantId,
+          message: 'Энэ сонголт одоогоор худалдаалагдахгүй байна.',
+        },
+      ]
+    if (variant.stockQuantity < item.quantity)
+      return [
+        {
+          _tag: 'InsufficientStock',
+          variantId: item.variantId,
+          availableQuantity: variant.stockQuantity,
+          message: 'Хүссэн тоо хэмжээгээр үлдэгдэл хүрэлцэхгүй байна.',
+        },
+      ]
+    return []
   })
-  if (changed)
+  if (corrections.length > 0)
     return Result.err<CheckoutCreated, CheckoutError>({
       _tag: 'CartChanged',
       message: 'Сагсны бараа эсвэл үлдэгдэл өөрчлөгдсөн байна.',
+      corrections,
     })
 
   const orderId = crypto.randomUUID()
@@ -201,18 +239,29 @@ export const handleBankTransferCallback = async (input: {
   const order = await findOrderWithPayment(input.orderId)
   if (!order?.payment || order.payment.method !== 'bank_transfer') return false
   if (input.action === 'confirm') {
-    await confirmOrderPayment(input.orderId, {
+    const confirmation = await confirmOrderPayment(input.orderId, {
       paymentId: `telegram:${input.callbackQueryId}`,
       amountMnt: order.payment.amountMnt,
       method: 'bank_transfer',
     })
-  } else {
-    await rejectBankTransferClaim(input.orderId, Date.now())
+    if (confirmation.status === 'error') {
+      const text =
+        confirmation.error._tag === 'InsufficientStock'
+          ? `⚠️ ${order.number} үлдэгдэл хүрэлцэхгүй байна`
+          : `⚠️ ${order.number} төлбөрийг баталж чадсангүй`
+      await answerTelegramCallback(input.callbackQueryId, text)
+      return true
+    }
+
+    const text = `✅ ${order.number} төлбөр батлагдлаа`
+    await answerTelegramCallback(input.callbackQueryId, text)
+    if (order.payment.telegramMessageId)
+      await editTelegramMessage(order.payment.telegramMessageId, text)
+    return true
   }
-  const text =
-    input.action === 'confirm'
-      ? `✅ ${order.number} төлбөр батлагдлаа`
-      : `❌ ${order.number} төлбөр татгалзлаа`
+
+  await rejectBankTransferClaim(input.orderId, Date.now())
+  const text = `❌ ${order.number} төлбөр татгалзлаа`
   await answerTelegramCallback(input.callbackQueryId, text)
   if (order.payment.telegramMessageId)
     await editTelegramMessage(order.payment.telegramMessageId, text)
@@ -228,10 +277,19 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
       _tag: 'BankTransferClaimNotAllowed' as const,
       message: 'Энэ төлбөрт мэдэгдэл өгөх боломжгүй.',
     })
-  if (order.payment.status === 'claimed' || order.payment.status === 'paid')
-    return Result.ok({ paymentStatus: order.payment.status })
-  const claimed = await markBankTransferClaimed(orderId, Date.now())
-  if (!claimed) return Result.ok({ paymentStatus: order.payment.status })
+  if (order.payment.status === 'paid') return Result.ok({ paymentStatus: 'paid' as const })
+  if (order.payment.status !== 'pending' && order.payment.status !== 'claimed')
+    return Result.err<{ paymentStatus: 'claimed' | 'paid' }, BankTransferClaimError>({
+      _tag: 'BankTransferClaimNotAllowed',
+      message: 'Энэ төлбөрт мэдэгдэл өгөх боломжгүй.',
+      paymentStatus: order.payment.status,
+    })
+  if (order.payment.status === 'claimed' && order.payment.telegramMessageId)
+    return Result.ok({ paymentStatus: 'claimed' as const })
+  if (order.payment.status === 'pending') {
+    const claimed = await markBankTransferClaimed(orderId, Date.now())
+    if (!claimed) return Result.ok({ paymentStatus: order.payment.status })
+  }
   const sent = await sendBankClaimMessage({
     orderId,
     orderNumber: order.number,
@@ -239,8 +297,15 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
     customerPhone: order.customerPhone,
     amountMnt: order.totalMnt,
   })
-  if (sent.status === 'ok') await storeTelegramMessageId(orderId, sent.value.messageId, Date.now())
-  return sent.status === 'ok'
-    ? Result.ok({ paymentStatus: 'claimed' as const })
-    : Result.err(sent.error)
+  if (sent.status === 'ok') {
+    await storeTelegramMessageId(orderId, sent.value.messageId, Date.now())
+    return Result.ok({ paymentStatus: 'claimed' as const })
+  }
+
+  await rejectBankTransferClaim(orderId, Date.now())
+  return Result.err<{ paymentStatus: 'claimed' | 'paid' }, BankTransferClaimError>({
+    _tag: 'StaffNotificationFailed',
+    message: 'Ажилтанд мэдэгдэл илгээж чадсангүй. Дахин оролдоно уу.',
+    retryable: true,
+  })
 }

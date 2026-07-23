@@ -1,14 +1,13 @@
 import { makePersisted } from '@solid-primitives/storage'
 import type { CartLineInput, PersistedCartItem } from '@store-kit/db/schemas/shopping'
 import { createSignal } from 'solid-js'
-import { createStore } from 'solid-js/store'
 import { isServer } from 'solid-js/web'
 
 export type { CartLineInput, PersistedCartItem } from '@store-kit/db/schemas/shopping'
 
 const storageKey = 'store-kit:plugged:cart:v1'
-const [cartItems, setStore] = createStore<PersistedCartItem[]>([])
-let setCartItems = setStore
+const [cartItems, setNativeCartItems] = createSignal<PersistedCartItem[]>([])
+let setCartItems = setNativeCartItems
 const [isCartOpen, setIsCartOpen] = createSignal(false)
 let persistenceStarted = false
 
@@ -46,41 +45,66 @@ export function startCartPersistence() {
   if (isServer || persistenceStarted) return
 
   persistenceStarted = true
-  const [, setPersistedCartItems] = makePersisted([cartItems, setStore], {
+  const [, setPersistedCartItems] = makePersisted([cartItems, setNativeCartItems], {
     name: storageKey,
     storage: localStorage,
     deserialize: deserializeCart,
   })
   setCartItems = setPersistedCartItems
+  window.addEventListener('storefront:cart-cleared', () => setCartItems([]))
 }
 
 export function addCartItem(item: PersistedCartItem) {
   if (!isPersistedCartItem(item)) return
 
-  const existing = cartItems.find(({ variantId }) => variantId === item.variantId)
-  setCartItems(
-    existing
-      ? cartItems.map(cartItem =>
+  setCartItems(items => {
+    const existing = items.find(({ variantId }) => variantId === item.variantId)
+    return existing
+      ? items.map(cartItem =>
           cartItem.variantId === item.variantId
             ? { ...item, quantity: Math.min(existing.quantity + item.quantity, 10) }
             : cartItem,
         )
-      : [...cartItems, item],
-  )
+      : [...items, item]
+  })
 }
 
 export function setCartItemQuantity(variantId: string, quantity: number) {
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) return
 
-  setCartItems(cartItems.map(item => (item.variantId === variantId ? { ...item, quantity } : item)))
+  setCartItems(items =>
+    items.map(item => (item.variantId === variantId ? { ...item, quantity } : item)),
+  )
 }
 
 export function removeCartItem(variantId: string) {
-  setCartItems(cartItems.filter(item => item.variantId !== variantId))
+  setCartItems(items => items.filter(item => item.variantId !== variantId))
+}
+
+export function refreshCartItemSnapshots(
+  lines: Pick<
+    PersistedCartItem,
+    | 'variantId'
+    | 'productSlug'
+    | 'productName'
+    | 'variantName'
+    | 'options'
+    | 'imageR2Key'
+    | 'unitPriceMnt'
+  >[],
+) {
+  const currentById = new Map(lines.map(line => [line.variantId, line]))
+  setCartItems(items =>
+    items.map(item => {
+      const current = currentById.get(item.variantId)
+      return current ? { ...item, ...current } : item
+    }),
+  )
 }
 
 export function clearCart() {
   setCartItems([])
+  if (!isServer) window.dispatchEvent(new CustomEvent('storefront:cart-cleared'))
 }
 
 export function openCart() {
@@ -91,9 +115,9 @@ export function closeCart() {
   setIsCartOpen(false)
 }
 
-export const cartItemCount = () => cartItems.reduce((count, item) => count + item.quantity, 0)
+export const cartItemCount = () => cartItems().reduce((count, item) => count + item.quantity, 0)
 
 export const cartLineInputs = (): CartLineInput[] =>
-  cartItems.map(({ variantId, quantity }) => ({ variantId, quantity }))
+  cartItems().map(({ variantId, quantity }) => ({ variantId, quantity }))
 
 export { cartItems, isCartOpen }

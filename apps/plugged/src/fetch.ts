@@ -12,7 +12,7 @@ export default {
       return app.handle(request)
     }
 
-    if (pathname.startsWith('/media/')) {
+    if (pathname.startsWith('/media/') && import.meta.env.DEV) {
       return handleMediaRequest(request)
     }
 

@@ -1,0 +1,3 @@
+PUBLIC_APP_URL=http://localhost:4321
+PUBLIC_MEDIA_BASE_URL=http://localhost:4321/media/
+QPAY_BASE_URL=https://merchant-sandbox.qpay.mn

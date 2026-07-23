@@ -9,11 +9,13 @@ export {
   closeCart,
   isCartOpen,
   openCart,
+  refreshCartItemSnapshots,
   removeCartItem,
   setCartItemQuantity,
 } from './cart'
 export type { CartItemsProps, CartLineInput, PersistedCartItem } from './cart'
 export { mediaUrl } from './media'
+export { createStorefrontQueryClient } from './query-client'
 export { cartQuery } from './query-options/cart'
 export { catalogQuery } from './query-options/catalog'
 export type { ProductListFilters } from './query-options/catalog'

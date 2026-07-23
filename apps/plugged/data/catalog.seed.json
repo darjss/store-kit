@@ -39,6 +39,14 @@
       "description": "Discontinued catalog items kept for historical records.",
       "sortOrder": 90,
       "active": false
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000004",
+      "slug": "cables",
+      "name": "Cables",
+      "description": "Replacement and balanced portable-audio cables.",
+      "sortOrder": 30,
+      "active": true
     }
   ],
   "products": [
@@ -213,6 +221,166 @@
         }
       ],
       "useCases": ["daily-carry"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000004",
+      "slug": "ember-bass-iem",
+      "brandSlug": "plugged-lab",
+      "categorySlug": "in-ear-monitors",
+      "name": "Ember Bass IEM",
+      "shortDescription": "A punchy single-dynamic IEM for bass-heavy daily listening.",
+      "description": "A compact metal-shell IEM tuned for firm sub-bass without covering vocals.",
+      "status": "active",
+      "featured": true,
+      "details": {
+        "driverConfiguration": "10 mm dynamic",
+        "impedanceOhms": 22,
+        "detachableCable": true
+      },
+      "images": [
+        {
+          "id": "40000000-0000-4000-8000-000000000005",
+          "source": "data/images/aster-copper.svg",
+          "r2Key": "catalog/products/ember-bass-iem/copper.svg",
+          "contentType": "image/svg+xml",
+          "alt": "Copper Ember IEM and braided cable",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "50000000-0000-4000-8000-000000000007",
+          "sku": "PL-EMBER-BA",
+          "name": "Default",
+          "options": {},
+          "priceMnt": 149000,
+          "stockQuantity": 6,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        }
+      ],
+      "useCases": ["bass", "daily-carry"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000005",
+      "slug": "veil-vocal-iem",
+      "brandSlug": "plugged-lab",
+      "categorySlug": "in-ear-monitors",
+      "name": "Veil Vocal IEM",
+      "shortDescription": "A clear midrange IEM for vocals, acoustic music, and calls.",
+      "description": "Veil keeps voices forward and edges controlled for long listening sessions.",
+      "status": "active",
+      "featured": false,
+      "details": {
+        "driverConfiguration": "1 dynamic + 1 balanced armature",
+        "impedanceOhms": 28,
+        "detachableCable": true
+      },
+      "images": [
+        {
+          "id": "40000000-0000-4000-8000-000000000006",
+          "source": "data/images/aster-graphite.svg",
+          "r2Key": "catalog/products/veil-vocal-iem/graphite.svg",
+          "contentType": "image/svg+xml",
+          "alt": "Graphite Veil IEM with silver cable",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "50000000-0000-4000-8000-000000000008",
+          "sku": "PL-VEIL-VOC",
+          "name": "Default",
+          "options": {},
+          "priceMnt": 169000,
+          "stockQuantity": 3,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        }
+      ],
+      "useCases": ["vocals", "first-iem"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000006",
+      "slug": "node-pro-balanced-dac",
+      "brandSlug": "plugged-lab",
+      "categorySlug": "portable-audio",
+      "name": "Node Pro Balanced DAC",
+      "shortDescription": "A pocket DAC with 3.5 mm and 4.4 mm headphone outputs.",
+      "description": "Node Pro gives phones and laptops more output power while staying pocketable.",
+      "status": "active",
+      "featured": true,
+      "details": {
+        "input": "USB-C",
+        "output": "3.5 mm + 4.4 mm",
+        "maximumSampleRate": "32-bit / 384 kHz",
+        "weightGrams": 28
+      },
+      "images": [
+        {
+          "id": "40000000-0000-4000-8000-000000000007",
+          "source": "data/images/node-mini.svg",
+          "r2Key": "catalog/products/node-pro-balanced-dac/silver.svg",
+          "contentType": "image/svg+xml",
+          "alt": "Silver Node Pro portable DAC",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "50000000-0000-4000-8000-000000000009",
+          "sku": "PL-NODE-PRO",
+          "name": "Default",
+          "options": {},
+          "priceMnt": 239000,
+          "stockQuantity": 8,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        }
+      ],
+      "useCases": ["gaming", "daily-carry"]
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000007",
+      "slug": "relay-2pin-cable",
+      "brandSlug": "plugged-lab",
+      "categorySlug": "cables",
+      "name": "Relay 2-Pin Cable",
+      "shortDescription": "A soft eight-core replacement cable with a 3.5 mm plug.",
+      "description": "Relay uses standard 0.78 mm two-pin connectors and a low-memory braid for daily carry.",
+      "status": "active",
+      "featured": false,
+      "details": {
+        "connector": "0.78 mm 2-pin",
+        "lengthMeters": 1.2
+      },
+      "images": [
+        {
+          "id": "40000000-0000-4000-8000-000000000008",
+          "source": "data/images/relay-cable.svg",
+          "r2Key": "catalog/products/relay-2pin-cable/black.svg",
+          "contentType": "image/svg+xml",
+          "alt": "Black braided Relay two-pin earphone cable",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "50000000-0000-4000-8000-000000000010",
+          "sku": "PL-RELAY-2P",
+          "name": "Default",
+          "options": {},
+          "priceMnt": 79000,
+          "stockQuantity": 11,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        }
+      ],
+      "useCases": ["daily-carry", "gaming"]
     }
   ]
 }

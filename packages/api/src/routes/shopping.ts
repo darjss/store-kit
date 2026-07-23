@@ -9,33 +9,18 @@ import { sendPaidOrderMessage } from '@store-kit/commerce/telegram'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
-const line = t.Object({ variantId: t.String(), quantity: t.Integer({ minimum: 1, maximum: 10 }) })
+const paymentVerificationFailed = () => ({
+  _tag: 'PaymentVerificationFailed' as const,
+  message: 'QPay төлбөрийг одоогоор шалгаж чадсангүй.',
+  retryable: true,
+})
+
 export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .onAfterHandle(({ set }) => {
     set.headers['cache-control'] = 'private, no-store'
   })
   .post('/checkout', async ({ body }) => Result.serialize(await createCheckoutOrder(body)), {
-    body: t.Object({
-      items: t.Array(line, { minItems: 1, maxItems: 20 }),
-      customer: t.Object({ name: t.String(), phone: t.String() }),
-      delivery: t.Object({
-        district: t.UnionEnum([
-          'Багануур',
-          'Багахангай',
-          'Баянгол',
-          'Баянзүрх',
-          'Налайх',
-          'Сонгинохайрхан',
-          'Сүхбаатар',
-          'Хан-Уул',
-          'Чингэлтэй',
-        ]),
-        khoroo: t.String(),
-        address: t.String(),
-        notes: t.Optional(t.String()),
-      }),
-      paymentMethod: t.UnionEnum(['qpay', 'bank_transfer']),
-    }),
+    body: t.Any(),
   })
   .get(
     '/orders/:id/status',
@@ -115,7 +100,8 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
           Result.err({ _tag: 'PaymentMismatch', message: 'QPay нэхэмжлэл олдсонгүй.' }),
         )
       const verified = await verifyQPayPayment(invoiceId)
-      if (verified.status === 'error') return Result.serialize<unknown, unknown>(verified)
+      if (verified.status === 'error')
+        return Result.serialize<unknown, unknown>(Result.err(paymentVerificationFailed()))
       if (!verified.value)
         return Result.serialize<unknown, unknown>(Result.ok({ paymentStatus: 'pending' as const }))
       return Result.serialize<unknown, unknown>(

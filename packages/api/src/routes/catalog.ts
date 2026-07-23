@@ -12,17 +12,37 @@ const slugPattern = '^[a-z0-9]+(?:-[a-z0-9]+)*$'
 const productListQuery = t.Object({
   category: t.Optional(t.String({ pattern: slugPattern })),
   brand: t.Optional(t.String({ pattern: slugPattern })),
-  useCase: t.Optional(t.UnionEnum(['first-iem', 'bass', 'vocals', 'gaming', 'daily-carry'])),
+  useCase: t.Optional(
+    t.Union([
+      t.Literal('first-iem'),
+      t.Literal('bass'),
+      t.Literal('vocals'),
+      t.Literal('gaming'),
+      t.Literal('daily-carry'),
+    ]),
+  ),
   featured: t.Optional(t.BooleanString()),
   query: t.Optional(t.String()),
   minPrice: t.Optional(t.Integer({ minimum: 0 })),
   maxPrice: t.Optional(t.Integer({ minimum: 0 })),
-  sort: t.Optional(t.UnionEnum(['featured', 'recent', 'price-asc', 'price-desc'])),
+  sort: t.Optional(
+    t.Union([
+      t.Literal('featured'),
+      t.Literal('recent'),
+      t.Literal('price-asc'),
+      t.Literal('price-desc'),
+    ]),
+  ),
   limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
   offset: t.Optional(t.Integer({ minimum: 0 })),
 })
 
 export const catalogRoutes = new Elysia({ aot: false, prefix: '/api' })
+  .onAfterHandle(({ set }) => {
+    set.headers['cache-control'] = 'public, max-age=0, must-revalidate'
+    set.headers['cloudflare-cdn-cache-control'] =
+      'public, max-age=60, stale-while-revalidate=300, stale-if-error=86400'
+  })
   .get('/products', async ({ query }) => Result.serialize(await listCatalogProducts(query)), {
     query: productListQuery,
   })
