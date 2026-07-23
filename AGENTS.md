@@ -15,7 +15,9 @@ Tests must exercise real behavior. Never add mocks, stubs, fake implementations,
 ## Coding conventions
 
 - Read `docs/product-preferences.md` before changing architecture, data flow, commerce, or storefront UI.
-- Use `~/` for package-local `src` imports. Do not add multi-level parent imports.
+- Prefer `~/` for package-local `src` imports only when package tooling safely preserves or
+  rewrites it for consumers. Source-export packages must use consumer-safe relative imports.
+  Short same-folder `./` imports remain allowed. Do not add multi-level parent imports.
 - Use plain feature namespaces for database queries, commerce operations, and TanStack query options.
 - Use TypeID with a stable entity prefix for every database entity ID.
 - Put browser-safe cross-layer schemas and types in `@store-kit/contracts`. Never import database types into client code.

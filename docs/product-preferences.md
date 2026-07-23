@@ -97,7 +97,10 @@ Database query files can import the shared server-only `db` directly. Do not pas
 
 Expose database access through plain feature namespaces such as `db.query.checkout.insertOrder(...)`. Expose commerce behavior through plain feature namespaces such as `commerce.payments.claimBankTransfer(...)`. Do not add classes, generic repositories, or dependency-injection containers.
 
-Use `~/` for package-local imports from `src`. Short same-folder `./` imports are acceptable. Do not use multi-level parent traversals.
+Prefer `~/` for package-local imports from `src` only when the package tooling safely resolves
+or rewrites the alias for consumers. Packages that export source files must use consumer-safe
+relative imports because an unresolved `~/` can bind to the consuming app's alias. Short
+same-folder `./` imports are acceptable. Do not use multi-level parent traversals.
 
 Operations can call multiple query modules. Routes, webhooks, scripts, and future integrations must call operations instead of duplicating business rules.
 

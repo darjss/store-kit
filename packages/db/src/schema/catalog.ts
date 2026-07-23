@@ -28,7 +28,7 @@ export type ProductUseCase = 'first-iem' | 'bass' | 'vocals' | 'gaming' | 'daily
 export const brand = sqliteTable(
   'brand',
   {
-    id: text('id').primaryKey().$defaultFn(createBrandId),
+    id: text('id').notNull().$defaultFn(createBrandId),
     slug: text('slug').notNull(),
     name: text('name').notNull(),
     description: text('description'),
@@ -37,6 +37,7 @@ export const brand = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'brand_pk', columns: [table.id] }),
     uniqueIndex('brand_slug_unique').on(table.slug),
     check('brand_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.brand)),
   ],
@@ -45,7 +46,7 @@ export const brand = sqliteTable(
 export const category = sqliteTable(
   'category',
   {
-    id: text('id').primaryKey().$defaultFn(createCategoryId),
+    id: text('id').notNull().$defaultFn(createCategoryId),
     slug: text('slug').notNull(),
     name: text('name').notNull(),
     description: text('description'),
@@ -55,6 +56,7 @@ export const category = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'category_pk', columns: [table.id] }),
     uniqueIndex('category_slug_unique').on(table.slug),
     index('category_active_sort_order_name_index').on(table.active, table.sortOrder, table.name),
     check('category_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.category)),
@@ -64,7 +66,7 @@ export const category = sqliteTable(
 export const product = sqliteTable(
   'product',
   {
-    id: text('id').primaryKey().$defaultFn(createProductId),
+    id: text('id').notNull().$defaultFn(createProductId),
     slug: text('slug').notNull(),
     brandId: text('brand_id').references(() => brand.id, { onDelete: 'set null' }),
     categoryId: text('category_id').references(() => category.id, {
@@ -83,6 +85,7 @@ export const product = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'product_pk', columns: [table.id] }),
     uniqueIndex('product_slug_unique').on(table.slug),
     index('product_status_featured_created_at_index').on(
       table.status,
@@ -110,7 +113,7 @@ export const product = sqliteTable(
 export const productImage = sqliteTable(
   'product_image',
   {
-    id: text('id').primaryKey().$defaultFn(createProductImageId),
+    id: text('id').notNull().$defaultFn(createProductImageId),
     productId: text('product_id')
       .notNull()
       .references(() => product.id, { onDelete: 'cascade' }),
@@ -120,6 +123,7 @@ export const productImage = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'product_image_pk', columns: [table.id] }),
     uniqueIndex('product_image_product_id_sort_order_unique').on(table.productId, table.sortOrder),
     uniqueIndex('product_image_id_product_id_unique').on(table.id, table.productId),
     check('product_image_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.productImage)),
@@ -129,7 +133,7 @@ export const productImage = sqliteTable(
 export const productVariant = sqliteTable(
   'product_variant',
   {
-    id: text('id').primaryKey().$defaultFn(createProductVariantId),
+    id: text('id').notNull().$defaultFn(createProductVariantId),
     productId: text('product_id')
       .notNull()
       .references(() => product.id, { onDelete: 'cascade' }),
@@ -145,6 +149,7 @@ export const productVariant = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'product_variant_pk', columns: [table.id] }),
     uniqueIndex('product_variant_sku_unique').on(table.sku),
     uniqueIndex('product_variant_id_product_id_unique').on(table.id, table.productId),
     index('product_variant_product_id_active_sort_order_index').on(

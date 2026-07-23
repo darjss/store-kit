@@ -1,3 +1,4 @@
+import { getTableConfig } from 'drizzle-orm/sqlite-core'
 import { Value } from 'typebox/value'
 import { expect, test } from 'vite-plus/test'
 
@@ -50,6 +51,7 @@ test('TypeBox ID schemas reject malformed IDs and IDs from another entity', () =
 test('the singleton checkout settings ID is a cfg TypeID', () => {
   expect(defaultCheckoutSettingsId).toBe('cfg_00000000000000000000000001')
   expect(Value.Check(checkoutSettingsIdSchema, defaultCheckoutSettingsId)).toBe(true)
+  expect(Value.Check(checkoutSettingsIdSchema, 'cfg_00000000000000000000000002')).toBe(false)
 })
 
 test('every entity primary key has its prefixed Drizzle default', () => {
@@ -68,5 +70,25 @@ test('every entity primary key has its prefixed Drizzle default', () => {
   for (const [id, prefix] of defaults) {
     expect(typeof id).toBe('string')
     expect(hasTypeIdPrefix(id as string, prefix)).toBe(true)
+  }
+})
+
+test('every single-column entity primary key is explicitly not null', () => {
+  const entities = [
+    { table: brand, id: brand.id },
+    { table: category, id: category.id },
+    { table: product, id: product.id },
+    { table: productImage, id: productImage.id },
+    { table: productVariant, id: productVariant.id },
+    { table: checkoutSettings, id: checkoutSettings.id },
+    { table: order, id: order.id },
+    { table: orderLine, id: orderLine.id },
+    { table: payment, id: payment.id },
+  ] as const
+
+  for (const { table, id } of entities) {
+    expect(id.notNull).toBe(true)
+    const [primaryKey] = getTableConfig(table).primaryKeys
+    expect(primaryKey?.columns).toEqual([id])
   }
 })

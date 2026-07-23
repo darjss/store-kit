@@ -31,7 +31,7 @@ export const prepare = async (items: CartLineInput[]) => {
 export const insertOrder = async (aggregate: NewOrderAggregate) => {
   await db.batch([
     db.insert(order).values(aggregate.order),
-    ...aggregate.lines.map(line => db.insert(orderLine).values(line)),
+    db.insert(orderLine).values(aggregate.lines),
     db.insert(payment).values(aggregate.payment),
   ])
 }
