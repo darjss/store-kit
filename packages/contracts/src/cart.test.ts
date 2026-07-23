@@ -30,6 +30,11 @@ test('cart input carries only authoritative identity and quantity', () => {
   ).toBe(false)
   expect(Value.Check(cartLineInputsSchema, [{ variantId: 'variant-1', quantity: 1 }])).toBe(false)
   expect(
+    Value.Check(cartLineInputsSchema, [
+      { variantId: 'var_81arz3ndektsv4rrffq69g5fav', quantity: 1 },
+    ]),
+  ).toBe(false)
+  expect(
     Value.Check(cartLineInputsSchema, [{ variantId: persistedItem.variantId, quantity: 11 }]),
   ).toBe(false)
   expect(Value.Check(cartLineInputsSchema, [])).toBe(false)

@@ -1,6 +1,7 @@
 import { commerce } from '@store-kit/commerce'
 import { verifyQPayCallback, verifyQPayPayment } from '@store-kit/commerce/qpay'
 import { sendPaidOrderMessage } from '@store-kit/commerce/telegram'
+import { orderIdPattern } from '@store-kit/contracts/orders'
 import type { PrivateOrderError, PublicOrder } from '@store-kit/contracts/orders'
 import type {
   BankTransferClaim,
@@ -8,7 +9,6 @@ import type {
   PaymentRefresh,
   PaymentRefreshError,
 } from '@store-kit/contracts/payments'
-import { entityIdPrefixes, typeIdPattern } from '@store-kit/db/ids'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
@@ -79,7 +79,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
       )
     },
     {
-      params: t.Object({ id: t.String({ pattern: typeIdPattern(entityIdPrefixes.order) }) }),
+      params: t.Object({ id: t.String({ pattern: orderIdPattern }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },
@@ -93,7 +93,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
         await commerce.payments.claimBankTransfer(params.id, headers['x-order-token'] ?? ''),
       ),
     {
-      params: t.Object({ id: t.String({ pattern: typeIdPattern(entityIdPrefixes.order) }) }),
+      params: t.Object({ id: t.String({ pattern: orderIdPattern }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },
@@ -135,7 +135,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
         : Result.serialize(Result.err<PaymentRefresh, PaymentRefreshError>(confirmation.error))
     },
     {
-      params: t.Object({ id: t.String({ pattern: typeIdPattern(entityIdPrefixes.order) }) }),
+      params: t.Object({ id: t.String({ pattern: orderIdPattern }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },

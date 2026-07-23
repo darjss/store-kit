@@ -58,6 +58,12 @@ test('checkout result exposes only serialized customer payment instructions', ()
   expect(
     Value.Check(checkoutCreatedSchema, {
       ...created,
+      orderId: 'ord_81arz3ndektsv4rrffq69g5fav',
+    }),
+  ).toBe(false)
+  expect(
+    Value.Check(checkoutCreatedSchema, {
+      ...created,
       nextAction: { ...nextAction, providerInvoiceId: 'private-provider-id' },
     }),
   ).toBe(false)

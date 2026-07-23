@@ -122,9 +122,6 @@ importers:
       '@store-kit/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@store-kit/db':
-        specifier: workspace:*
-        version: link:../db
       better-result:
         specifier: 'catalog:'
         version: 2.10.0

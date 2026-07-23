@@ -1,8 +1,8 @@
-import { env } from 'cloudflare:workers'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, exists, gte, inArray, isNull, lt, notExists, or, sql } from 'drizzle-orm'
 
 import { db } from '../client'
-import { orderLine, payment } from '../schema/shopping'
+import { productVariant } from '../schema/catalog'
+import { order as customerOrder, orderLine, payment } from '../schema/shopping'
 
 type Payment = typeof payment.$inferSelect
 
@@ -84,37 +84,88 @@ export const confirmAndDecrementStock = async (
     .from(orderLine)
     .where(eq(orderLine.orderId, input.orderId))
 
-  const claim = env.DB.prepare(
-    `update payment set status = 'confirming', updated_at = ?
-     where order_id = ? and status in ('pending', 'claimed')
-       and not exists (
-         select 1 from order_line
-         left join product_variant on product_variant.id = order_line.variant_id
-         where order_line.order_id = payment.order_id
-           and (product_variant.id is null or product_variant.stock_quantity < order_line.quantity)
-       )`,
-  ).bind(input.paidAt, input.orderId)
+  const claim = db
+    .update(payment)
+    .set({ status: 'confirming', updatedAt: input.paidAt })
+    .where(
+      and(
+        eq(payment.orderId, input.orderId),
+        inArray(payment.status, ['pending', 'claimed']),
+        notExists(
+          db
+            .select({ value: sql`1` })
+            .from(orderLine)
+            .leftJoin(productVariant, eq(productVariant.id, orderLine.variantId))
+            .where(
+              and(
+                eq(orderLine.orderId, payment.orderId),
+                or(isNull(productVariant.id), lt(productVariant.stockQuantity, orderLine.quantity)),
+              ),
+            ),
+        ),
+      ),
+    )
+    .returning({ id: payment.id })
 
-  const decrements = lines.map(line =>
-    env.DB.prepare(
-      `update product_variant set stock_quantity = stock_quantity - ?, updated_at = ?
-       where id = ? and stock_quantity >= ?
-         and exists (select 1 from payment where order_id = ? and status = 'confirming')`,
-    ).bind(line.quantity, input.paidAt, line.variantId, line.quantity, input.orderId),
+  const paymentIsConfirming = db
+    .select({ value: sql`1` })
+    .from(payment)
+    .where(and(eq(payment.orderId, input.orderId), eq(payment.status, 'confirming')))
+  const decrementableLines = lines.flatMap(line =>
+    line.variantId ? [{ ...line, variantId: line.variantId }] : [],
+  )
+  const decrements = decrementableLines.map(line =>
+    db
+      .update(productVariant)
+      .set({
+        stockQuantity: sql`${productVariant.stockQuantity} - ${line.quantity}`,
+        updatedAt: input.paidAt,
+      })
+      .where(
+        and(
+          eq(productVariant.id, line.variantId),
+          gte(productVariant.stockQuantity, line.quantity),
+          exists(paymentIsConfirming),
+        ),
+      )
+      .returning({ id: productVariant.id }),
   )
 
-  const finishPayment = env.DB.prepare(
-    `update payment set status = 'paid', provider_payment_id = ?, paid_at = ?, updated_at = ?
-     where order_id = ? and status = 'confirming'`,
-  ).bind(input.providerPaymentId, input.paidAt, input.paidAt, input.orderId)
-  const finishOrder = env.DB.prepare(
-    `update customer_order set status = 'confirmed', updated_at = ?
-     where id = ? and status = 'new'
-       and exists (select 1 from payment where order_id = ? and status = 'paid' and provider_payment_id = ?)`,
-  ).bind(input.paidAt, input.orderId, input.orderId, input.providerPaymentId)
+  const finishPayment = db
+    .update(payment)
+    .set({
+      status: 'paid',
+      providerPaymentId: input.providerPaymentId,
+      paidAt: input.paidAt,
+      updatedAt: input.paidAt,
+    })
+    .where(and(eq(payment.orderId, input.orderId), eq(payment.status, 'confirming')))
+    .returning({ id: payment.id })
+  const finishOrder = db
+    .update(customerOrder)
+    .set({ status: 'confirmed', updatedAt: input.paidAt })
+    .where(
+      and(
+        eq(customerOrder.id, input.orderId),
+        eq(customerOrder.status, 'new'),
+        exists(
+          db
+            .select({ value: sql`1` })
+            .from(payment)
+            .where(
+              and(
+                eq(payment.orderId, input.orderId),
+                eq(payment.status, 'paid'),
+                eq(payment.providerPaymentId, input.providerPaymentId),
+              ),
+            ),
+        ),
+      ),
+    )
+    .returning({ id: customerOrder.id })
 
-  const [claimResult] = await env.DB.batch([claim, ...decrements, finishPayment, finishOrder])
-  if ((claimResult.meta.changes ?? 0) > 0) return { status: 'confirmed' }
+  const [claimedPayments] = await db.batch([claim, ...decrements, finishPayment, finishOrder])
+  if (claimedPayments.length > 0) return { status: 'confirmed' }
 
   const paymentAfterBatch = await findByOrderId(input.orderId)
   if (paymentAfterBatch?.status === 'paid') {
@@ -126,13 +177,26 @@ export const confirmAndDecrementStock = async (
 }
 
 export const markQPayPaidWithoutStock = async (input: ConfirmPaymentWrite) => {
-  const results = await env.DB.batch([
-    env.DB.prepare(
-      `update payment set status = 'paid', provider_payment_id = ?, paid_at = ?, updated_at = ?
-         where order_id = ? and method = 'qpay' and amount_mnt = ? and status in ('pending', 'claimed')`,
-    ).bind(input.providerPaymentId, input.paidAt, input.paidAt, input.orderId, input.amountMnt),
+  const [updatedPayments] = await db.batch([
+    db
+      .update(payment)
+      .set({
+        status: 'paid',
+        providerPaymentId: input.providerPaymentId,
+        paidAt: input.paidAt,
+        updatedAt: input.paidAt,
+      })
+      .where(
+        and(
+          eq(payment.orderId, input.orderId),
+          eq(payment.method, 'qpay'),
+          eq(payment.amountMnt, input.amountMnt),
+          inArray(payment.status, ['pending', 'claimed']),
+        ),
+      )
+      .returning({ id: payment.id }),
   ])
-  return (results[0].meta.changes ?? 0) > 0
+  return updatedPayments.length > 0
 }
 
 export const paymentQuery = {

@@ -78,3 +78,4 @@ export type PublicOrderLine = Static<typeof publicOrderLineSchema>
 export type PublicOrderPayment = Static<typeof publicOrderPaymentSchema>
 export type PublicOrder = Static<typeof publicOrderSchema>
 export type PrivateOrderError = Static<typeof privateOrderErrorSchema>
+export { orderIdPattern } from './common'
