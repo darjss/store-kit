@@ -115,13 +115,18 @@ export const productImage = sqliteTable(
       .notNull()
       .references(() => product.id, { onDelete: 'cascade' }),
     r2Key: text('r2_key').notNull(),
-    alt: text('alt'),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    alt: text('alt').notNull(),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: integer('created_at').notNull(),
   },
   table => [
     uniqueIndex('product_image_product_id_sort_order_unique').on(table.productId, table.sortOrder),
     uniqueIndex('product_image_id_product_id_unique').on(table.id, table.productId),
+    check('product_image_width_check', sql`${table.width} > 0`),
+    check('product_image_height_check', sql`${table.height} > 0`),
+    check('product_image_alt_check', sql`length(trim(${table.alt})) > 0`),
     check('product_image_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.productImage)),
   ],
 )

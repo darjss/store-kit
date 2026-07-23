@@ -18,6 +18,9 @@ const item: PersistedCartItem = {
   variantName: 'Black',
   options: { color: 'Black' },
   imageR2Key: 'products/product/black.webp',
+  imageWidth: 1200,
+  imageHeight: 900,
+  imageAlt: 'Black Product',
   unitPriceMnt: 120_000,
 }
 

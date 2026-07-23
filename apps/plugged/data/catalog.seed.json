@@ -73,6 +73,8 @@
           "source": "data/images/aster-graphite.svg",
           "r2Key": "catalog/products/aster-modular-iem/graphite.svg",
           "contentType": "image/svg+xml",
+          "width": 1200,
+          "height": 900,
           "alt": "Graphite Aster in-ear monitors with braided cable",
           "sortOrder": 10
         },
@@ -81,6 +83,8 @@
           "source": "data/images/aster-copper.svg",
           "r2Key": "catalog/products/aster-modular-iem/copper.svg",
           "contentType": "image/svg+xml",
+          "width": 1200,
+          "height": 900,
           "alt": "Copper Aster in-ear monitors with braided cable",
           "sortOrder": 20
         },
@@ -89,6 +93,8 @@
           "source": "data/images/aster-kit.svg",
           "r2Key": "catalog/products/aster-modular-iem/included-kit.svg",
           "contentType": "image/svg+xml",
+          "width": 1200,
+          "height": 900,
           "alt": "Aster carrying case, cable, and ear tip set",
           "sortOrder": 30
         }
@@ -176,6 +182,8 @@
           "source": "data/images/node-mini.svg",
           "r2Key": "catalog/products/node-mini-usb-c-dac/silver.svg",
           "contentType": "image/svg+xml",
+          "width": 1200,
+          "height": 900,
           "alt": "Silver Node Mini USB-C DAC and braided lead",
           "sortOrder": 10
         }
@@ -244,6 +252,8 @@
           "source": "data/images/aster-copper.svg",
           "r2Key": "catalog/products/ember-bass-iem/copper.svg",
           "contentType": "image/svg+xml",
+          "width": 1200,
+          "height": 900,
           "alt": "Copper Ember IEM and braided cable",
           "sortOrder": 10
         }
@@ -284,6 +294,8 @@
           "source": "data/images/aster-graphite.svg",
           "r2Key": "catalog/products/veil-vocal-iem/graphite.svg",
           "contentType": "image/svg+xml",
+          "width": 1200,
+          "height": 900,
           "alt": "Graphite Veil IEM with silver cable",
           "sortOrder": 10
         }
@@ -325,6 +337,8 @@
           "source": "data/images/node-mini.svg",
           "r2Key": "catalog/products/node-pro-balanced-dac/silver.svg",
           "contentType": "image/svg+xml",
+          "width": 1200,
+          "height": 900,
           "alt": "Silver Node Pro portable DAC",
           "sortOrder": 10
         }
@@ -364,6 +378,8 @@
           "source": "data/images/relay-cable.svg",
           "r2Key": "catalog/products/relay-2pin-cable/black.svg",
           "contentType": "image/svg+xml",
+          "width": 900,
+          "height": 650,
           "alt": "Black braided Relay two-pin earphone cable",
           "sortOrder": 10
         }

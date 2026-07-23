@@ -7,7 +7,6 @@ import {
   removeCartItem,
   setCartItemQuantity,
 } from '@store-kit/storefront/cart/store'
-import { mediaUrl } from '@store-kit/storefront/media'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { cartQuery } from '@store-kit/storefront/query-options/cart'
 import { catalogQuery } from '@store-kit/storefront/query-options/catalog'
@@ -33,6 +32,8 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js'
+
+import { ProductImage } from './ProductImage'
 
 const StoreIcon = lazy(() => import('./StoreIcon'))
 const money = new Intl.NumberFormat('mn-MN')
@@ -139,12 +140,10 @@ function Search() {
                         >
                           <Show when={image}>
                             {item => (
-                              <img
+                              <ProductImage
                                 class="h-22.5 w-30 object-contain max-md:h-16.5 max-md:w-22"
-                                src={mediaUrl(item().r2Key)}
-                                width="120"
-                                height="90"
-                                alt={item().alt ?? product.name}
+                                image={item()}
+                                layout="thumbnail"
                               />
                             )}
                           </Show>
@@ -202,6 +201,9 @@ function Chrome() {
         variantName: line.variantName,
         options: line.options,
         imageR2Key: line.imageR2Key,
+        imageWidth: line.imageWidth,
+        imageHeight: line.imageHeight,
+        imageAlt: line.imageAlt,
         unitPriceMnt: line.unitPriceMnt,
       })),
     )
@@ -295,12 +297,25 @@ function Chrome() {
             <Cart.Items>
               {item => (
                 <article class="border-ink grid grid-cols-[110px_minmax(0,1fr)] gap-3 border-b-3 py-4 max-md:grid-cols-[80px_minmax(0,1fr)]">
-                  <Show when={item.imageR2Key}>
-                    <img
-                      class="bg-paper-clean size-27.5 object-contain max-md:size-20"
-                      src={mediaUrl(item.imageR2Key!)}
-                      alt=""
-                    />
+                  <Show
+                    when={
+                      item.imageR2Key && item.imageWidth && item.imageHeight && item.imageAlt
+                        ? {
+                            r2Key: item.imageR2Key,
+                            width: item.imageWidth,
+                            height: item.imageHeight,
+                            alt: item.imageAlt,
+                          }
+                        : undefined
+                    }
+                  >
+                    {image => (
+                      <ProductImage
+                        class="bg-paper-clean size-27.5 object-contain max-md:size-20"
+                        image={image()}
+                        layout="thumbnail"
+                      />
+                    )}
                   </Show>
                   <div class="min-w-0">
                     <a class="wrap-break-word" href={`/products/${item.productSlug}`}>

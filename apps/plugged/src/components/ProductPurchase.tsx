@@ -4,6 +4,8 @@ import { addCartItem, openCart } from '@store-kit/storefront/cart/store'
 import { animate } from 'motion'
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js'
 
+import { ProductImage } from './ProductImage'
+
 const money = new Intl.NumberFormat('mn-MN')
 const actionClass =
   'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
@@ -14,7 +16,6 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
   const [variantId, setVariantId] = createSignal(initial?.id ?? '')
   const [quantity, setQuantity] = createSignal(1)
   const [announcement, setAnnouncement] = createSignal('')
-  const imageUrl = (key: string) => new URL(key, props.mediaBaseUrl).toString()
   const selected = createMemo(() =>
     props.product.variants.find(variant => variant.id === variantId()),
   )
@@ -58,6 +59,9 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
       variantName: variant.name,
       options: variant.options,
       imageR2Key: image()?.r2Key ?? null,
+      imageWidth: image()?.width ?? null,
+      imageHeight: image()?.height ?? null,
+      imageAlt: image()?.alt ?? null,
       unitPriceMnt: variant.priceMnt,
     })
     setAnnouncement(`${props.product.name} сагсанд нэмэгдлээ.`)
@@ -72,11 +76,12 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
       >
         <Show when={image()}>
           {item => (
-            <img
+            <ProductImage
               class="h-[90%] w-[90%] object-contain filter-[drop-shadow(0_6px_0_rgb(0_0_0/0.2))] max-md:w-[115%] max-md:max-w-none"
-              src={imageUrl(item().r2Key)}
-              alt={item().alt ?? props.product.name}
-              fetchpriority="high"
+              image={item()}
+              layout="detail"
+              mediaBaseUrl={props.mediaBaseUrl}
+              priority
             />
           )}
         </Show>

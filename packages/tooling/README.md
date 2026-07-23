@@ -63,6 +63,8 @@ The validator rejects unknown fields. All fields in the example are required unl
           "source": "data/images/example-iem.webp",
           "r2Key": "catalog/example-iem/main.webp",
           "contentType": "image/webp",
+          "width": 1200,
+          "height": 900,
           "alt": "Example IEM",
           "sortOrder": 0
         }
@@ -86,7 +88,7 @@ The validator rejects unknown fields. All fields in the example are required unl
 }
 ```
 
-`brandSlug`, `categorySlug`, `description`, `websiteUrl`, `shortDescription`, `details`, `alt`, and `compareAtPriceMnt` are optional. Optional text, details, alt text, and compare-at prices can also be `null`. A product must have at least one variant. Product detail values can be a string, number, boolean, or string array. Variant option values must be strings. `imageKeys` must contain R2 keys from the same product. Use an empty array when a variant uses the shared product gallery.
+`brandSlug`, `categorySlug`, `description`, `websiteUrl`, `shortDescription`, `details`, and `compareAtPriceMnt` are optional. Optional text, details, and compare-at prices can also be `null`. Each image requires its source width, source height, and meaningful alt text. A product must have at least one variant. Product detail values can be a string, number, boolean, or string array. Variant option values must be strings. `imageKeys` must contain R2 keys from the same product. Use an empty array when a variant uses the shared product gallery.
 
 Supported image content types are `image/avif`, `image/gif`, `image/jpeg`, `image/png`, `image/svg+xml`, and `image/webp`.
 

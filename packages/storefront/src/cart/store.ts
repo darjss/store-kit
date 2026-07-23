@@ -29,6 +29,12 @@ function isPersistedCartItem(value: unknown): value is PersistedCartItem {
     item.options !== null &&
     Object.values(item.options).every(option => typeof option === 'string') &&
     (typeof item.imageR2Key === 'string' || item.imageR2Key === null) &&
+    (Number.isInteger(item.imageWidth) || item.imageWidth === null) &&
+    (item.imageWidth ?? 1) > 0 &&
+    (Number.isInteger(item.imageHeight) || item.imageHeight === null) &&
+    (item.imageHeight ?? 1) > 0 &&
+    (typeof item.imageAlt === 'string' || item.imageAlt === null) &&
+    (item.imageAlt === null || item.imageAlt.length > 0) &&
     Number.isInteger(item.unitPriceMnt) &&
     (item.unitPriceMnt ?? -1) >= 0
   )
@@ -92,6 +98,9 @@ export function refreshCartItemSnapshots(
     | 'variantName'
     | 'options'
     | 'imageR2Key'
+    | 'imageWidth'
+    | 'imageHeight'
+    | 'imageAlt'
     | 'unitPriceMnt'
   >[],
 ) {
