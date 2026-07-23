@@ -15,6 +15,13 @@ export const slugSchema = Type.String({ pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' })
 const urlSchema = Type.String({ format: 'uri' })
 export const nonNegativeIntegerSchema = Type.Integer({ minimum: 0 })
 
+export const productUseCaseSchema = Type.Union([
+  Type.Literal('first-iem'),
+  Type.Literal('bass'),
+  Type.Literal('vocals'),
+  Type.Literal('gaming'),
+  Type.Literal('daily-carry'),
+])
 export const productStatusSchema = Type.Union([
   Type.Literal('draft'),
   Type.Literal('active'),
@@ -42,6 +49,7 @@ const productRefinements = {
   slug: () => slugSchema,
   status: () => productStatusSchema,
   details: () => productDetailsSchema,
+  useCases: () => Type.Array(productUseCaseSchema),
 }
 
 const productVariantRefinements = {
@@ -87,6 +95,7 @@ export const updateProductVariantImageSchema = createUpdateSchema(productVariant
 export const productListFiltersSchema = Type.Object({
   category: Type.Optional(slugSchema),
   brand: Type.Optional(slugSchema),
+  useCase: Type.Optional(productUseCaseSchema),
   featured: Type.Optional(Type.Boolean()),
   query: Type.Optional(Type.String()),
   minPrice: Type.Optional(nonNegativeIntegerSchema),
@@ -103,6 +112,7 @@ export const productListFiltersSchema = Type.Object({
   offset: Type.Optional(nonNegativeIntegerSchema),
 })
 
+export type ProductUseCase = Static<typeof productUseCaseSchema>
 export type ProductStatus = Static<typeof productStatusSchema>
 export type ProductListFilters = Static<typeof productListFiltersSchema>
 

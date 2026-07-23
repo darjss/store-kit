@@ -253,8 +253,9 @@ Keep inventory per variant.
 Initial behavior:
 
 - check available stock during order creation
-- decrease stock when an order is created
-- restore stock when an order is cancelled
+- decrease stock only when payment is confirmed
+- make repeated payment confirmation safe so stock decreases only once
+- prevent confirmation from making stock negative
 - let an admin edit stock directly
 
 Do not add an inventory ledger, reservation service, warehouse model, or event sourcing initially.

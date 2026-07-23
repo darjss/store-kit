@@ -12,6 +12,11 @@ export const listPublishedProducts = async (filters: ProductListFilters = {}) =>
   if (filters.category) conditions.push(eq(category.slug, filters.category))
   if (filters.brand) conditions.push(eq(brand.slug, filters.brand))
   if (filters.featured !== undefined) conditions.push(eq(product.featured, filters.featured))
+  if (filters.useCase) {
+    conditions.push(
+      sql`exists (select 1 from json_each(${product.useCases}) where json_each.value = ${filters.useCase})`,
+    )
+  }
 
   if (filters.query) {
     const search = `%${filters.query
