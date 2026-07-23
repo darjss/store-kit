@@ -1,4 +1,18 @@
 export { api } from './client'
+export {
+  Cart,
+  addCartItem,
+  cartItemCount,
+  cartItems,
+  cartLineInputs,
+  clearCart,
+  closeCart,
+  isCartOpen,
+  openCart,
+  removeCartItem,
+  setCartItemQuantity,
+} from './cart'
+export type { CartItemsProps, CartLineInput, PersistedCartItem } from './cart'
 export { mediaUrl } from './media'
 export { catalogQuery } from './query-options/catalog'
 export type { ProductListFilters } from './query-options/catalog'
