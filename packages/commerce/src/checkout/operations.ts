@@ -3,63 +3,47 @@ import type {
   CartCorrection,
   CheckoutCreated,
   CheckoutError,
+  CheckoutInput,
   PaymentInstructions,
   PaymentMethod,
   QPayPaymentInstructions,
 } from '@store-kit/contracts'
-import { checkoutInputSchema } from '@store-kit/contracts/checkout'
-import { query as dbQuery } from '@store-kit/db'
-import { createOrderId, createOrderLineId, createPaymentId } from '@store-kit/db/ids'
+import { database } from '@store-kit/db'
+import { createId } from '@store-kit/db/ids'
 /* oxlint-disable eslint/no-underscore-dangle */
 import { Result } from 'better-result'
 import { matchAsync } from 'dismatch/async'
-import { Value } from 'typebox/value'
 
 import { createQPayInvoice } from '../adapters/qpay'
-import { inactiveVariant, insufficientStock, missingVariant } from '../cart/errors'
-import { hashStatusToken } from '../orders/status-token'
 import {
   changedCart,
-  checkoutFieldMessage,
   deliveryUnavailable,
   emptyCheckoutCart,
+  inactiveVariant,
+  insufficientStock,
   invalidCheckoutDetails,
+  missingVariant,
   paymentSetupFailed,
-} from './errors'
+} from '../errors'
+import { hashStatusToken } from '../orders/status-token'
 
 const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').replace(/^976/, '')
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
-const trimString = (value: unknown) => (typeof value === 'string' ? value.trim() : value)
-const trimOptionalString = (value: unknown) => {
-  const trimmed = trimString(value)
-  return trimmed === '' ? undefined : trimmed
-}
 
-const normalizeCheckoutInput = (input: unknown): unknown => {
-  if (!isRecord(input)) return input
-
-  const customer = isRecord(input.customer)
-    ? {
-        ...input.customer,
-        name: trimString(input.customer.name),
-        phone:
-          typeof input.customer.phone === 'string'
-            ? normalizePhone(input.customer.phone)
-            : input.customer.phone,
-      }
-    : input.customer
-  const delivery = isRecord(input.delivery)
-    ? {
-        ...input.delivery,
-        khoroo: trimString(input.delivery.khoroo),
-        address: trimString(input.delivery.address),
-        notes: trimOptionalString(input.delivery.notes),
-      }
-    : input.delivery
-
-  return { ...input, customer, delivery }
-}
+const normalizeCheckoutInput = (input: CheckoutInput) => ({
+  ...input,
+  customer: {
+    name: input.customer.name.trim(),
+    phone: normalizePhone(input.customer.phone),
+  },
+  delivery: {
+    ...input.delivery,
+    khoroo: input.delivery.khoroo.trim(),
+    address: input.delivery.address.trim(),
+    ...(input.delivery.notes?.trim()
+      ? { notes: input.delivery.notes.trim() }
+      : { notes: undefined }),
+  },
+})
 
 type SelectedPaymentMethod = { type: 'qpay' } | { type: 'bank_transfer' }
 
@@ -107,42 +91,21 @@ const preparePayment = (
       }),
   })
 
-export const createCheckoutOrder = async (rawInput: unknown) => {
+export const createCheckoutOrder = async (rawInput: CheckoutInput) => {
   const input = normalizeCheckoutInput(rawInput)
-  if (
-    input !== null &&
-    typeof input === 'object' &&
-    'items' in input &&
-    Array.isArray(input.items) &&
-    input.items.length === 0
-  )
+  if (input.items.length === 0)
     return Result.err<CheckoutCreated, CheckoutError>(emptyCheckoutCart())
-  if (!Value.Check(checkoutInputSchema, input))
-    return Result.err<CheckoutCreated, CheckoutError>(
-      invalidCheckoutDetails(
-        [...Value.Errors(checkoutInputSchema, input)].map(issue => ({
-          path: issue.instancePath,
-          message: checkoutFieldMessage(issue.instancePath),
-        })),
-      ),
-    )
   const variantIds = new Set(input.items.map(item => item.variantId))
   if (variantIds.size !== input.items.length)
     return Result.err<CheckoutCreated, CheckoutError>(
-      invalidCheckoutDetails(
-        [{ path: '/items', message: 'Нэг сонголтыг нэг удаа оруулна уу.' }],
-        'Нэг барааны сонголтыг давхар оруулах боломжгүй.',
-      ),
+      invalidCheckoutDetails([{ path: '/items', code: 'duplicate' }]),
     )
   if (!/^[6789]\d{7}$/.test(input.customer.phone))
     return Result.err<CheckoutCreated, CheckoutError>(
-      invalidCheckoutDetails(
-        [{ path: '/customer/phone', message: 'Монголын 8 оронтой дугаар оруулна уу.' }],
-        'Утасны дугаараа шалгана уу.',
-      ),
+      invalidCheckoutDetails([{ path: '/customer/phone', code: 'invalid' }]),
     )
 
-  const { settings, variants } = await dbQuery.checkout.prepare(input.items)
+  const { settings, variants } = await database.query.checkout.prepare(input.items)
   if (!settings) return Result.err<CheckoutCreated, CheckoutError>(deliveryUnavailable())
   const byId = new Map(variants.map(variant => [variant.variantId, variant]))
   const corrections = input.items.flatMap<CartCorrection>(item => {
@@ -157,8 +120,8 @@ export const createCheckoutOrder = async (rawInput: unknown) => {
   if (corrections.length > 0)
     return Result.err<CheckoutCreated, CheckoutError>(changedCart(corrections))
 
-  const orderId = createOrderId()
-  const paymentId = createPaymentId()
+  const orderId = createId('order')
+  const paymentId = createId('payment')
   const orderNumber = `PLG-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
   const statusToken = `${crypto.randomUUID()}${crypto.randomUUID()}`
   const subtotalMnt = input.items.reduce(
@@ -179,7 +142,7 @@ export const createCheckoutOrder = async (rawInput: unknown) => {
   )
   if (payment.status === 'error') return Result.err<CheckoutCreated, CheckoutError>(payment.error)
 
-  await dbQuery.checkout.insertOrder({
+  await database.query.checkout.insertOrder({
     order: {
       id: orderId,
       number: orderNumber,
@@ -200,7 +163,7 @@ export const createCheckoutOrder = async (rawInput: unknown) => {
     lines: input.items.map(item => {
       const variant = byId.get(item.variantId)!
       return {
-        id: createOrderLineId(),
+        id: createId('orderLine'),
         orderId,
         productId: variant.productId,
         variantId: variant.variantId,

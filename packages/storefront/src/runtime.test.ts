@@ -1,7 +1,7 @@
 import { expect, test } from 'vite-plus/test'
 
 import { formatMnt } from './format'
-import { publicMediaUrl } from './media'
+import { mediaUrl, publicMediaUrl } from './media'
 import { clampPurchaseQuantity, maximumPurchaseQuantity } from './purchase'
 import { orderQuery } from './query-options/orders'
 import { orderStatusLabel, paymentStatusLabel, shouldPollOrderStatus } from './status'
@@ -28,9 +28,13 @@ test('scopes private-order queries by their credential', () => {
 })
 
 test('builds encoded public media URLs', () => {
-  expect(publicMediaUrl('products/Zero Red.webp', 'https://media.plugged.mn/')).toBe(
-    'https://media.plugged.mn/products/Zero%20Red.webp',
+  expect(publicMediaUrl('products/Zero Red.webp', 'https://media.example.com/')).toBe(
+    'https://media.example.com/products/Zero%20Red.webp',
   )
+  expect(mediaUrl('https://media.example.com/products/zero-red.webp')).toBe(
+    'https://media.example.com/products/zero-red.webp',
+  )
+  expect(mediaUrl('products/zero-red.webp')).toBe('/media/products/zero-red.webp')
 })
 
 test('uses reviewed customer status labels', () => {

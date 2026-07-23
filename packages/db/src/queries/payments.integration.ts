@@ -2,13 +2,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { expect, test } from 'vite-plus/test'
 
 import { db } from '../client'
-import {
-  createOrderId,
-  createOrderLineId,
-  createPaymentId,
-  createProductId,
-  createProductVariantId,
-} from '../ids'
+import { createId } from '../ids'
 import { product, productVariant } from '../schema/catalog'
 import { order, orderLine, payment } from '../schema/shopping'
 import { confirmAndDecrementStock } from './payments'
@@ -18,9 +12,9 @@ const insertOrderAggregate = async (
   stockQuantities: number[],
   orderedQuantities: number[],
 ) => {
-  const productId = createProductId()
-  const variantIds = stockQuantities.map(() => createProductVariantId())
-  const orderId = createOrderId()
+  const productId = createId('product')
+  const variantIds = stockQuantities.map(() => createId('productVariant'))
+  const orderId = createId('order')
   const telegramMessageId = `message-${label}`
   const now = Date.now()
 
@@ -66,7 +60,7 @@ const insertOrderAggregate = async (
     }),
     db.insert(orderLine).values(
       variantIds.map((variantId, index) => ({
-        id: createOrderLineId(),
+        id: createId('orderLine'),
         orderId,
         productId,
         variantId,
@@ -80,7 +74,7 @@ const insertOrderAggregate = async (
       })),
     ),
     db.insert(payment).values({
-      id: createPaymentId(),
+      id: createId('payment'),
       orderId,
       method: 'bank_transfer',
       status: 'claimed',

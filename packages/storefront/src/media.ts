@@ -1,4 +1,3 @@
-const productionMediaBaseUrl = 'https://media.plugged.mn/'
 const encodeR2Key = (r2Key: string) => r2Key.split('/').map(encodeURIComponent).join('/')
 
 export const publicMediaUrl = (r2Key: string, baseUrl: string) =>
@@ -6,13 +5,14 @@ export const publicMediaUrl = (r2Key: string, baseUrl: string) =>
 
 const isLocalUrl = (url: URL) => ['localhost', '127.0.0.1'].includes(url.hostname)
 
-export const mediaUrl = (r2Key: string, baseUrl = productionMediaBaseUrl) => {
+export const mediaUrl = (source: string, baseUrl?: string) => {
+  if (/^https?:\/\//.test(source) || source.startsWith('/')) return source
   if (
-    typeof window !== 'undefined' &&
-    ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    !baseUrl ||
+    (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname))
   )
-    return `/media/${encodeR2Key(r2Key)}`
-  return publicMediaUrl(r2Key, baseUrl)
+    return `/media/${encodeR2Key(source)}`
+  return publicMediaUrl(source, baseUrl)
 }
 
 export const cloudflareImageTransformer = (
@@ -21,7 +21,7 @@ export const cloudflareImageTransformer = (
 ) => {
   const sourceUrl = new URL(
     source,
-    typeof window === 'undefined' ? productionMediaBaseUrl : window.location.origin,
+    typeof window === 'undefined' ? 'http://localhost' : window.location.origin,
   )
   if (isLocalUrl(sourceUrl)) return sourceUrl.toString()
 

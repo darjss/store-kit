@@ -4,13 +4,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { describe, expect, it } from 'vite-plus/test'
 
 import { db } from './client'
-import {
-  createOrderId,
-  createOrderLineId,
-  createPaymentId,
-  createProductId,
-  createProductVariantId,
-} from './ids'
+import { createId } from './ids'
 import { paymentQuery } from './queries/payments'
 import { product, productVariant } from './schema/catalog'
 import { order, orderLine, payment } from './schema/shopping'
@@ -33,10 +27,10 @@ const createFixture = async ({
   telegramMessageId = method === 'bank_transfer' ? '100' : null,
 }: FixtureOptions = {}) => {
   const now = Date.now()
-  const orderId = createOrderId()
-  const paymentId = createPaymentId()
-  const productId = createProductId()
-  const variantIds = stocks.map(() => createProductVariantId())
+  const orderId = createId('order')
+  const paymentId = createId('payment')
+  const productId = createId('product')
+  const variantIds = stocks.map(() => createId('productVariant'))
   const subtotalMnt = quantities.reduce((sum, quantity) => sum + quantity * 1_000, 0)
 
   await db.batch([
@@ -84,7 +78,7 @@ const createFixture = async ({
     }),
     ...variantIds.map((variantId, index) =>
       db.insert(orderLine).values({
-        id: createOrderLineId(),
+        id: createId('orderLine'),
         orderId,
         productId,
         variantId,
@@ -220,7 +214,7 @@ describe('atomic payment confirmation', () => {
       telegramMessageId: '301',
     })
     await db.insert(orderLine).values({
-      id: createOrderLineId(),
+      id: createId('orderLine'),
       orderId: fixture.orderId,
       productId: null,
       variantId: fixture.variantIds[0],

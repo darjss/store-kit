@@ -5,14 +5,7 @@ import { expect, test } from 'vite-plus/test'
 import {
   brandIdSchema,
   checkoutSettingsIdSchema,
-  createBrandId,
-  createCategoryId,
-  createOrderId,
-  createOrderLineId,
-  createPaymentId,
-  createProductId,
-  createProductImageId,
-  createProductVariantId,
+  createId,
   defaultCheckoutSettingsId,
   entityIdPrefixes,
   hasTypeIdPrefix,
@@ -22,14 +15,14 @@ import { checkoutSettings, order, orderLine, payment } from './schema/shopping'
 
 test('entity ID generators use their stable prefixes and produce valid TypeIDs', () => {
   const ids = [
-    [createBrandId(), entityIdPrefixes.brand],
-    [createCategoryId(), entityIdPrefixes.category],
-    [createProductId(), entityIdPrefixes.product],
-    [createProductImageId(), entityIdPrefixes.productImage],
-    [createProductVariantId(), entityIdPrefixes.productVariant],
-    [createOrderId(), entityIdPrefixes.order],
-    [createOrderLineId(), entityIdPrefixes.orderLine],
-    [createPaymentId(), entityIdPrefixes.payment],
+    [createId('brand'), entityIdPrefixes.brand],
+    [createId('category'), entityIdPrefixes.category],
+    [createId('product'), entityIdPrefixes.product],
+    [createId('productImage'), entityIdPrefixes.productImage],
+    [createId('productVariant'), entityIdPrefixes.productVariant],
+    [createId('order'), entityIdPrefixes.order],
+    [createId('orderLine'), entityIdPrefixes.orderLine],
+    [createId('payment'), entityIdPrefixes.payment],
   ] as const
 
   for (const [id, prefix] of ids) {
@@ -39,10 +32,10 @@ test('entity ID generators use their stable prefixes and produce valid TypeIDs',
 })
 
 test('TypeBox ID schemas reject malformed IDs and IDs from another entity', () => {
-  const brandId = createBrandId()
+  const brandId = createId('brand')
 
   expect(Value.Check(brandIdSchema, brandId)).toBe(true)
-  expect(Value.Check(brandIdSchema, createProductId())).toBe(false)
+  expect(Value.Check(brandIdSchema, createId('product'))).toBe(false)
   expect(Value.Check(brandIdSchema, `${brandId.slice(0, -1)}i`)).toBe(false)
   expect(Value.Check(brandIdSchema, brandId.toUpperCase())).toBe(false)
   expect(hasTypeIdPrefix(brandId, entityIdPrefixes.product)).toBe(false)

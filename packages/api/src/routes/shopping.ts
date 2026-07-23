@@ -6,6 +6,7 @@ import type { BankTransferClaim, BankTransferClaimError } from '@store-kit/contr
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
+import { nullablePublicImage } from '../media'
 import { contractBody } from '../typebox-contract'
 
 export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
@@ -21,7 +22,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   )
   .get(
     '/orders/:id/status',
-    async ({ params, headers }) => {
+    async ({ params, headers, request }) => {
       const result = await commerce.orders.getPrivateStatus(
         params.id,
         headers['x-order-token'] ?? '',
@@ -51,10 +52,15 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
             variantName: line.variantName,
             sku: line.sku,
             options: line.options,
-            imageR2Key: line.imageR2Key,
-            imageWidth: line.imageWidth,
-            imageHeight: line.imageHeight,
-            imageAlt: line.imageAlt,
+            image: nullablePublicImage(
+              {
+                r2Key: line.imageR2Key,
+                width: line.imageWidth,
+                height: line.imageHeight,
+                alt: line.imageAlt,
+              },
+              request,
+            ),
             unitPriceMnt: line.unitPriceMnt,
             quantity: line.quantity,
             lineTotalMnt: line.lineTotalMnt,

@@ -1,4 +1,7 @@
 export * from './cart'
 export * from './checkout'
+export { publicImageSchema } from './common'
+export type { PublicImage } from './common'
+export * from './errors'
 export * from './orders'
 export * from './payments'

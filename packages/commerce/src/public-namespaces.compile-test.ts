@@ -2,11 +2,11 @@ type DatabaseModule = typeof import('@store-kit/db')
 type CommerceModule = typeof import('./index')
 
 export const provePublicNamespacesCompile = (db: DatabaseModule, storeKit: CommerceModule) => {
-  void db.query.catalog.listPublishedProducts
-  void db.query.cart.findVariants
-  void db.query.checkout.insertOrder
-  void db.query.orders.findPrivate
-  void db.query.payments.findByOrderId
+  void db.database.query.catalog.listPublishedProducts
+  void db.database.query.cart.findVariants
+  void db.database.query.checkout.insertOrder
+  void db.database.query.orders.findPrivate
+  void db.database.query.payments.findByOrderId
 
   void storeKit.commerce.catalog.listProducts
   void storeKit.commerce.cart.validate

@@ -4,7 +4,7 @@ import { checkoutQuery } from './queries/checkout'
 import { orderQuery } from './queries/orders'
 import { paymentQuery } from './queries/payments'
 
-export type Query = {
+export type DatabaseQuery = {
   catalog: typeof catalogQuery
   cart: typeof cartQuery
   checkout: typeof checkoutQuery
@@ -12,10 +12,12 @@ export type Query = {
   payments: typeof paymentQuery
 }
 
-export const query: Query = {
-  catalog: catalogQuery,
-  cart: cartQuery,
-  checkout: checkoutQuery,
-  orders: orderQuery,
-  payments: paymentQuery,
+export const database = {
+  query: {
+    catalog: catalogQuery,
+    cart: cartQuery,
+    checkout: checkoutQuery,
+    orders: orderQuery,
+    payments: paymentQuery,
+  } satisfies DatabaseQuery,
 }

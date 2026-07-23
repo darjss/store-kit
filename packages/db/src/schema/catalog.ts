@@ -10,14 +10,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 
-import {
-  createBrandId,
-  createCategoryId,
-  createProductId,
-  createProductImageId,
-  createProductVariantId,
-  entityIdPrefixes,
-} from '../ids.ts'
+import { createId, entityIdPrefixes } from '../ids.ts'
 import { typeIdCheck } from './typeid-check.ts'
 
 export type ProductDetailValue = string | number | boolean | string[]
@@ -28,7 +21,9 @@ export type ProductUseCase = 'first-iem' | 'bass' | 'vocals' | 'gaming' | 'daily
 export const brand = sqliteTable(
   'brand',
   {
-    id: text('id').notNull().$defaultFn(createBrandId),
+    id: text('id')
+      .notNull()
+      .$defaultFn(() => createId('brand')),
     slug: text('slug').notNull(),
     name: text('name').notNull(),
     description: text('description'),
@@ -46,7 +41,9 @@ export const brand = sqliteTable(
 export const category = sqliteTable(
   'category',
   {
-    id: text('id').notNull().$defaultFn(createCategoryId),
+    id: text('id')
+      .notNull()
+      .$defaultFn(() => createId('category')),
     slug: text('slug').notNull(),
     name: text('name').notNull(),
     description: text('description'),
@@ -66,7 +63,9 @@ export const category = sqliteTable(
 export const product = sqliteTable(
   'product',
   {
-    id: text('id').notNull().$defaultFn(createProductId),
+    id: text('id')
+      .notNull()
+      .$defaultFn(() => createId('product')),
     slug: text('slug').notNull(),
     brandId: text('brand_id').references(() => brand.id, { onDelete: 'set null' }),
     categoryId: text('category_id').references(() => category.id, {
@@ -113,7 +112,9 @@ export const product = sqliteTable(
 export const productImage = sqliteTable(
   'product_image',
   {
-    id: text('id').notNull().$defaultFn(createProductImageId),
+    id: text('id')
+      .notNull()
+      .$defaultFn(() => createId('productImage')),
     productId: text('product_id')
       .notNull()
       .references(() => product.id, { onDelete: 'cascade' }),
@@ -138,7 +139,9 @@ export const productImage = sqliteTable(
 export const productVariant = sqliteTable(
   'product_variant',
   {
-    id: text('id').notNull().$defaultFn(createProductVariantId),
+    id: text('id')
+      .notNull()
+      .$defaultFn(() => createId('productVariant')),
     productId: text('product_id')
       .notNull()
       .references(() => product.id, { onDelete: 'cascade' }),

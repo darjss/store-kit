@@ -8,7 +8,7 @@ import type {
   PaymentRefreshError,
   PaymentStatus,
 } from '@store-kit/contracts/payments'
-import { query as dbQuery } from '@store-kit/db'
+import { database } from '@store-kit/db'
 /* oxlint-disable eslint/no-underscore-dangle */
 import { Result } from 'better-result'
 import { match } from 'dismatch'
@@ -21,7 +21,6 @@ import {
   sendBankClaimMessage,
   sendPaidOrderMessage,
 } from '../adapters/telegram'
-import { orderOperations } from '../orders/operations'
 import {
   bankTransferClaimNotAllowed,
   paymentInsufficientStock,
@@ -29,7 +28,8 @@ import {
   paymentVerificationFailed,
   qpayInvoiceMissing,
   staffNotificationFailed,
-} from './errors'
+} from '../errors'
+import { orderOperations } from '../orders/operations'
 
 export const confirmOrderPayment = async (
   orderId: string,
@@ -41,7 +41,7 @@ export const confirmOrderPayment = async (
   },
 ) => {
   const paidAt = Date.now()
-  const result = await dbQuery.payments.confirmAndDecrementStock({
+  const result = await database.query.payments.confirmAndDecrementStock({
     orderId,
     providerPaymentId: reference.paymentId,
     amountMnt: reference.amountMnt,
@@ -118,7 +118,7 @@ const acknowledged = (): WebhookOutcome => ({ status: 'acknowledged' })
 const retryableFailure = (): WebhookOutcome => ({ status: 'retryable-failure' })
 
 export const handleQPayCallback = async (paymentLookupId: string): Promise<WebhookOutcome> => {
-  const localPayment = await dbQuery.payments.findById(paymentLookupId)
+  const localPayment = await database.query.payments.findById(paymentLookupId)
   if (!localPayment || localPayment.method !== 'qpay' || localPayment.providerInvoiceId === null)
     return acknowledged()
 
@@ -133,7 +133,7 @@ export const handleQPayCallback = async (paymentLookupId: string): Promise<Webho
   })
   if (confirmation.status !== 'ok') return acknowledged()
 
-  const persistedPayment = await dbQuery.payments.findById(paymentLookupId)
+  const persistedPayment = await database.query.payments.findById(paymentLookupId)
   if (persistedPayment?.telegramMessageId) return acknowledged()
 
   const label = confirmation.value.needsStaffAction
@@ -141,7 +141,7 @@ export const handleQPayCallback = async (paymentLookupId: string): Promise<Webho
     : localPayment.orderId
   const sent = await sendPaidOrderMessage(label, localPayment.amountMnt)
   if (sent.status === 'error') return retryableFailure()
-  await dbQuery.payments.storeQPayTelegramMessageId(
+  await database.query.payments.storeQPayTelegramMessageId(
     paymentLookupId,
     sent.value.messageId,
     Date.now(),
@@ -189,7 +189,7 @@ export const handleBankTransferCallback = async (input: {
   callbackQueryId: string
   telegramMessageId: string
 }): Promise<WebhookOutcome> => {
-  const order = await dbQuery.orders.findWithPayment(input.orderId)
+  const order = await database.query.orders.findWithPayment(input.orderId)
   if (!order?.payment || order.payment.method !== 'bank_transfer') return acknowledged()
   const payment = order.payment
 
@@ -205,7 +205,7 @@ export const handleBankTransferCallback = async (input: {
             telegramMessageId: input.telegramMessageId,
           })
         : undefined
-      const persisted = await dbQuery.orders.findWithPayment(input.orderId)
+      const persisted = await database.query.orders.findWithPayment(input.orderId)
       if (!persisted?.payment) return acknowledged()
       const persistedPayment = persisted.payment
       const text =
@@ -221,7 +221,7 @@ export const handleBankTransferCallback = async (input: {
       return respondToTelegramCallback(input, text, persistedPayment.telegramMessageId)
     },
     reject: async () => {
-      const rejection = await dbQuery.payments.rejectBankTransferClaim(
+      const rejection = await database.query.payments.rejectBankTransferClaim(
         input.orderId,
         input.telegramMessageId,
         Date.now(),
@@ -261,9 +261,9 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
     return Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'paid' })
   if (order.payment.status === 'claimed')
     return Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'claimed' })
-  const claimed = await dbQuery.payments.markBankTransferClaimed(orderId, Date.now())
+  const claimed = await database.query.payments.markBankTransferClaimed(orderId, Date.now())
   if (!claimed) {
-    const persisted = await dbQuery.payments.findByOrderId(orderId)
+    const persisted = await database.query.payments.findByOrderId(orderId)
     if (
       persisted?.status === 'pending' ||
       persisted?.status === 'claimed' ||
@@ -284,7 +284,7 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
     amountMnt: order.totalMnt,
   })
   if (sent.status === 'ok') {
-    const stored = await dbQuery.payments.storeTelegramMessageId(
+    const stored = await database.query.payments.storeTelegramMessageId(
       orderId,
       sent.value.messageId,
       Date.now(),
@@ -293,7 +293,7 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
       return Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'claimed' })
   }
 
-  await dbQuery.payments.releaseBankTransferClaim(orderId, Date.now())
+  await database.query.payments.releaseBankTransferClaim(orderId, Date.now())
   return Result.err<BankTransferClaim, BankTransferClaimError>(staffNotificationFailed())
 }
 

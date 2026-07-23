@@ -9,13 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 
-import {
-  createOrderId,
-  createOrderLineId,
-  createPaymentId,
-  defaultCheckoutSettingsId,
-  entityIdPrefixes,
-} from '../ids.ts'
+import { createId, defaultCheckoutSettingsId, entityIdPrefixes } from '../ids.ts'
 import { product, productVariant } from './catalog'
 import { typeIdCheck } from './typeid-check.ts'
 
@@ -48,7 +42,9 @@ export const checkoutSettings = sqliteTable(
 export const order = sqliteTable(
   'customer_order',
   {
-    id: text('id').notNull().$defaultFn(createOrderId),
+    id: text('id')
+      .notNull()
+      .$defaultFn(() => createId('order')),
     number: text('number').notNull(),
     statusTokenHash: text('status_token_hash').notNull(),
     status: text('status', {
@@ -91,7 +87,9 @@ export const order = sqliteTable(
 export const orderLine = sqliteTable(
   'order_line',
   {
-    id: text('id').notNull().$defaultFn(createOrderLineId),
+    id: text('id')
+      .notNull()
+      .$defaultFn(() => createId('orderLine')),
     orderId: text('order_id')
       .notNull()
       .references(() => order.id, { onDelete: 'cascade' }),
@@ -125,7 +123,9 @@ export const orderLine = sqliteTable(
 export const payment = sqliteTable(
   'payment',
   {
-    id: text('id').notNull().$defaultFn(createPaymentId),
+    id: text('id')
+      .notNull()
+      .$defaultFn(() => createId('payment')),
     orderId: text('order_id')
       .notNull()
       .references(() => order.id, { onDelete: 'cascade' }),

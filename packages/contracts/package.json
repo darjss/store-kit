@@ -7,6 +7,8 @@
     ".": "./src/index.ts",
     "./cart": "./src/cart.ts",
     "./checkout": "./src/checkout.ts",
+    "./common": "./src/common.ts",
+    "./errors": "./src/errors.ts",
     "./orders": "./src/orders.ts",
     "./payments": "./src/payments.ts"
   },

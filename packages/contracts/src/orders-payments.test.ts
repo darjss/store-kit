@@ -1,13 +1,14 @@
 import { Value } from 'typebox/value'
 import { expect, test } from 'vite-plus/test'
 
-import { privateOrderErrorSchema, publicOrderSchema } from './orders'
 import {
   bankTransferClaimErrorSchema,
   paymentConfirmationErrorSchema,
-  paymentConfirmationSchema,
   paymentRefreshErrorSchema,
-} from './payments'
+  privateOrderErrorSchema,
+} from './errors'
+import { publicOrderSchema } from './orders'
+import { paymentConfirmationSchema } from './payments'
 
 const publicOrder = {
   id: 'ord_01arz3ndektsv4rrffq69g5fav',
@@ -30,10 +31,12 @@ const publicOrder = {
       variantName: 'Black',
       sku: 'IEM-BLACK',
       options: { color: 'Black' },
-      imageR2Key: 'products/first-iem/black.webp',
-      imageWidth: 1200,
-      imageHeight: 900,
-      imageAlt: 'Black First IEM',
+      image: {
+        url: 'https://media.example.com/products/first-iem/black.webp',
+        width: 1200,
+        height: 900,
+        alt: 'Black First IEM',
+      },
       unitPriceMnt: 120_000,
       quantity: 1,
       lineTotalMnt: 120_000,
@@ -60,6 +63,12 @@ test('public order status accepts the customer view and rejects persistence secr
     Value.Check(publicOrderSchema, {
       ...publicOrder,
       payment: { ...publicOrder.payment, providerPaymentId: 'provider-secret' },
+    }),
+  ).toBe(false)
+  expect(
+    Value.Check(publicOrderSchema, {
+      ...publicOrder,
+      lines: [{ ...publicOrder.lines[0], imageR2Key: 'catalog/private-key.webp' }],
     }),
   ).toBe(false)
 })

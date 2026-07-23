@@ -13,7 +13,8 @@ export const entityIdPrefixes = {
   payment: 'pay',
 } as const
 
-export type EntityIdPrefix = (typeof entityIdPrefixes)[keyof typeof entityIdPrefixes]
+export type Entity = keyof typeof entityIdPrefixes
+export type EntityIdPrefix = (typeof entityIdPrefixes)[Entity]
 
 const suffixPattern = '[0-7][0123456789abcdefghjkmnpqrstvwxyz]{25}'
 
@@ -39,16 +40,8 @@ export const defaultCheckoutSettingsId = TypeID.fromUUID(
 
 export const checkoutSettingsIdSchema = Type.Literal(defaultCheckoutSettingsId)
 
-const createId = <const Prefix extends EntityIdPrefix>(prefix: Prefix) => typeid(prefix).toString()
-
-export const createBrandId = () => createId(entityIdPrefixes.brand)
-export const createCategoryId = () => createId(entityIdPrefixes.category)
-export const createProductId = () => createId(entityIdPrefixes.product)
-export const createProductImageId = () => createId(entityIdPrefixes.productImage)
-export const createProductVariantId = () => createId(entityIdPrefixes.productVariant)
-export const createOrderId = () => createId(entityIdPrefixes.order)
-export const createOrderLineId = () => createId(entityIdPrefixes.orderLine)
-export const createPaymentId = () => createId(entityIdPrefixes.payment)
+export const createId = <const EntityName extends Entity>(entity: EntityName) =>
+  typeid(entityIdPrefixes[entity]).toString()
 
 export const hasTypeIdPrefix = (value: string, prefix: EntityIdPrefix) => {
   try {

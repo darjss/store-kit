@@ -2,11 +2,11 @@ import type {
   CartCorrection,
   CartValidationError,
   StockStatus,
-  ValidatedCart,
   ValidatedCartLine,
 } from '@store-kit/contracts'
-import { persistedCartItemsSchema } from '@store-kit/contracts/cart'
-import { query as dbQuery } from '@store-kit/db'
+import { cartValidationInputsSchema } from '@store-kit/contracts/cart'
+import type { CartValidationInput } from '@store-kit/contracts/cart'
+import { database } from '@store-kit/db'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
@@ -18,7 +18,7 @@ import {
   insufficientStock,
   invalidCart,
   missingVariant,
-} from './errors'
+} from '../errors'
 
 export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
 
@@ -28,25 +28,42 @@ const stockStatus = (quantity: number): StockStatus => {
   return 'in-stock'
 }
 
-const validate = async (input: unknown) => {
-  if (Array.isArray(input) && input.length === 0) {
-    return Result.err<ValidatedCart, CartValidationError>(cartEmpty())
-  }
-  if (!Value.Check(persistedCartItemsSchema, input)) {
-    return Result.err<ValidatedCart, CartValidationError>(invalidCart(input))
+type ServerValidatedCartLine = Omit<ValidatedCartLine, 'image'> & {
+  imageR2Key: string | null
+  imageWidth: number | null
+  imageHeight: number | null
+  imageAlt: string | null
+}
+type ServerValidatedCart = {
+  lines: ServerValidatedCartLine[]
+  corrections: CartCorrection[]
+  subtotalMnt: number
+}
+
+const validate = async (input: CartValidationInput[]) => {
+  if (input.length === 0) return Result.err<ServerValidatedCart, CartValidationError>(cartEmpty())
+  if (!Value.Check(cartValidationInputsSchema, input)) {
+    return Result.err<ServerValidatedCart, CartValidationError>(
+      invalidCart(
+        [...Value.Errors(cartValidationInputsSchema, input)].map(error => ({
+          path: error.instancePath || '/',
+          code: 'invalid' as const,
+        })),
+      ),
+    )
   }
 
   const duplicateVariant = input.find(
     (item, index) => input.findIndex(candidate => candidate.variantId === item.variantId) !== index,
   )
   if (duplicateVariant) {
-    return Result.err<ValidatedCart, CartValidationError>(duplicateCartVariant())
+    return Result.err<ServerValidatedCart, CartValidationError>(duplicateCartVariant())
   }
 
-  const currentVariants = await dbQuery.cart.findVariants(input)
+  const currentVariants = await database.query.cart.findVariants(input)
   const variantsById = new Map(currentVariants.map(variant => [variant.variantId, variant]))
   const corrections: CartCorrection[] = []
-  const lines: ValidatedCartLine[] = []
+  const lines: ServerValidatedCartLine[] = []
 
   for (const item of input) {
     const variant = variantsById.get(item.variantId)
@@ -61,8 +78,10 @@ const validate = async (input: unknown) => {
     if (variant.stockQuantity < item.quantity) {
       corrections.push(insufficientStock(item.variantId, variant.stockQuantity))
     }
-    if (variant.unitPriceMnt !== item.unitPriceMnt) {
-      corrections.push(changedPrice(item.variantId, item.unitPriceMnt, variant.unitPriceMnt))
+    if (variant.unitPriceMnt !== item.previousUnitPriceMnt) {
+      corrections.push(
+        changedPrice(item.variantId, item.previousUnitPriceMnt, variant.unitPriceMnt),
+      )
     }
 
     lines.push({
@@ -84,7 +103,7 @@ const validate = async (input: unknown) => {
     })
   }
 
-  return Result.ok<ValidatedCart, CartValidationError>({
+  return Result.ok<ServerValidatedCart, CartValidationError>({
     lines,
     corrections,
     subtotalMnt: lines.reduce((total, line) => total + line.lineTotalMnt, 0),

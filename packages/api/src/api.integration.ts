@@ -1,3 +1,4 @@
+import type { CartValidationError, ValidatedCart } from '@store-kit/contracts/cart'
 import type { CheckoutCreated, CheckoutError } from '@store-kit/contracts/checkout'
 import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
@@ -12,6 +13,7 @@ const seedCheckout = async (suffix: number) => {
   const now = Date.now()
   const productId = entityId('prod', suffix)
   const variantId = entityId('var', suffix)
+  const imageId = entityId('img', suffix)
   await env.DB.batch([
     env.DB.prepare(
       `insert or replace into checkout_settings
@@ -28,6 +30,20 @@ const seedCheckout = async (suffix: number) => {
         (id, product_id, sku, name, options, price_mnt, stock_quantity, active, sort_order, created_at, updated_at)
        values (?, ?, ?, ?, '{}', ?, ?, 1, 0, ?, ?)`,
     ).bind(variantId, productId, `API-SKU-${suffix}`, 'Default', 10_000, 10, now, now),
+    env.DB.prepare(
+      `insert into product_image
+        (id, product_id, r2_key, width, height, alt, sort_order, created_at)
+       values (?, ?, ?, 1200, 900, ?, 0, ?)`,
+    ).bind(
+      imageId,
+      productId,
+      `catalog/products/api-product-${suffix}/main.webp`,
+      'API Product',
+      now,
+    ),
+    env.DB.prepare(
+      `insert into product_variant_image (product_id, variant_id, image_id) values (?, ?, ?)`,
+    ).bind(productId, variantId, imageId),
   ])
   return { productId, variantId }
 }
@@ -44,9 +60,14 @@ const checkoutBody = (variantId: string) => ({
   paymentMethod: 'bank_transfer',
 })
 
-const postJson = (path: string, body: unknown, headers?: HeadersInit) =>
+const postJson = (
+  path: string,
+  body: unknown,
+  headers?: HeadersInit,
+  origin = 'https://plugged.test',
+) =>
   app.handle(
-    new Request(`https://plugged.test${path}`, {
+    new Request(`${origin}${path}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },
       body: JSON.stringify(body),
@@ -67,7 +88,59 @@ describe('checked shared request contracts', () => {
     expect(cartResponse.status).toBe(422)
   })
 
-  it('normalizes before validation and persists exactly the normalized checkout strings', async () => {
+  it('returns stable field codes for checkout domain validation', async () => {
+    const { variantId } = await seedCheckout(96)
+    const response = await postJson('/api/checkout', {
+      ...checkoutBody(variantId),
+      items: [
+        { variantId, quantity: 1 },
+        { variantId, quantity: 1 },
+      ],
+    })
+    const result = Result.deserialize<CheckoutCreated, CheckoutError>(await response.json())
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        _tag: 'InvalidCheckoutDetails',
+        fields: [{ path: '/items', code: 'duplicate' }],
+      },
+    })
+  })
+
+  it('returns final public image URLs without exposing R2 keys', async () => {
+    const { variantId } = await seedCheckout(95)
+    const input = [{ variantId, quantity: 1, previousUnitPriceMnt: 10_000 }]
+    const productionResponse = await postJson('/api/cart/validate', input)
+    const localResponse = await postJson('/api/cart/validate', input, undefined, 'http://localhost')
+    const production = Result.deserialize<ValidatedCart, CartValidationError>(
+      await productionResponse.json(),
+    )
+    const local = Result.deserialize<ValidatedCart, CartValidationError>(await localResponse.json())
+
+    expect(production).toMatchObject({
+      status: 'ok',
+      value: {
+        lines: [
+          {
+            image: {
+              url: 'https://media.plugged.mn/catalog/products/api-product-95/main.webp',
+              width: 1200,
+              height: 900,
+              alt: 'API Product',
+            },
+          },
+        ],
+      },
+    })
+    expect(local).toMatchObject({
+      status: 'ok',
+      value: { lines: [{ image: { url: '/media/catalog/products/api-product-95/main.webp' } }] },
+    })
+    expect(JSON.stringify(production)).not.toContain('r2Key')
+  })
+
+  it('rejects invalid shared details and persists exactly the normalized valid strings', async () => {
     const { variantId } = await seedCheckout(92)
     const whitespaceResponse = await postJson('/api/checkout', {
       ...checkoutBody(variantId),
@@ -79,22 +152,7 @@ describe('checked shared request contracts', () => {
         notes: '   ',
       },
     })
-    const whitespaceResult = Result.deserialize<CheckoutCreated, CheckoutError>(
-      await whitespaceResponse.json(),
-    )
-
-    expect(whitespaceResponse.status).toBe(200)
-    expect(whitespaceResult).toMatchObject({
-      status: 'error',
-      error: {
-        _tag: 'InvalidCheckoutDetails',
-        fields: expect.arrayContaining([
-          expect.objectContaining({ path: '/customer/name' }),
-          expect.objectContaining({ path: '/delivery/khoroo' }),
-          expect.objectContaining({ path: '/delivery/address' }),
-        ]),
-      },
-    })
+    expect(whitespaceResponse.status).toBe(422)
 
     const validResponse = await postJson('/api/checkout', {
       ...checkoutBody(variantId),
