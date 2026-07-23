@@ -14,13 +14,6 @@ export const orderStatusSchema = Type.Union([
   Type.Literal('cancelled'),
 ])
 export const paymentMethodSchema = Type.Union([Type.Literal('qpay'), Type.Literal('bank_transfer')])
-export const paymentStatusSchema = Type.Union([
-  Type.Literal('pending'),
-  Type.Literal('claimed'),
-  Type.Literal('confirming'),
-  Type.Literal('paid'),
-  Type.Literal('failed'),
-])
 export const cartLineInputSchema = Type.Object(
   {
     variantId: Type.String({ minLength: 1 }),
@@ -29,6 +22,47 @@ export const cartLineInputSchema = Type.Object(
   { additionalProperties: false },
 )
 export const cartLineInputsSchema = Type.Array(cartLineInputSchema, { minItems: 1, maxItems: 20 })
+export const ulaanbaatarDistrictSchema = Type.Union([
+  Type.Literal('Багануур'),
+  Type.Literal('Багахангай'),
+  Type.Literal('Баянгол'),
+  Type.Literal('Баянзүрх'),
+  Type.Literal('Налайх'),
+  Type.Literal('Сонгинохайрхан'),
+  Type.Literal('Сүхбаатар'),
+  Type.Literal('Хан-Уул'),
+  Type.Literal('Чингэлтэй'),
+])
+export const checkoutInputSchema = Type.Object(
+  {
+    items: Type.Array(cartLineInputSchema, { minItems: 1, maxItems: 20 }),
+    customer: Type.Object(
+      {
+        name: Type.String({ minLength: 1, maxLength: 100 }),
+        phone: Type.String({ minLength: 8, maxLength: 20 }),
+      },
+      { additionalProperties: false },
+    ),
+    delivery: Type.Object(
+      {
+        district: ulaanbaatarDistrictSchema,
+        khoroo: Type.String({ minLength: 1, maxLength: 50 }),
+        address: Type.String({ minLength: 1, maxLength: 500 }),
+        notes: Type.Optional(Type.String({ maxLength: 500 })),
+      },
+      { additionalProperties: false },
+    ),
+    paymentMethod: paymentMethodSchema,
+  },
+  { additionalProperties: false },
+)
+export const paymentStatusSchema = Type.Union([
+  Type.Literal('pending'),
+  Type.Literal('claimed'),
+  Type.Literal('confirming'),
+  Type.Literal('paid'),
+  Type.Literal('failed'),
+])
 export const persistedCartItemSchema = Type.Object(
   {
     variantId: Type.String({ minLength: 1 }),
@@ -42,7 +76,7 @@ export const persistedCartItemSchema = Type.Object(
   },
   { additionalProperties: false },
 )
-export const cartValidationInputSchema = Type.Array(persistedCartItemSchema, {
+export const persistedCartItemsSchema = Type.Array(persistedCartItemSchema, {
   minItems: 1,
   maxItems: 20,
 })
@@ -88,6 +122,7 @@ export const insertPaymentSchema = createInsertSchema(payment, paymentRefinement
 export const updatePaymentSchema = createUpdateSchema(payment, paymentRefinements)
 
 export type CartLineInput = Static<typeof cartLineInputSchema>
+export type CheckoutInput = Static<typeof checkoutInputSchema>
 export type PersistedCartItem = Static<typeof persistedCartItemSchema>
 export type CheckoutSettings = Static<typeof selectCheckoutSettingsSchema>
 export type NewCheckoutSettings = typeof checkoutSettings.$inferInsert

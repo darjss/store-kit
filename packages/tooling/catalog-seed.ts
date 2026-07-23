@@ -104,7 +104,7 @@ const checkoutSettingsSeedSchema = strictObject({
 })
 
 const pluggedCatalogSeedSchema = strictObject({
-  checkoutSettings: checkoutSettingsSeedSchema,
+  checkoutSettings: Type.Optional(checkoutSettingsSeedSchema),
   brands: Type.Array(brandSeedSchema),
   categories: Type.Array(categorySeedSchema),
   products: Type.Array(productSeedSchema),
@@ -337,40 +337,42 @@ const buildSql = (seed: CatalogSeed) => {
     seed.products.flatMap(product => product.images.map(image => [image.r2Key, image.id] as const)),
   )
 
-  statements.push(
-    upsert(
-      'checkout_settings',
-      [
-        'id',
-        'delivery_fee_mnt',
-        'bank_name',
-        'bank_account_name',
-        'bank_account_number',
-        'checkout_help_text',
-        'order_confirmation_text',
-        'updated_at',
-      ],
-      [
-        sqlText('default'),
-        String(seed.checkoutSettings.deliveryFeeMnt),
-        sqlText(seed.checkoutSettings.bankName),
-        sqlText(seed.checkoutSettings.bankAccountName),
-        sqlText(seed.checkoutSettings.bankAccountNumber),
-        sqlNullableText(seed.checkoutSettings.checkoutHelpText),
-        sqlNullableText(seed.checkoutSettings.orderConfirmationText),
-        'unixepoch()',
-      ],
-      [
-        'delivery_fee_mnt',
-        'bank_name',
-        'bank_account_name',
-        'bank_account_number',
-        'checkout_help_text',
-        'order_confirmation_text',
-        'updated_at',
-      ],
-    ),
-  )
+  if (seed.checkoutSettings) {
+    statements.push(
+      upsert(
+        'checkout_settings',
+        [
+          'id',
+          'delivery_fee_mnt',
+          'bank_name',
+          'bank_account_name',
+          'bank_account_number',
+          'checkout_help_text',
+          'order_confirmation_text',
+          'updated_at',
+        ],
+        [
+          sqlText('default'),
+          String(seed.checkoutSettings.deliveryFeeMnt),
+          sqlText(seed.checkoutSettings.bankName),
+          sqlText(seed.checkoutSettings.bankAccountName),
+          sqlText(seed.checkoutSettings.bankAccountNumber),
+          sqlNullableText(seed.checkoutSettings.checkoutHelpText),
+          sqlNullableText(seed.checkoutSettings.orderConfirmationText),
+          'unixepoch()',
+        ],
+        [
+          'delivery_fee_mnt',
+          'bank_name',
+          'bank_account_name',
+          'bank_account_number',
+          'checkout_help_text',
+          'order_confirmation_text',
+          'updated_at',
+        ],
+      ),
+    )
+  }
 
   for (const brand of seed.brands) {
     statements.push(

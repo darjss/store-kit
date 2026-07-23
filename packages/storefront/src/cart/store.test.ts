@@ -44,6 +44,7 @@ test('quantity commands keep quantities positive integers', () => {
   addCartItem(item)
   setCartItemQuantity(item.variantId, 0)
   setCartItemQuantity(item.variantId, 1.5)
+  setCartItemQuantity(item.variantId, 11)
 
   expect(cartLineInputs()).toEqual([{ variantId: 'variant-1', quantity: 1 }])
 

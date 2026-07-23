@@ -2,12 +2,12 @@ import { Value } from 'typebox/value'
 import { expect, test } from 'vite-plus/test'
 
 import {
-  cartLineInputSchema,
   cartLineInputsSchema,
+  checkoutInputSchema,
   insertOrderLineSchema,
+  persistedCartItemSchema,
   insertOrderSchema,
   insertPaymentSchema,
-  persistedCartItemSchema,
 } from './shopping'
 
 const order = {
@@ -63,7 +63,28 @@ test('cart input limits line count and quantity', () => {
   expect(Value.Check(cartLineInputsSchema, [])).toBe(false)
 })
 
-test('persisted cart items contain a display snapshot but line inputs do not', () => {
+test('checkout input accepts Ulaanbaatar delivery and rejects other districts', () => {
+  const checkout = {
+    items: [{ variantId: 'variant-1', quantity: 1 }],
+    customer: { name: 'Бат', phone: '99112233' },
+    delivery: {
+      district: 'Баянзүрх',
+      khoroo: '1-р хороо',
+      address: 'Энхтайвны өргөн чөлөө',
+    },
+    paymentMethod: 'bank_transfer',
+  }
+
+  expect(Value.Check(checkoutInputSchema, checkout)).toBe(true)
+  expect(
+    Value.Check(checkoutInputSchema, {
+      ...checkout,
+      delivery: { ...checkout.delivery, district: 'Дархан' },
+    }),
+  ).toBe(false)
+})
+
+test('persisted cart items contain only the allowed display snapshot', () => {
   const item = {
     variantId: 'variant-1',
     quantity: 2,
@@ -76,7 +97,6 @@ test('persisted cart items contain a display snapshot but line inputs do not', (
   }
 
   expect(Value.Check(persistedCartItemSchema, item)).toBe(true)
-  expect(Value.Check(cartLineInputSchema, item)).toBe(false)
   expect(Value.Check(persistedCartItemSchema, { ...item, unitPriceMnt: -1 })).toBe(false)
   expect(Value.Check(persistedCartItemSchema, { ...item, stockQuantity: 3 })).toBe(false)
 })

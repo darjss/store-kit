@@ -1,5 +1,4 @@
-import type { PersistedCartItem } from '@store-kit/api'
-
+import type { PersistedCartItem } from '../cart'
 import { api } from '../client'
 import { resultQueryOptions } from './result'
 

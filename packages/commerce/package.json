@@ -6,12 +6,17 @@
   "exports": {
     ".": "./src/operations/system-status.ts",
     "./catalog": "./src/catalog/operations.ts",
+    "./qpay": "./src/adapters/qpay.ts",
     "./shopping": "./src/shopping/operations.ts",
-    "./shopping/errors": "./src/shopping/errors.ts"
+    "./shopping/errors": "./src/shopping/errors.ts",
+    "./checkout": "./src/checkout/operations.ts",
+    "./payments": "./src/payments/operations.ts",
+    "./telegram": "./src/adapters/telegram.ts"
   },
   "dependencies": {
     "@store-kit/db": "workspace:*",
     "better-result": "catalog:",
+    "ky": "^2.0.2",
     "typebox": "catalog:"
   }
 }

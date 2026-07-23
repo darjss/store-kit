@@ -18,8 +18,9 @@ const cartItem = t.Object(
 
 export const cartRoutes = new Elysia({ aot: false, prefix: '/api/cart' }).post(
   '/validate',
-  async ({ body }) => Result.serialize(await validateCart(body)),
-  {
-    body: t.Array(cartItem, { minItems: 1, maxItems: 20 }),
+  async ({ body, set }) => {
+    set.headers['cache-control'] = 'private, no-store'
+    return Result.serialize(await validateCart(body))
   },
+  { body: t.Array(cartItem, { minItems: 1, maxItems: 20 }) },
 )
