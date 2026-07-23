@@ -10,6 +10,16 @@ import { query as dbQuery } from '@store-kit/db'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
+import {
+  cartEmpty,
+  changedPrice,
+  duplicateCartVariant,
+  inactiveVariant,
+  insufficientStock,
+  invalidCart,
+  missingVariant,
+} from './errors'
+
 export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
 
 const stockStatus = (quantity: number): StockStatus => {
@@ -18,21 +28,9 @@ const stockStatus = (quantity: number): StockStatus => {
   return 'in-stock'
 }
 
-const invalidCart = (input: unknown) => ({
-  _tag: 'InvalidCart' as const,
-  message: 'Сагсны мэдээлэл буруу байна.',
-  fields: Value.Errors(persistedCartItemsSchema, input).map(error => ({
-    path: error.instancePath,
-    message: error.message,
-  })),
-})
-
 const validate = async (input: unknown) => {
   if (Array.isArray(input) && input.length === 0) {
-    return Result.err<ValidatedCart, CartValidationError>({
-      _tag: 'CartEmpty',
-      message: 'Таны сагс хоосон байна.',
-    })
+    return Result.err<ValidatedCart, CartValidationError>(cartEmpty())
   }
   if (!Value.Check(persistedCartItemsSchema, input)) {
     return Result.err<ValidatedCart, CartValidationError>(invalidCart(input))
@@ -42,11 +40,7 @@ const validate = async (input: unknown) => {
     (item, index) => input.findIndex(candidate => candidate.variantId === item.variantId) !== index,
   )
   if (duplicateVariant) {
-    return Result.err<ValidatedCart, CartValidationError>({
-      _tag: 'InvalidCart',
-      message: 'Сагсны мэдээлэл буруу байна.',
-      fields: [{ path: '/items', message: 'Нэг хувилбар нэг удаа байх ёстой.' }],
-    })
+    return Result.err<ValidatedCart, CartValidationError>(duplicateCartVariant())
   }
 
   const currentVariants = await dbQuery.cart.findVariants(input)
@@ -57,37 +51,18 @@ const validate = async (input: unknown) => {
   for (const item of input) {
     const variant = variantsById.get(item.variantId)
     if (!variant) {
-      corrections.push({
-        _tag: 'MissingVariant',
-        variantId: item.variantId,
-        message: 'Энэ сонголт олдсонгүй. Сагснаас хасна уу.',
-      })
+      corrections.push(missingVariant(item.variantId))
       continue
     }
 
     if (!variant.active || variant.productStatus !== 'active') {
-      corrections.push({
-        _tag: 'InactiveVariant',
-        variantId: item.variantId,
-        message: 'Энэ сонголт одоогоор худалдаалагдахгүй байна.',
-      })
+      corrections.push(inactiveVariant(item.variantId))
     }
     if (variant.stockQuantity < item.quantity) {
-      corrections.push({
-        _tag: 'InsufficientStock',
-        variantId: item.variantId,
-        availableQuantity: variant.stockQuantity,
-        message: 'Хүссэн тоо хэмжээгээр үлдэгдэл хүрэлцэхгүй байна.',
-      })
+      corrections.push(insufficientStock(item.variantId, variant.stockQuantity))
     }
     if (variant.unitPriceMnt !== item.unitPriceMnt) {
-      corrections.push({
-        _tag: 'PriceChanged',
-        variantId: item.variantId,
-        previousUnitPriceMnt: item.unitPriceMnt,
-        currentUnitPriceMnt: variant.unitPriceMnt,
-        message: 'Энэ барааны үнэ өөрчлөгдсөн байна.',
-      })
+      corrections.push(changedPrice(item.variantId, item.unitPriceMnt, variant.unitPriceMnt))
     }
 
     lines.push({

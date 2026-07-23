@@ -147,6 +147,9 @@ importers:
       better-result:
         specifier: 'catalog:'
         version: 2.10.0
+      dismatch:
+        specifier: ^2.6.0
+        version: 2.6.0
       ky:
         specifier: ^2.0.2
         version: 2.0.2
@@ -2681,6 +2684,10 @@ packages:
   diff@8.0.4:
     resolution: {integrity: sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw==}
     engines: {node: '>=0.3.1'}
+
+  dismatch@2.6.0:
+    resolution: {integrity: sha512-5u3Z5WLApiZ4p+hGPzhGPE+SteVbVkfk1zTChX5TBv6SXHbgjyUBWtz1TVA8HrgqKEsak+yW5i6gDFazB8bfYA==}
+    engines: {node: '>=18'}
 
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
@@ -5864,6 +5871,8 @@ snapshots:
       dequal: 2.0.3
 
   diff@8.0.4: {}
+
+  dismatch@2.6.0: {}
 
   dom-accessibility-api@0.5.16: {}
 

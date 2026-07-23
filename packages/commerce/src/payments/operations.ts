@@ -8,6 +8,8 @@ import type {
 import { query as dbQuery } from '@store-kit/db'
 /* oxlint-disable eslint/no-underscore-dangle */
 import { Result } from 'better-result'
+import { match } from 'dismatch'
+import { matchAsync } from 'dismatch/async'
 
 import {
   answerTelegramCallback,
@@ -15,22 +17,25 @@ import {
   sendBankClaimMessage,
 } from '../adapters/telegram'
 import { orderOperations } from '../orders/operations'
+import {
+  bankTransferClaimNotAllowed,
+  paymentInsufficientStock,
+  paymentMismatch,
+  staffNotificationFailed,
+} from './errors'
 
 export const confirmOrderPayment = async (
   orderId: string,
   reference: { paymentId: string; amountMnt: number; method: PaymentMethod },
 ) => {
   const current = await dbQuery.orders.findWithPayment(orderId)
-  if (!current?.payment || current.payment.amountMnt !== reference.amountMnt)
-    return Result.err<PaymentConfirmation, PaymentConfirmationError>({
-      _tag: 'PaymentMismatch',
-      message: 'Төлбөрийн мэдээлэл таарахгүй байна.',
-    })
-  if (current.payment.method !== reference.method)
-    return Result.err<PaymentConfirmation, PaymentConfirmationError>({
-      _tag: 'PaymentMismatch',
-      message: 'Төлбөрийн мэдээлэл таарахгүй байна.',
-    })
+  if (
+    !current?.payment ||
+    current.payment.amountMnt !== reference.amountMnt ||
+    current.payment.method !== reference.method
+  )
+    return Result.err<PaymentConfirmation, PaymentConfirmationError>(paymentMismatch())
+
   if (current.payment.status === 'paid')
     return Result.ok<PaymentConfirmation, PaymentConfirmationError>({
       orderId,
@@ -49,116 +54,138 @@ export const confirmOrderPayment = async (
     method: reference.method,
     paidAt,
   })
-  if (result.status === 'confirmed')
-    return Result.ok<PaymentConfirmation, PaymentConfirmationError>({
-      orderId,
-      paymentStatus: 'paid',
-      orderStatus: 'confirmed',
-      stockApplied: true,
-      needsStaffAction: false,
-      newlyPaid: true,
-    })
-  if (result.status === 'already-paid')
-    return Result.ok<PaymentConfirmation, PaymentConfirmationError>({
-      orderId,
-      paymentStatus: 'paid',
-      orderStatus: result.stockApplied ? 'confirmed' : 'new',
-      stockApplied: result.stockApplied,
-      needsStaffAction: !result.stockApplied,
-      newlyPaid: false,
-    })
 
-  if (reference.method === 'qpay') {
-    const newlyPaid = await dbQuery.payments.markQPayPaidWithoutStock({
-      orderId,
-      providerPaymentId: reference.paymentId,
-      amountMnt: reference.amountMnt,
-      method: reference.method,
-      paidAt,
-    })
-    if (!newlyPaid) {
-      const existing = await dbQuery.orders.findWithPayment(orderId)
-      if (existing?.payment?.status !== 'paid')
-        return Result.err<PaymentConfirmation, PaymentConfirmationError>({
-          _tag: 'PaymentMismatch',
-          message: 'Төлбөрийн мэдээлэл таарахгүй байна.',
-        })
-    }
-    return Result.ok<PaymentConfirmation, PaymentConfirmationError>({
-      orderId,
-      paymentStatus: 'paid',
-      orderStatus: 'new',
-      stockApplied: false,
-      needsStaffAction: true,
-      newlyPaid,
-    })
-  }
-  return Result.err<PaymentConfirmation, PaymentConfirmationError>({
-    _tag: 'InsufficientStock',
-    message: 'Үлдэгдэл хүрэлцэхгүй тул төлбөрийг баталсангүй.',
-    variantIds: current.lines.flatMap(line => (line.variantId ? [line.variantId] : [])),
+  return matchAsync(
+    result,
+    'status',
+  )<Result<PaymentConfirmation, PaymentConfirmationError>>({
+    'confirmed': () =>
+      Result.ok<PaymentConfirmation, PaymentConfirmationError>({
+        orderId,
+        paymentStatus: 'paid',
+        orderStatus: 'confirmed',
+        stockApplied: true,
+        needsStaffAction: false,
+        newlyPaid: true,
+      }),
+    'already-paid': ({ stockApplied }) =>
+      Result.ok<PaymentConfirmation, PaymentConfirmationError>({
+        orderId,
+        paymentStatus: 'paid',
+        orderStatus: stockApplied ? 'confirmed' : 'new',
+        stockApplied,
+        needsStaffAction: !stockApplied,
+        newlyPaid: false,
+      }),
+    'payment-mismatch': () =>
+      Result.err<PaymentConfirmation, PaymentConfirmationError>(paymentMismatch()),
+    'insufficient-stock': async ({ method }) => {
+      if (method === 'bank_transfer')
+        return Result.err<PaymentConfirmation, PaymentConfirmationError>(
+          paymentInsufficientStock(
+            current.lines.flatMap(line => (line.variantId ? [line.variantId] : [])),
+          ),
+        )
+
+      const newlyPaid = await dbQuery.payments.markQPayPaidWithoutStock({
+        orderId,
+        providerPaymentId: reference.paymentId,
+        amountMnt: reference.amountMnt,
+        method,
+        paidAt,
+      })
+      if (!newlyPaid) {
+        const existing = await dbQuery.orders.findWithPayment(orderId)
+        if (existing?.payment?.status !== 'paid')
+          return Result.err<PaymentConfirmation, PaymentConfirmationError>(paymentMismatch())
+      }
+      return Result.ok<PaymentConfirmation, PaymentConfirmationError>({
+        orderId,
+        paymentStatus: 'paid',
+        orderStatus: 'new',
+        stockApplied: false,
+        needsStaffAction: true,
+        newlyPaid,
+      })
+    },
   })
 }
 
 export const findQPayOrder = (invoiceId: string) =>
   dbQuery.payments.findByProviderInvoiceId(invoiceId)
 
+type BankTransferCallbackAction = { type: 'confirm' } | { type: 'reject' }
+
+const bankTransferCallbackAction = (
+  action: BankTransferCallbackAction['type'],
+): BankTransferCallbackAction => (action === 'confirm' ? { type: 'confirm' } : { type: 'reject' })
+
 export const handleBankTransferCallback = async (input: {
-  action: 'confirm' | 'reject'
+  action: BankTransferCallbackAction['type']
   orderId: string
   callbackQueryId: string
 }) => {
   const order = await dbQuery.orders.findWithPayment(input.orderId)
   if (!order?.payment || order.payment.method !== 'bank_transfer') return false
-  if (input.action === 'confirm') {
-    const confirmation = await confirmOrderPayment(input.orderId, {
-      paymentId: `telegram:${input.callbackQueryId}`,
-      amountMnt: order.payment.amountMnt,
-      method: 'bank_transfer',
-    })
-    if (confirmation.status === 'error') {
-      const text =
-        confirmation.error._tag === 'InsufficientStock'
-          ? `⚠️ ${order.number} үлдэгдэл хүрэлцэхгүй байна`
-          : `⚠️ ${order.number} төлбөрийг баталж чадсангүй`
+  const payment = order.payment
+
+  return matchAsync(bankTransferCallbackAction(input.action))({
+    confirm: async () => {
+      const confirmation = await confirmOrderPayment(input.orderId, {
+        paymentId: `telegram:${input.callbackQueryId}`,
+        amountMnt: payment.amountMnt,
+        method: 'bank_transfer',
+      })
+
+      return confirmation.match({
+        ok: async () => {
+          const text = `✅ ${order.number} төлбөр батлагдлаа`
+          await answerTelegramCallback(input.callbackQueryId, text)
+          if (payment.telegramMessageId) await editTelegramMessage(payment.telegramMessageId, text)
+          return true
+        },
+        err: async error => {
+          const text = match(
+            error,
+            '_tag',
+          )({
+            InsufficientStock: () => `⚠️ ${order.number} үлдэгдэл хүрэлцэхгүй байна`,
+            PaymentMismatch: () => `⚠️ ${order.number} төлбөрийг баталж чадсангүй`,
+          })
+          await answerTelegramCallback(input.callbackQueryId, text)
+          return true
+        },
+      })
+    },
+    reject: async () => {
+      await dbQuery.payments.rejectBankTransferClaim(input.orderId, Date.now())
+      const text = `❌ ${order.number} төлбөр татгалзлаа`
       await answerTelegramCallback(input.callbackQueryId, text)
+      if (payment.telegramMessageId) await editTelegramMessage(payment.telegramMessageId, text)
       return true
-    }
-
-    const text = `✅ ${order.number} төлбөр батлагдлаа`
-    await answerTelegramCallback(input.callbackQueryId, text)
-    if (order.payment.telegramMessageId)
-      await editTelegramMessage(order.payment.telegramMessageId, text)
-    return true
-  }
-
-  await dbQuery.payments.rejectBankTransferClaim(input.orderId, Date.now())
-  const text = `❌ ${order.number} төлбөр татгалзлаа`
-  await answerTelegramCallback(input.callbackQueryId, text)
-  if (order.payment.telegramMessageId)
-    await editTelegramMessage(order.payment.telegramMessageId, text)
-  return true
+    },
+  })
 }
 
 export const claimBankTransfer = async (orderId: string, statusToken: string) => {
   const privateOrder = await orderOperations.getPrivateStatus(orderId, statusToken)
-  if (privateOrder.status === 'error')
-    return Result.err<BankTransferClaim, BankTransferClaimError>(privateOrder.error)
-  const order = privateOrder.value
-  if (!order.payment || order.payment.method !== 'bank_transfer')
-    return Result.err<BankTransferClaim, BankTransferClaimError>({
-      _tag: 'BankTransferClaimNotAllowed',
-      message: 'Энэ төлбөрт мэдэгдэл өгөх боломжгүй.',
-      paymentStatus: order.payment?.status ?? 'failed',
-    })
+  const claimableOrder = Result.andThen(privateOrder, order => {
+    if (!order.payment || order.payment.method !== 'bank_transfer')
+      return Result.err(bankTransferClaimNotAllowed(order.payment?.status ?? 'failed'))
+    if (
+      order.payment.status !== 'pending' &&
+      order.payment.status !== 'claimed' &&
+      order.payment.status !== 'paid'
+    )
+      return Result.err(bankTransferClaimNotAllowed(order.payment.status))
+    return Result.ok({ ...order, payment: order.payment })
+  })
+  if (claimableOrder.status === 'error')
+    return Result.err<BankTransferClaim, BankTransferClaimError>(claimableOrder.error)
+
+  const order = claimableOrder.value
   if (order.payment.status === 'paid')
     return Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'paid' })
-  if (order.payment.status !== 'pending' && order.payment.status !== 'claimed')
-    return Result.err<BankTransferClaim, BankTransferClaimError>({
-      _tag: 'BankTransferClaimNotAllowed',
-      message: 'Энэ төлбөрт мэдэгдэл өгөх боломжгүй.',
-      paymentStatus: order.payment.status,
-    })
   if (order.payment.status === 'claimed' && order.payment.telegramMessageId)
     return Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'claimed' })
   if (order.payment.status === 'pending') {
@@ -181,11 +208,7 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
   }
 
   await dbQuery.payments.rejectBankTransferClaim(orderId, Date.now())
-  return Result.err<BankTransferClaim, BankTransferClaimError>({
-    _tag: 'StaffNotificationFailed',
-    message: 'Ажилтанд мэдэгдэл илгээж чадсангүй. Дахин оролдоно уу.',
-    retryable: true,
-  })
+  return Result.err<BankTransferClaim, BankTransferClaimError>(staffNotificationFailed())
 }
 
 export const paymentOperations = {
