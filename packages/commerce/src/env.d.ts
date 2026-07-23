@@ -1,5 +1,6 @@
 declare namespace Cloudflare {
   interface Env {
+    CACHE: KVNamespace
     QPAY_USERNAME: string
     QPAY_PASSWORD: string
     QPAY_INVOICE_CODE: string
