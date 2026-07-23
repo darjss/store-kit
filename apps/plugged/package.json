@@ -23,7 +23,6 @@
     "@store-kit/storefront": "workspace:*",
     "@store-kit/ui": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/solid-form": "^1.33.2",
     "@tanstack/solid-query": "catalog:",
     "@unpic/core": "^1.0.3",
     "astro": "^7.1.3",

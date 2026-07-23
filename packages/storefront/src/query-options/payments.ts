@@ -5,7 +5,8 @@ import type {
   PaymentRefreshError,
 } from '@store-kit/contracts/payments'
 
-import { api } from '../client'
+import { api } from '~/client'
+
 import { resultMutationOptions } from './result'
 
 type PrivatePaymentInput = { orderId: string; token: string }

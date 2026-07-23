@@ -1,10 +1,25 @@
+import solid from 'vite-plugin-solid'
 import { defineConfig } from 'vite-plus'
 
 import formatConfig from './oxfmt.config'
 import lintConfig from './oxlint.config'
 
 export default defineConfig({
+  plugins: [solid()],
   resolve: { tsconfigPaths: true },
+  ssr: {
+    noExternal: [
+      '@corvu/utils',
+      '@kobalte/core',
+      '@solar-icons/solid',
+      '@store-kit/ui',
+      '@tanstack/solid-form',
+      'cmdk-solid',
+      'solid-prevent-scroll',
+      'solid-presence',
+      'solid-sonner',
+    ],
+  },
   run: {
     tasks: {
       'db:generate': {

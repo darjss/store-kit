@@ -14,6 +14,19 @@ export {
   setCartItemQuantity,
 } from './cart'
 export type { CartItemsProps, CartLineInput, PersistedCartItem } from './cart'
+export { Checkout, useCheckout } from './checkout'
+export type { CheckoutDomainError } from './checkout'
+export {
+  PendingSubmitButton,
+  SubmitButton,
+  jsonPointerToFieldName,
+  typeboxValidator,
+  useAppForm,
+  useFieldContext,
+  useFormContext,
+  withFieldGroup,
+  withForm,
+} from './form'
 export { formatMnt } from './format'
 export { mediaUrl, publicMediaUrl } from './media'
 export { clampPurchaseQuantity, maximumPurchaseQuantity } from './purchase'
@@ -24,7 +37,7 @@ export type { ProductListFilters } from './query-options/catalog'
 export { checkoutMutation } from './query-options/checkout'
 export { orderQuery } from './query-options/orders'
 export { paymentMutation } from './query-options/payments'
-export { useQueryResult } from './query-options/result'
+export { useMutationResult, useQueryResult } from './query-options/result'
 export { systemStatusOptions } from './query-options/system-status'
 export { orderStatusLabel, paymentStatusLabel, shouldPollOrderStatus } from './status'
 export { cartStorageKey, privateOrderStorageKey } from './storage'

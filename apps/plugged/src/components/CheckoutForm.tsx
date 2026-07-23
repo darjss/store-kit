@@ -1,29 +1,21 @@
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
-import type { CheckoutCreated, CheckoutError, CheckoutInput } from '@store-kit/contracts/checkout'
-import { checkoutInputSchema } from '@store-kit/contracts/checkout'
-import { cartItems, cartLineInputs, clearCart, openCart } from '@store-kit/storefront/cart/store'
+import type { CheckoutCreated } from '@store-kit/contracts/checkout'
+import { cartItems, openCart } from '@store-kit/storefront/cart/store'
+import { Checkout, useCheckout } from '@store-kit/storefront/checkout'
+import { PendingSubmitButton, jsonPointerToFieldName } from '@store-kit/storefront/form'
 import { formatMnt } from '@store-kit/storefront/format'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
-import { cartQuery } from '@store-kit/storefront/query-options/cart'
-import { checkoutMutation } from '@store-kit/storefront/query-options/checkout'
-import { useQueryResult } from '@store-kit/storefront/query-options/result'
 import {
   Button,
   Field,
   FieldDescription,
   FieldError,
   FieldLabel,
-  Input,
-  NativeSelect,
   NativeSelectOption,
-  RadioGroup,
   RadioGroupItem,
-  Textarea,
 } from '@store-kit/ui'
-import { createForm } from '@tanstack/solid-form'
-import { QueryClientProvider, createMutation } from '@tanstack/solid-query'
+import { QueryClientProvider } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
-import { Value } from 'typebox/value'
 
 const districts = [
   'Багануур',
@@ -43,148 +35,30 @@ const formBandClass =
   'mb-4 border-4 border-ink bg-paper-clean p-[clamp(1rem,2vw,2rem)] [&>h2]:font-display [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8] [&_[data-slot=field]]:mb-4'
 const errorPanelClass =
   'mb-4 border-4 border-warning bg-paper-clean p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:border-ink [&_button]:bg-acid [&_button]:px-3 [&_button]:py-2 [&_button]:font-black'
-const formFieldByContractPath = {
-  '/customer/name': 'name',
-  '/customer/phone': 'phone',
-  '/delivery/district': 'district',
-  '/delivery/khoroo': 'khoroo',
-  '/delivery/address': 'address',
-  '/delivery/notes': 'notes',
-  '/paymentMethod': 'paymentMethod',
-} as const
-const validationMessageByContractPath: Record<keyof typeof formFieldByContractPath, string> = {
-  '/customer/name': 'Нэрээ оруулна уу.',
-  '/customer/phone': 'Утасны дугаараа шалгана уу.',
-  '/delivery/district': 'Дүүргээ сонгоно уу.',
-  '/delivery/khoroo': 'Хороогоо оруулна уу.',
-  '/delivery/address': 'Дэлгэрэнгүй хаягаа оруулна уу.',
-  '/delivery/notes': 'Нэмэлт тайлбар 500 тэмдэгтээс ихгүй байна.',
-  '/paymentMethod': 'Төлбөрийн аргаа сонгоно уу.',
-}
-
-type CheckoutFormValues = Omit<CheckoutInput, 'items' | 'customer' | 'delivery'> &
-  CheckoutInput['customer'] &
-  CheckoutInput['delivery']
-
-type TransportError = { _tag: 'TransportError'; message: string }
 
 const qpayAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'qpay' ? order.nextAction : undefined
 const bankAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'bank_transfer' ? order.nextAction : undefined
 
-const toCheckoutInput = (value: CheckoutFormValues): CheckoutInput => ({
-  items: cartLineInputs(),
-  customer: { name: value.name, phone: value.phone },
-  delivery: {
-    district: value.district,
-    khoroo: value.khoroo,
-    address: value.address,
-    ...(value.notes ? { notes: value.notes } : {}),
-  },
-  paymentMethod: value.paymentMethod,
-})
-
-const validateCheckout = ({ value }: { value: CheckoutFormValues }) => {
-  const fields = Object.fromEntries(
-    Value.Errors(checkoutInputSchema, toCheckoutInput(value)).flatMap(issue => {
-      const path = issue.instancePath as keyof typeof formFieldByContractPath
-      const field = formFieldByContractPath[path]
-      return field ? [[field, validationMessageByContractPath[path]]] : []
-    }),
-  )
-  return Object.keys(fields).length > 0 ? { fields } : undefined
-}
-
-const validationError = (errors: unknown[]) =>
-  errors.find((item): item is string => typeof item === 'string')
+const fieldMessage = (hasDomainError: boolean, validationErrors: unknown[], message: string) =>
+  hasDomainError || validationErrors.length > 0 ? message : undefined
 
 function FormOwner() {
-  const checkout = createMutation(() => checkoutMutation.create())
-  const validation = useQueryResult(() => ({
-    ...cartQuery.validate([...cartItems()]),
-    enabled: false,
-  }))
-  const [domainError, setDomainError] = createSignal<CheckoutError | TransportError>()
-  const [created, setCreated] = createSignal<CheckoutCreated>()
-
-  const form = createForm(() => ({
-    defaultValues: {
-      name: '',
-      phone: '',
-      district: 'Баянзүрх' as (typeof districts)[number],
-      khoroo: '',
-      address: '',
-      notes: '',
-      paymentMethod: 'qpay' as 'qpay' | 'bank_transfer',
-    } satisfies CheckoutFormValues,
-    validators: { onSubmit: validateCheckout },
-    onSubmit: async ({ value }) => {
-      setDomainError()
-      try {
-        const cart = await validation.refetch()
-        if (cart.data?.status !== 'ok') {
-          setDomainError({
-            _tag: 'TransportError',
-            message: 'Сагсыг шалгаж чадсангүй. Мэдээллээ хадгалсан тул дахин оролдоно уу.',
-          })
-          return
-        }
-        if (cart.data.value.corrections.length > 0) {
-          setDomainError({
-            _tag: 'CartChanged',
-            message: 'Сагсны бараа өөрчлөгдсөн байна.',
-            corrections: cart.data.value.corrections,
-          })
-          requestAnimationFrame(() =>
-            document.querySelector<HTMLElement>('#cart-correction')?.focus(),
-          )
-          return
-        }
-        const result = await checkout.mutateAsync(toCheckoutInput(value))
-        if (result.status === 'ok') {
-          clearCart()
-          setCreated(result.value)
-          return
-        }
-        setDomainError(result.error)
-        if (result.error._tag === 'InvalidCheckoutDetails') {
-          const first = result.error.fields[0]?.path.split('/').at(-1)
-          requestAnimationFrame(() =>
-            document.querySelector<HTMLElement>(`[name="${first}"]`)?.focus(),
-          )
-        } else if (result.error._tag === 'CartChanged') {
-          requestAnimationFrame(() =>
-            document.querySelector<HTMLElement>('#cart-correction')?.focus(),
-          )
-        }
-      } catch {
-        setDomainError({
-          _tag: 'TransportError',
-          message: 'Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.',
-        })
-      }
-    },
-  }))
-
+  const checkout = useCheckout()
+  const created = checkout.created
   const error = () =>
-    domainError() as
+    checkout.domainError() as
       | {
           _tag?: string
           message?: string
           canUseBankTransfer?: boolean
-          fields?: { path: string; message: string }[]
+          fields?: { path: string }[]
           corrections?: { message: string }[]
         }
       | undefined
   const fieldError = (name: string) =>
-    error()?.fields?.find(item => item.path.endsWith(`/${name}`))?.message
-  const clearFieldError = (name: string) => {
-    const current = domainError()
-    if (current?._tag !== 'InvalidCheckoutDetails') return
-    const fields = current.fields.filter(item => !item.path.endsWith(`/${name}`))
-    setDomainError(fields.length > 0 ? { ...current, fields } : undefined)
-  }
+    Boolean(error()?.fields?.some(item => jsonPointerToFieldName(item.path) === name))
 
   return (
     <Switch>
@@ -244,19 +118,7 @@ function FormOwner() {
           </section>
         </Show>
         <Show when={cartItems().length > 0}>
-          <form
-            class="grid grid-cols-12 items-start gap-8 max-md:flex max-md:flex-col"
-            aria-busy={checkout.isPending || validation.isFetching}
-            noValidate
-            onSubmit={event => {
-              event.preventDefault()
-              const formElement = event.currentTarget
-              void form.handleSubmit().then(() => {
-                formElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
-                return undefined
-              })
-            }}
-          >
+          <Checkout.Form class="grid grid-cols-12 items-start gap-8 max-md:flex max-md:flex-col">
             <div class="col-[1/8] max-md:w-full">
               <h1 class="font-display text-[clamp(4rem,9vw,6rem)] leading-[0.75] max-md:text-[4.5rem]">
                 ЗАХИАЛГА
@@ -284,10 +146,10 @@ function FormOwner() {
                   <p>{error()?.message}</p>
                 </section>
               </Show>
-              <Show when={error()?._tag === 'TransportError'}>
+              <Show when={checkout.transportError()}>
                 <section class={errorPanelClass} role="alert">
                   <strong>Холболт амжилтгүй.</strong>
-                  <p>{error()?.message}</p>
+                  <p>Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.</p>
                   <Button type="submit" variant="outline">
                     Дахин оролдох
                   </Button>
@@ -295,56 +157,50 @@ function FormOwner() {
               </Show>
               <section class={formBandClass}>
                 <h2>Холбоо барих</h2>
-                <form.Field name="name">
+                <Checkout.Field name="customer.name">
                   {field => {
                     const message = () =>
-                      fieldError('name') ?? validationError(field().state.meta.errors)
+                      fieldMessage(
+                        fieldError('customer.name'),
+                        field().state.meta.errors,
+                        'Нэрээ оруулна уу.',
+                      )
                     return (
                       <Field>
                         <FieldLabel for={field().name}>
                           Нэр <span aria-hidden="true">*</span>
                         </FieldLabel>
-                        <Input
+                        <field.Input
                           id={field().name}
-                          name={field().name}
                           required
-                          value={field().state.value}
                           aria-invalid={Boolean(message())}
                           aria-describedby={message() ? fieldErrorId('name') : undefined}
-                          onInput={event => {
-                            field().handleChange(event.currentTarget.value)
-                            clearFieldError('name')
-                          }}
-                          onBlur={() => field().handleBlur()}
                           autocomplete="name"
                         />
                         <FieldError id={fieldErrorId('name')}>{message()}</FieldError>
                       </Field>
                     )
                   }}
-                </form.Field>
-                <form.Field name="phone">
+                </Checkout.Field>
+                <Checkout.Field name="customer.phone">
                   {field => {
                     const message = () =>
-                      fieldError('phone') ?? validationError(field().state.meta.errors)
+                      fieldMessage(
+                        fieldError('customer.phone'),
+                        field().state.meta.errors,
+                        'Утасны дугаараа шалгана уу.',
+                      )
                     return (
                       <Field>
                         <FieldLabel for={field().name}>
                           Утас <span aria-hidden="true">*</span>
                         </FieldLabel>
-                        <Input
+                        <field.Input
                           id={field().name}
-                          name={field().name}
                           inputmode="tel"
                           required
-                          value={field().state.value}
                           aria-invalid={Boolean(message())}
                           aria-describedby={message() ? fieldErrorId('phone') : undefined}
-                          onInput={event => {
-                            field().handleChange(event.currentTarget.value)
-                            clearFieldError('phone')
-                          }}
-                          onBlur={() => field().handleBlur()}
                           placeholder="9911 2233"
                           autocomplete="tel"
                         />
@@ -352,113 +208,96 @@ function FormOwner() {
                       </Field>
                     )
                   }}
-                </form.Field>
+                </Checkout.Field>
               </section>
               <section class={formBandClass}>
                 <h2>Улаанбаатар хүргэлт</h2>
-                <form.Field name="district">
+                <Checkout.Field name="delivery.district">
                   {field => (
                     <Field>
                       <FieldLabel for={field().name}>
                         Дүүрэг <span aria-hidden="true">*</span>
                       </FieldLabel>
-                      <NativeSelect
-                        class="w-full"
-                        id={field().name}
-                        name={field().name}
-                        required
-                        value={field().state.value}
-                        onChange={event =>
-                          field().handleChange(
-                            event.currentTarget.value as (typeof districts)[number],
-                          )
-                        }
-                        onBlur={() => field().handleBlur()}
-                      >
+                      <field.NativeSelect class="w-full" id={field().name} required>
                         <For each={districts}>
                           {district => (
                             <NativeSelectOption value={district}>{district}</NativeSelectOption>
                           )}
                         </For>
-                      </NativeSelect>
+                      </field.NativeSelect>
                     </Field>
                   )}
-                </form.Field>
-                <form.Field name="khoroo">
+                </Checkout.Field>
+                <Checkout.Field name="delivery.khoroo">
                   {field => {
                     const message = () =>
-                      fieldError('khoroo') ?? validationError(field().state.meta.errors)
+                      fieldMessage(
+                        fieldError('delivery.khoroo'),
+                        field().state.meta.errors,
+                        'Хороогоо оруулна уу.',
+                      )
                     return (
                       <Field>
                         <FieldLabel for={field().name}>
                           Хороо <span aria-hidden="true">*</span>
                         </FieldLabel>
-                        <Input
+                        <field.Input
                           id={field().name}
-                          name={field().name}
                           required
-                          value={field().state.value}
                           aria-invalid={Boolean(message())}
                           aria-describedby={message() ? fieldErrorId('khoroo') : undefined}
-                          onInput={event => {
-                            field().handleChange(event.currentTarget.value)
-                            clearFieldError('khoroo')
-                          }}
-                          onBlur={() => field().handleBlur()}
                         />
                         <FieldError id={fieldErrorId('khoroo')}>{message()}</FieldError>
                       </Field>
                     )
                   }}
-                </form.Field>
-                <form.Field name="address">
+                </Checkout.Field>
+                <Checkout.Field name="delivery.address">
                   {field => {
                     const message = () =>
-                      fieldError('address') ?? validationError(field().state.meta.errors)
+                      fieldMessage(
+                        fieldError('delivery.address'),
+                        field().state.meta.errors,
+                        'Дэлгэрэнгүй хаягаа оруулна уу.',
+                      )
                     return (
                       <Field>
                         <FieldLabel for={field().name}>
                           Дэлгэрэнгүй хаяг <span aria-hidden="true">*</span>
                         </FieldLabel>
-                        <Textarea
+                        <field.Textarea
                           id={field().name}
-                          name={field().name}
                           required
-                          value={field().state.value}
                           aria-invalid={Boolean(message())}
                           aria-describedby={message() ? fieldErrorId('address') : undefined}
-                          onInput={event => {
-                            field().handleChange(event.currentTarget.value)
-                            clearFieldError('address')
-                          }}
-                          onBlur={() => field().handleBlur()}
                         />
                         <FieldError id={fieldErrorId('address')}>{message()}</FieldError>
                       </Field>
                     )
                   }}
-                </form.Field>
-                <form.Field name="notes">
+                </Checkout.Field>
+                <Checkout.Field name="delivery.notes">
                   {field => {
-                    const message = () => validationError(field().state.meta.errors)
+                    const message = () =>
+                      fieldMessage(
+                        fieldError('delivery.notes'),
+                        field().state.meta.errors,
+                        'Нэмэлт тайлбар 500 тэмдэгтээс ихгүй байна.',
+                      )
                     return (
                       <Field>
                         <FieldLabel for={field().name}>Нэмэлт тайлбар</FieldLabel>
                         <FieldDescription>Заавал биш</FieldDescription>
-                        <Textarea
+                        <field.Textarea
                           id={field().name}
-                          name={field().name}
-                          value={field().state.value}
                           aria-invalid={Boolean(message())}
                           aria-describedby={message() ? fieldErrorId('notes') : undefined}
-                          onInput={event => field().handleChange(event.currentTarget.value)}
-                          onBlur={() => field().handleBlur()}
                         />
                         <FieldError id={fieldErrorId('notes')}>{message()}</FieldError>
                       </Field>
                     )
                   }}
-                </form.Field>
+                </Checkout.Field>
                 <Show when={error()?._tag === 'DeliveryUnavailable'}>
                   <div class={errorPanelClass}>
                     <strong>Хүргэлт боломжгүй.</strong>
@@ -470,21 +309,19 @@ function FormOwner() {
                 class={`${formBandClass} [&_[role=radiogroup]>label]:border-ink [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4`}
               >
                 <h2>Төлбөр</h2>
-                <form.Field name="paymentMethod">
+                <Checkout.Field name="paymentMethod">
                   {field => {
-                    const message = () => validationError(field().state.meta.errors)
+                    const message = () =>
+                      fieldMessage(
+                        fieldError('paymentMethod'),
+                        field().state.meta.errors,
+                        'Төлбөрийн аргаа сонгоно уу.',
+                      )
                     return (
                       <Field>
-                        <RadioGroup
-                          name={field().name}
-                          required
-                          value={field().state.value}
+                        <field.RadioGroup
                           aria-invalid={Boolean(message())}
                           aria-describedby={message() ? fieldErrorId('paymentMethod') : undefined}
-                          onChange={value =>
-                            field().handleChange(value as CheckoutFormValues['paymentMethod'])
-                          }
-                          onBlur={() => field().handleBlur()}
                         >
                           <FieldLabel for="payment-qpay">
                             <RadioGroupItem id="payment-qpay" value="qpay" />
@@ -498,12 +335,12 @@ function FormOwner() {
                               Дансаар шилжүүлэх <small>Ажилтан баталгаажуулна</small>
                             </span>
                           </FieldLabel>
-                        </RadioGroup>
+                        </field.RadioGroup>
                         <FieldError id={fieldErrorId('paymentMethod')}>{message()}</FieldError>
                       </Field>
                     )
                   }}
-                </form.Field>
+                </Checkout.Field>
                 <Show when={error()?._tag === 'PaymentSetupFailed'}>
                   <div class={errorPanelClass}>
                     <p>{error()?.message}</p>
@@ -514,7 +351,9 @@ function FormOwner() {
                       <Button
                         type="button"
                         variant="secondary"
-                        onClick={() => form.setFieldValue('paymentMethod', 'bank_transfer')}
+                        onClick={() =>
+                          checkout.form.setFieldValue('paymentMethod', 'bank_transfer')
+                        }
                       >
                         Дансаар төлөх
                       </Button>
@@ -536,19 +375,21 @@ function FormOwner() {
                 )}
               </For>
               <div class="py-4">Хүргэлтийн төлбөрийг сервер баталгаажуулж нийт дүнд нэмнэ.</div>
-              <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting] as const}>
+              <Checkout.Submit>
                 {state => (
-                  <Button
+                  <PendingSubmitButton
                     class={`${actionClass} bg-ink text-paper w-full`}
-                    type="submit"
-                    disabled={!state()[0] || state()[1]}
+                    pending={state().pending}
+                    pendingChildren="Баталгаажуулж байна…"
+                    busyLabel="Захиалгыг баталгаажуулж байна"
+                    disabled={!state().canSubmit}
                   >
-                    {state()[1] ? 'Баталгаажуулж байна…' : 'Захиалга үүсгэх →'}
-                  </Button>
+                    Захиалга үүсгэх →
+                  </PendingSubmitButton>
                 )}
-              </form.Subscribe>
+              </Checkout.Submit>
             </aside>
-          </form>
+          </Checkout.Form>
         </Show>
       </Match>
     </Switch>
@@ -570,7 +411,9 @@ export function CheckoutForm() {
         const client = createStorefrontQueryClient()
         return (
           <QueryClientProvider client={client}>
-            <FormOwner />
+            <Checkout.Root>
+              <FormOwner />
+            </Checkout.Root>
           </QueryClientProvider>
         )
       }}
