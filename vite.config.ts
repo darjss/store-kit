@@ -26,6 +26,10 @@ export default defineConfig({
         cwd: 'packages/tooling',
         cache: false,
       },
+      'test:commerce:integration': {
+        command: 'vp test --config vitest.integration.config.ts',
+        cache: false,
+      },
     },
   },
   staged: {

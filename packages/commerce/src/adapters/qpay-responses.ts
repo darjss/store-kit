@@ -19,14 +19,8 @@ const invoiceResponseSchema = Type.Object({
   ),
 })
 
-const paymentResponseSchema = Type.Object({
-  payment_id: Type.String({ minLength: 1 }),
-  payment_status: Type.String({ minLength: 1 }),
-  payment_amount: Type.Number({ minimum: 0 }),
-  object_id: Type.String({ minLength: 1 }),
-})
-
 const paymentCheckResponseSchema = Type.Object({
+  count: Type.Number({ minimum: 0 }),
   rows: Type.Array(
     Type.Object({
       payment_id: Type.String({ minLength: 1 }),
@@ -38,7 +32,6 @@ const paymentCheckResponseSchema = Type.Object({
 
 type TokenResponse = Static<typeof tokenResponseSchema>
 type InvoiceResponse = Static<typeof invoiceResponseSchema>
-type PaymentResponse = Static<typeof paymentResponseSchema>
 type PaymentCheckResponse = Static<typeof paymentCheckResponseSchema>
 
 const parse = <Schema extends TSchema>(
@@ -52,9 +45,6 @@ export const parseQPayTokenResponse = (input: unknown): TokenResponse | undefine
 
 export const parseQPayInvoiceResponse = (input: unknown): InvoiceResponse | undefined =>
   parse(invoiceResponseSchema, input)
-
-export const parseQPayPaymentResponse = (input: unknown): PaymentResponse | undefined =>
-  parse(paymentResponseSchema, input)
 
 export const parseQPayPaymentCheckResponse = (input: unknown): PaymentCheckResponse | undefined =>
   parse(paymentCheckResponseSchema, input)

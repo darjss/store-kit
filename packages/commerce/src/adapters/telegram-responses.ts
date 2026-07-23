@@ -26,7 +26,7 @@ const telegramMessageResponseSchema = Type.Object(
 const telegramActionResponseSchema = Type.Object(
   {
     ok: Type.Literal(true),
-    result: Type.Union([Type.Boolean(), Type.Object({}, { additionalProperties: true })]),
+    result: Type.Boolean(),
   },
   { additionalProperties: true },
 )
@@ -44,9 +44,9 @@ export const parseTelegramMessageResponse = (
   return { status: 'invalid' as const }
 }
 
-export const parseTelegramActionResponse = (value: unknown): ParsedTelegramResponse<undefined> => {
+export const parseTelegramActionResponse = (value: unknown): ParsedTelegramResponse<boolean> => {
   if (Value.Check(telegramActionResponseSchema, value)) {
-    return { status: 'ok' as const, value: undefined }
+    return { status: 'ok' as const, value: value.result }
   }
   if (Value.Check(telegramRejectedResponseSchema, value)) return { status: 'rejected' as const }
   return { status: 'invalid' as const }

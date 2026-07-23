@@ -19,18 +19,17 @@ export type CartVariant = {
   imageR2Key: string | null
 }
 
-export const findVariants = async (items: CartLineInput[]): Promise<CartVariant[]> => {
-  if (items.length === 0) return []
+export const selectVariants = (items: CartLineInput[]) => {
   const variantIds = [...new Set(items.map(item => item.variantId))]
 
   return db
     .select({
-      variantId: productVariant.id,
-      productId: product.id,
+      variantId: sql<string>`${productVariant.id}`.as('variant_id'),
+      productId: sql<string>`${product.id}`.as('product_id'),
       productSlug: product.slug,
-      productName: product.name,
+      productName: sql<string>`${product.name}`.as('product_name'),
       productStatus: product.status,
-      variantName: productVariant.name,
+      variantName: sql<string>`${productVariant.name}`.as('variant_name'),
       sku: productVariant.sku,
       options: productVariant.options,
       unitPriceMnt: productVariant.priceMnt,
@@ -50,12 +49,15 @@ export const findVariants = async (items: CartLineInput[]): Promise<CartVariant[
           order by ${productImage.sortOrder}
           limit 1
         )
-      )`,
+      )`.as('image_r2_key'),
     })
     .from(productVariant)
     .innerJoin(product, eq(productVariant.productId, product.id))
     .where(inArray(productVariant.id, variantIds))
     .orderBy(productVariant.id)
 }
+
+export const findVariants = async (items: CartLineInput[]): Promise<CartVariant[]> =>
+  items.length === 0 ? [] : selectVariants(items)
 
 export const cartQuery = { findVariants }

@@ -1,6 +1,9 @@
 import { commerce } from '@store-kit/commerce'
+import { cartLineInputsSchema } from '@store-kit/contracts/cart'
 import { Result } from 'better-result'
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
+
+import { contractBody } from '../typebox-contract'
 
 export const cartRoutes = new Elysia({ aot: false, prefix: '/api/cart' }).post(
   '/validate',
@@ -8,5 +11,5 @@ export const cartRoutes = new Elysia({ aot: false, prefix: '/api/cart' }).post(
     set.headers['cache-control'] = 'private, no-store'
     return Result.serialize(await commerce.cart.validate(body))
   },
-  { body: t.Any() },
+  { body: contractBody(cartLineInputsSchema) },
 )

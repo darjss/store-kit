@@ -5,18 +5,10 @@ import {
   nonNegativeIntegerSchema,
   nullableTimestampSchema,
   orderIdSchema,
+  orderStatusSchema,
   variantOptionsSchema,
 } from './common'
 import { paymentMethodSchema, paymentStatusSchema } from './payments'
-
-export const orderStatusSchema = Type.Union([
-  Type.Literal('new'),
-  Type.Literal('confirmed'),
-  Type.Literal('preparing'),
-  Type.Literal('delivering'),
-  Type.Literal('completed'),
-  Type.Literal('cancelled'),
-])
 
 export const publicOrderLineSchema = Type.Object(
   {
@@ -78,4 +70,4 @@ export type PublicOrderLine = Static<typeof publicOrderLineSchema>
 export type PublicOrderPayment = Static<typeof publicOrderPaymentSchema>
 export type PublicOrder = Static<typeof publicOrderSchema>
 export type PrivateOrderError = Static<typeof privateOrderErrorSchema>
-export { orderIdPattern } from './common'
+export { orderIdPattern, orderStatusSchema } from './common'

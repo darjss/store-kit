@@ -3,13 +3,15 @@ import { env } from 'cloudflare:workers'
 import ky from 'ky'
 import type { KyInstance } from 'ky'
 
+import { createQPayCallbackUrl, qpayPaymentCheckBody } from './qpay-callback'
 import {
   parseQPayInvoiceResponse,
   parseQPayPaymentCheckResponse,
-  parseQPayPaymentResponse,
   parseQPayTokenResponse,
 } from './qpay-responses'
 import { createQPayTokenCache } from './qpay-token-cache'
+
+export { createQPayCallbackUrl, qpayPaymentCheckBody } from './qpay-callback'
 
 export type QPayError =
   | { _tag: 'QPayRequestFailed'; message: string }
@@ -103,6 +105,7 @@ export const createQPayInvoice = async (input: {
   orderNumber: string
   amountMnt: number
   description: string
+  paymentLookupId: string
 }) => {
   try {
     const response = await getAuthenticatedClient()
@@ -113,7 +116,7 @@ export const createQPayInvoice = async (input: {
           invoice_receiver_code: 'terminal',
           invoice_description: input.description,
           amount: input.amountMnt,
-          callback_url: `${env.PUBLIC_APP_URL}/api/webhooks/qpay`,
+          callback_url: createQPayCallbackUrl(env.PUBLIC_APP_URL, input.paymentLookupId),
         },
       })
       .json<unknown>()
@@ -130,28 +133,11 @@ export const createQPayInvoice = async (input: {
   }
 }
 
-export const verifyQPayCallback = async (paymentId: string) => {
-  try {
-    const response = await getAuthenticatedClient().get(`v2/payment/${paymentId}`).json<unknown>()
-    const payment = parseQPayPaymentResponse(response)
-    if (!payment || payment.payment_status !== 'PAID') throw invalidResponse
-    return Result.ok<{ invoiceId: string; paymentId: string; amountMnt: number }, QPayError>({
-      invoiceId: payment.object_id,
-      paymentId: payment.payment_id,
-      amountMnt: payment.payment_amount,
-    })
-  } catch (cause) {
-    return Result.err<{ invoiceId: string; paymentId: string; amountMnt: number }, QPayError>(
-      adapterError(cause),
-    )
-  }
-}
-
 export const verifyQPayPayment = async (invoiceId: string) => {
   try {
     const response = await getAuthenticatedClient()
       .post('v2/payment/check', {
-        json: { object_type: 'INVOICE', object_id: invoiceId },
+        json: qpayPaymentCheckBody(invoiceId),
       })
       .json<unknown>()
     const paymentCheck = parseQPayPaymentCheckResponse(response)

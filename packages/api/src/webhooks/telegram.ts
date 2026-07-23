@@ -14,6 +14,9 @@ const telegramUpdateSchema = Type.Object(
           id: Type.String(),
           from: Type.Object({ id: Type.Number() }, { additionalProperties: true }),
           data: Type.Optional(Type.String()),
+          message: Type.Optional(
+            Type.Object({ message_id: Type.Number() }, { additionalProperties: true }),
+          ),
         },
         { additionalProperties: true },
       ),
@@ -34,14 +37,20 @@ export const telegramWebhook = new Elysia({ aot: false, prefix: '/api/webhooks' 
 
     const callback = body.callback_query
     if (!callback || String(callback.from.id) !== env.TELEGRAM_ADMIN_USER_ID) return { ok: true }
+    if (!callback.message) return { ok: true }
     const match = /^bank:(confirm|reject):(.+)$/.exec(callback.data ?? '')
     const orderId = match?.[2]
     if (!match || !orderId || !orderIdExpression.test(orderId)) return { ok: true }
-    await commerce.payments.handleBankTransferCallback({
+    const outcome = await commerce.payments.handleBankTransferCallback({
       action: match[1] === 'confirm' ? 'confirm' : 'reject',
       orderId,
       callbackQueryId: callback.id,
+      telegramMessageId: String(callback.message.message_id),
     })
+    if (outcome.status === 'retryable-failure') {
+      set.status = 503
+      return { ok: false }
+    }
     return { ok: true }
   },
   {

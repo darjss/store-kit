@@ -3,7 +3,6 @@ import { expect, test } from 'vite-plus/test'
 import {
   parseQPayInvoiceResponse,
   parseQPayPaymentCheckResponse,
-  parseQPayPaymentResponse,
   parseQPayTokenResponse,
 } from './qpay-responses'
 
@@ -39,27 +38,9 @@ test('rejects invalid provider payloads before fields are read', () => {
       urls: [{ name: 'Bank app', link: 12 }],
     }),
   ).toBeUndefined()
-  expect(
-    parseQPayPaymentResponse({
-      payment_id: 'payment-1',
-      payment_status: 'PAID',
-      payment_amount: '1000',
-      object_id: 'invoice-1',
-    }),
-  ).toBeUndefined()
 })
 
-test('parses payment detail and check responses without exposing extra provider fields', () => {
-  expect(
-    parseQPayPaymentResponse({
-      payment_id: 'payment-1',
-      payment_status: 'PAID',
-      payment_amount: 1_000,
-      object_id: 'invoice-1',
-      payer_phone: 'private-provider-field',
-    }),
-  ).toMatchObject({ payment_id: 'payment-1', object_id: 'invoice-1' })
-
+test('parses documented payment check responses without exposing extra provider fields', () => {
   expect(
     parseQPayPaymentCheckResponse({
       count: 1,
