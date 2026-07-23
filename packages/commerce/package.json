@@ -9,6 +9,7 @@
     "./cart": "./src/cart/operations.ts",
     "./qpay": "./src/adapters/qpay.ts",
     "./checkout": "./src/checkout/operations.ts",
+    "./errors": "./src/errors.ts",
     "./orders": "./src/orders/operations.ts",
     "./payments": "./src/payments/operations.ts",
     "./system": "./src/operations/system-status.ts",
