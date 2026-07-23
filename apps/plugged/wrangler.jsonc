@@ -18,6 +18,10 @@
   ],
   "kv_namespaces": [{ "binding": "CACHE" }, { "binding": "AUTH_KV" }],
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "plugged-media" }],
+  "vars": {
+    "PUBLIC_APP_URL": "http://localhost:4321",
+    "QPAY_BASE_URL": "https://merchant-sandbox.qpay.mn",
+  },
   "observability": {
     "enabled": true,
   },

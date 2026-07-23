@@ -1,202 +1,114 @@
 import { Result } from 'better-result'
+import { env } from 'cloudflare:workers'
 import ky from 'ky'
 
-const SANDBOX_URL = 'https://merchant-sandbox.qpay.mn'
-const PRODUCTION_URL = 'https://merchant.qpay.mn'
-
-export type QPayConfig = {
-  clientId: string
-  clientSecret: string
-  invoiceCode: string
-  environment: 'sandbox' | 'production'
-}
-
-export type QPayInvoiceInput = {
-  orderNumber: string
-  customerCode: string
-  description: string
-  amountMnt: number
-  callbackUrl: string
-}
-
+export type QPayError = { _tag: 'QPayUnavailable'; message: string }
 export type QPayInvoice = {
   invoiceId: string
   qrText: string
   qrImage: string
-  bankLinks: { name: string; description: string; logo: string; link: string }[]
+  urls: { name: string; link: string }[]
 }
 
-export type QPayPaymentStatus =
-  | { status: 'pending'; invoiceId: string }
-  | {
-      status: 'paid'
-      invoiceId: string
-      paymentId: string
-      amountMnt: number
-    }
-
-export type QPayError = {
-  _tag: 'QPayUnavailable' | 'QPayInvalidResponse' | 'QPayPaymentMismatch'
-  message: string
-  retryable: boolean
-}
-
-type PaidPayment = Extract<QPayPaymentStatus, { status: 'paid' }>
-type QPayWebhookHook = (payment: PaidPayment) => void | Promise<void>
-
-type Token = { value: string; expiresAt: number }
-
-const unavailable = (): QPayError => ({
+const error = (): QPayError => ({
   _tag: 'QPayUnavailable',
-  message: 'QPay үйлчилгээтэй холбогдож чадсангүй. Дахин оролдоно уу.',
-  retryable: true,
+  message: 'QPay төлбөрийг одоогоор бэлтгэх боломжгүй байна.',
 })
 
-const invalidResponse = (): QPayError => ({
-  _tag: 'QPayInvalidResponse',
-  message: 'QPay хариуг баталгаажуулж чадсангүй. Дахин оролдоно уу.',
-  retryable: true,
-})
+const client = () => ky.create({ prefix: env.QPAY_BASE_URL || 'https://merchant.qpay.mn' })
 
-const mismatch = (): QPayError => ({
-  _tag: 'QPayPaymentMismatch',
-  message: 'Төлбөрийн мэдээлэл тохирохгүй байна. Дэлгүүртэй холбогдоно уу.',
-  retryable: false,
-})
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const record = (value: unknown) => (isRecord(value) ? value : undefined)
-
-const text = (value: unknown) => (typeof value === 'string' ? value : undefined)
-const number = (value: unknown) => (typeof value === 'number' ? value : undefined)
-
-const parseInvoice = (value: unknown): QPayInvoice | undefined => {
-  const body = record(value)
-  const invoiceId = text(body?.invoice_id)
-  const qrText = text(body?.qr_text)
-  const qrImage = text(body?.qr_image)
-  if (!invoiceId || !qrText || !qrImage || !Array.isArray(body?.urls)) return
-
-  const bankLinks = body.urls.flatMap(item => {
-    const link = record(item)
-    const name = text(link?.name)
-    const description = text(link?.description)
-    const logo = text(link?.logo)
-    const url = text(link?.link)
-    return name && description && logo && url ? [{ name, description, logo, link: url }] : []
-  })
-
-  return { invoiceId, qrText, qrImage, bankLinks }
+const accessToken = async () => {
+  const response: unknown = await client()
+    .post('v2/auth/token', {
+      headers: {
+        authorization: `Basic ${btoa(`${env.QPAY_USERNAME}:${env.QPAY_PASSWORD}`)}`,
+      },
+    })
+    .json()
+  if (!response || typeof response !== 'object' || !('access_token' in response))
+    throw new Error('Invalid provider response.')
+  if (typeof response.access_token !== 'string') throw new Error('Invalid provider response.')
+  return response.access_token
 }
 
-const parsePayment = (invoiceId: string, value: unknown): QPayPaymentStatus | undefined => {
-  const body = record(value)
-  if (!body || !Array.isArray(body.rows)) return
-
-  for (const item of body.rows) {
-    const payment = record(item)
-    if (text(payment?.payment_status) !== 'PAID') continue
-    const paymentId = text(payment?.payment_id)
-    const amountMnt = number(payment?.payment_amount)
-    if (paymentId && amountMnt !== undefined) {
-      return { status: 'paid', invoiceId, paymentId, amountMnt }
-    }
-  }
-
-  return { status: 'pending', invoiceId }
-}
-
-export const validateQPayConfig = (config: QPayConfig) => {
-  const missing = Object.entries(config)
-    .filter(([, value]) => value.trim() === '')
-    .map(([key]) => key)
-  return missing.length === 0
-    ? Result.ok(config)
-    : Result.err<QPayConfig, { _tag: 'QPayNotConfigured'; missing: string[] }>({
-        _tag: 'QPayNotConfigured',
-        missing,
+export const createQPayInvoice = async (input: {
+  orderNumber: string
+  amountMnt: number
+  description: string
+}) => {
+  try {
+    const token = await accessToken()
+    const response: unknown = await client()
+      .post('v2/invoice', {
+        headers: { authorization: `Bearer ${token}` },
+        json: {
+          invoice_code: env.QPAY_INVOICE_CODE,
+          sender_invoice_no: input.orderNumber,
+          invoice_receiver_code: 'terminal',
+          invoice_description: input.description,
+          amount: input.amountMnt,
+          callback_url: `${env.PUBLIC_APP_URL}/api/webhooks/qpay`,
+        },
       })
-}
-
-export const createQPayAdapter = (config: QPayConfig) => {
-  const baseUrl = config.environment === 'production' ? PRODUCTION_URL : SANDBOX_URL
-  const client = ky.create({ prefix: `${baseUrl}/`, timeout: 10_000, retry: { limit: 1 } })
-  let token: Token | undefined
-
-  const accessToken = async () => {
-    if (token && token.expiresAt > Date.now() + 30_000) return token.value
-
-    const authorization = btoa(`${config.clientId}:${config.clientSecret}`)
-    const response: unknown = await client
-      .post('v2/auth/token', { headers: { authorization: `Basic ${authorization}` } })
       .json()
-    const body = record(response)
-    const value = text(body?.access_token)
-    const expiresIn = number(body?.expires_in)
-    if (!value || expiresIn === undefined) throw new Error('Invalid QPay token response')
-
-    token = { value, expiresAt: Date.now() + expiresIn * 1_000 }
-    return value
+    if (!response || typeof response !== 'object') throw new Error('Invalid provider response.')
+    const invoiceId = 'invoice_id' in response ? response.invoice_id : null
+    const qrText = 'qr_text' in response ? response.qr_text : null
+    const qrImage = 'qr_image' in response ? response.qr_image : null
+    const rawUrls = 'urls' in response ? response.urls : []
+    if (typeof invoiceId !== 'string' || typeof qrText !== 'string' || typeof qrImage !== 'string')
+      throw new Error('Invalid provider response.')
+    const urls = Array.isArray(rawUrls)
+      ? rawUrls.flatMap(item => {
+          if (!item || typeof item !== 'object') return []
+          const name = 'name' in item ? item.name : null
+          const link = 'link' in item ? item.link : null
+          return typeof name === 'string' && typeof link === 'string' ? [{ name, link }] : []
+        })
+      : []
+    return Result.ok<QPayInvoice, QPayError>({ invoiceId, qrText, qrImage, urls })
+  } catch {
+    return Result.err<QPayInvoice, QPayError>(error())
   }
+}
 
-  const authorizedPost = async (path: string, json: object) => {
-    const bearer = await accessToken()
-    return client
-      .post(path, { headers: { authorization: `Bearer ${bearer}` }, json })
-      .json<unknown>()
+export const verifyQPayCallback = async (paymentId: string) => {
+  try {
+    const token = await accessToken()
+    const response: unknown = await client()
+      .get(`v2/payment/${paymentId}`, { headers: { authorization: `Bearer ${token}` } })
+      .json()
+    if (!response || typeof response !== 'object') throw new Error('Invalid provider response.')
+    const invoiceId = 'object_id' in response ? response.object_id : null
+    const amount = 'payment_amount' in response ? response.payment_amount : null
+    if (typeof invoiceId !== 'string' || typeof amount !== 'number')
+      throw new Error('Invalid provider response.')
+    return Result.ok({ invoiceId, paymentId, amountMnt: amount })
+  } catch {
+    return Result.err<null, QPayError>(error())
   }
+}
 
-  const createInvoice = async (input: QPayInvoiceInput) => {
-    try {
-      const response = await authorizedPost('v2/invoice', {
-        invoice_code: config.invoiceCode,
-        sender_invoice_no: input.orderNumber,
-        invoice_receiver_code: input.customerCode,
-        invoice_description: input.description,
-        amount: input.amountMnt,
-        callback_url: input.callbackUrl,
+export const verifyQPayPayment = async (invoiceId: string) => {
+  try {
+    const token = await accessToken()
+    const response: unknown = await client()
+      .post('v2/payment/check', {
+        headers: { authorization: `Bearer ${token}` },
+        json: { object_type: 'INVOICE', object_id: invoiceId },
       })
-      const invoice = parseInvoice(response)
-      return invoice
-        ? Result.ok<QPayInvoice, QPayError>(invoice)
-        : Result.err<QPayInvoice, QPayError>(invalidResponse())
-    } catch {
-      return Result.err<QPayInvoice, QPayError>(unavailable())
-    }
+      .json()
+    if (!response || typeof response !== 'object' || !('rows' in response))
+      throw new Error('Invalid provider response.')
+    if (!Array.isArray(response.rows) || response.rows.length === 0) return Result.ok(null)
+    const row: unknown = response.rows[0]
+    if (!row || typeof row !== 'object') throw new Error('Invalid provider response.')
+    const id = 'payment_id' in row ? row.payment_id : null
+    const amount = 'payment_amount' in row ? row.payment_amount : null
+    if (typeof id !== 'string' || typeof amount !== 'number')
+      throw new Error('Invalid provider response.')
+    return Result.ok({ paymentId: id, amountMnt: amount })
+  } catch {
+    return Result.err<null, QPayError>(error())
   }
-
-  const inspectPayment = async (invoiceId: string) => {
-    try {
-      const response = await authorizedPost('v2/payment/check', {
-        object_type: 'INVOICE',
-        object_id: invoiceId,
-        offset: { page_number: 1, page_limit: 100 },
-      })
-      const payment = parsePayment(invoiceId, response)
-      return payment
-        ? Result.ok<QPayPaymentStatus, QPayError>(payment)
-        : Result.err<QPayPaymentStatus, QPayError>(invalidResponse())
-    } catch {
-      return Result.err<QPayPaymentStatus, QPayError>(unavailable())
-    }
-  }
-
-  const handleWebhook = async (
-    invoiceId: string,
-    expectedAmountMnt: number,
-    hook: QPayWebhookHook,
-  ) => {
-    const result = await inspectPayment(invoiceId)
-    if (result.isErr() || result.value.status === 'pending') return result
-    if (result.value.amountMnt !== expectedAmountMnt) {
-      return Result.err<QPayPaymentStatus, QPayError>(mismatch())
-    }
-
-    await hook(result.value)
-    return result
-  }
-
-  return { createInvoice, inspectPayment, handleWebhook }
 }

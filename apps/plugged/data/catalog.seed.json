@@ -7,6 +7,14 @@
       "description": "Portable audio selected and tested by Plugged."
     }
   ],
+  "checkoutSettings": {
+    "deliveryFeeMnt": 5000,
+    "bankName": "Хаан банк",
+    "bankAccountName": "Plugged",
+    "bankAccountNumber": "5000000000",
+    "checkoutHelpText": "Төлбөрийн утгад захиалгын дугаараа бичнэ үү.",
+    "orderConfirmationText": "Төлбөр батлагдсаны дараа захиалгыг бэлтгэнэ."
+  },
   "categories": [
     {
       "id": "20000000-0000-4000-8000-000000000001",

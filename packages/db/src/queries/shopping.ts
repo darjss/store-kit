@@ -91,6 +91,28 @@ export const findPaymentByProviderInvoiceId = (providerInvoiceId: string) =>
 export const findPaymentByOrderId = (orderId: string) =>
   db.query.payment.findFirst({ where: { orderId } })
 
+export const findOrderWithPayment = (id: string) =>
+  db.query.order.findFirst({ where: { id }, with: { lines: true, payment: true } })
+
+export const storeTelegramMessageId = (orderId: string, messageId: string, updatedAt: number) =>
+  db
+    .update(payment)
+    .set({ telegramMessageId: messageId, updatedAt })
+    .where(and(eq(payment.orderId, orderId), eq(payment.status, 'claimed')))
+
+export const rejectBankTransferClaim = (orderId: string, updatedAt: number) =>
+  db
+    .update(payment)
+    .set({ status: 'pending', claimedAt: null, telegramMessageId: null, updatedAt })
+    .where(
+      and(
+        eq(payment.orderId, orderId),
+        eq(payment.method, 'bank_transfer'),
+        eq(payment.status, 'claimed'),
+      ),
+    )
+    .returning()
+
 export type ConfirmPaymentWrite = {
   orderId: string
   providerPaymentId: string
