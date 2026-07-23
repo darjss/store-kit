@@ -28,12 +28,20 @@ export const findCartVariants = async (items: CartLineInput[]) => {
       unitPriceMnt: productVariant.priceMnt,
       stockQuantity: productVariant.stockQuantity,
       active: productVariant.active,
-      imageR2Key: sql<string | null>`(
-        select ${productImage.r2Key} from ${productVariantImage}
-        inner join ${productImage} on ${productImage.id} = ${productVariantImage.imageId}
-        where ${productVariantImage.variantId} = ${productVariant.id}
-        order by ${productImage.sortOrder}
-        limit 1
+      imageR2Key: sql<string | null>`coalesce(
+        (
+          select ${productImage.r2Key} from ${productVariantImage}
+          inner join ${productImage} on ${productImage.id} = ${productVariantImage.imageId}
+          where ${productVariantImage.variantId} = ${productVariant.id}
+          order by ${productImage.sortOrder}
+          limit 1
+        ),
+        (
+          select ${productImage.r2Key} from ${productImage}
+          where ${productImage.productId} = ${product.id}
+          order by ${productImage.sortOrder}
+          limit 1
+        )
       )`,
     })
     .from(productVariant)

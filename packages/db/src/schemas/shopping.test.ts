@@ -2,10 +2,12 @@ import { Value } from 'typebox/value'
 import { expect, test } from 'vite-plus/test'
 
 import {
+  cartLineInputSchema,
   cartLineInputsSchema,
   insertOrderLineSchema,
   insertOrderSchema,
   insertPaymentSchema,
+  persistedCartItemSchema,
 } from './shopping'
 
 const order = {
@@ -59,4 +61,22 @@ test('cart input limits line count and quantity', () => {
   expect(Value.Check(cartLineInputsSchema, [{ variantId: 'variant-1', quantity: 1 }])).toBe(true)
   expect(Value.Check(cartLineInputsSchema, [{ variantId: 'variant-1', quantity: 11 }])).toBe(false)
   expect(Value.Check(cartLineInputsSchema, [])).toBe(false)
+})
+
+test('persisted cart items contain a display snapshot but line inputs do not', () => {
+  const item = {
+    variantId: 'variant-1',
+    quantity: 2,
+    productSlug: 'first-iem',
+    productName: 'First IEM',
+    variantName: 'Black',
+    options: { color: 'Black' },
+    imageR2Key: 'products/first-iem/black.webp',
+    unitPriceMnt: 120_000,
+  }
+
+  expect(Value.Check(persistedCartItemSchema, item)).toBe(true)
+  expect(Value.Check(cartLineInputSchema, item)).toBe(false)
+  expect(Value.Check(persistedCartItemSchema, { ...item, unitPriceMnt: -1 })).toBe(false)
+  expect(Value.Check(persistedCartItemSchema, { ...item, stockQuantity: 3 })).toBe(false)
 })
