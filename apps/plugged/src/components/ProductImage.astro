@@ -3,10 +3,10 @@ import { transformBaseImageProps } from '@unpic/core/base'
 import { cloudflareImageTransformer } from '@store-kit/storefront/media'
 import { mediaUrl } from '~/media-url'
 import { productImageLayouts } from './product-image';
-import type { ProductImageLayout, ProductImageMetadata } from './product-image';
+import type { ProductImageLayout } from './product-image';
 
 interface Props {
-  image: ProductImageMetadata
+  image: { r2Key: string; width: number; height: number; alt: string }
   layout: ProductImageLayout
   class?: string
   priority?: boolean

@@ -1,4 +1,4 @@
-import type { CartValidationError } from '@store-kit/contracts/cart'
+import type { CartCorrection, CartValidationError } from '@store-kit/contracts/cart'
 import type {
   CheckoutCreated,
   CheckoutDetails,
@@ -17,22 +17,19 @@ import { cartQuery } from './query-options/cart'
 import { checkoutMutation } from './query-options/checkout'
 import { useMutationResult, useQueryResult } from './query-options/result'
 
-const defaultCheckoutDetails = {
-  customer: { name: '', phone: '' },
-  delivery: {
-    district: 'Баянзүрх',
-    khoroo: '',
-    address: '',
-    notes: '',
-  },
-  paymentMethod: 'qpay',
-} satisfies CheckoutDetails
+type LocalCartChanged = {
+  _tag: 'CartChanged'
+  corrections: CartCorrection[]
+}
 
-export type CheckoutDomainError = CheckoutError | CartValidationError
+export type CheckoutDomainError =
+  | Exclude<CheckoutError, { _tag: 'CartChanged' }>
+  | CartValidationError
+  | LocalCartChanged
 
 type CheckoutRootProps = {
   children: JSX.Element
-  defaultValues?: CheckoutDetails
+  defaultValues: CheckoutDetails
 }
 
 const focusControl = (form: HTMLFormElement | undefined, name?: string) => {
@@ -70,7 +67,6 @@ function createCheckoutState(props: CheckoutRootProps) {
           setResult(
             Result.err<CheckoutCreated, CheckoutDomainError>({
               _tag: 'CartChanged',
-              message: 'Сагсны бараа өөрчлөгдсөн байна.',
               corrections: cart.corrections,
             }),
           )
@@ -99,7 +95,7 @@ function createCheckoutState(props: CheckoutRootProps) {
   }
 
   const form = useAppForm(() => ({
-    defaultValues: props.defaultValues ?? defaultCheckoutDetails,
+    defaultValues: props.defaultValues,
     canSubmitWhenInvalid: true,
     validators: {
       onChange: typeboxValidator(checkoutDetailsSchema),

@@ -1,4 +1,4 @@
-import { cloudflareImageTransformer, mediaUrl } from '@store-kit/storefront/media'
+import { cloudflareImageTransformer } from '@store-kit/storefront/media'
 import { transformBaseImageProps } from '@unpic/core/base'
 import type { JSX } from 'solid-js'
 
@@ -8,7 +8,6 @@ import type { ProductImageLayout, ProductImageMetadata } from './product-image'
 export function ProductImage(props: {
   image: ProductImageMetadata
   layout: ProductImageLayout
-  mediaBaseUrl?: string
   class?: string
   priority?: boolean
 }) {
@@ -19,7 +18,7 @@ export function ProductImage(props: {
       undefined,
       JSX.ImgHTMLAttributes<HTMLImageElement>
     >({
-      src: mediaUrl(props.image.r2Key, props.mediaBaseUrl),
+      src: props.image.url,
       alt: props.image.alt,
       width: props.image.width,
       height: props.image.height,

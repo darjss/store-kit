@@ -29,12 +29,6 @@ const districts = [
   'Чингэлтэй',
 ] as const
 const fieldErrorId = (name: string) => `${name}-error`
-const actionClass =
-  'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
-const formBandClass =
-  'mb-4 border-4 border-ink bg-paper-clean p-[clamp(1rem,2vw,2rem)] [&>h2]:font-display [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8] [&_[data-slot=field]]:mb-4'
-const errorPanelClass =
-  'mb-4 border-4 border-warning bg-paper-clean p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:border-ink [&_button]:bg-acid [&_button]:px-3 [&_button]:py-2 [&_button]:font-black'
 
 const qpayAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'qpay' ? order.nextAction : undefined
@@ -102,7 +96,7 @@ function FormOwner() {
               )}
             </Show>
             <a
-              class={actionClass}
+              class="border-ink bg-orange text-ink inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 px-4 py-3 font-black no-underline transition-transform duration-100 active:scale-[0.97] motion-reduce:transition-none"
               href={`/orders/${order().orderId}#token=${encodeURIComponent(order().statusToken)}`}
             >
               Захиалгын төлөв харах →
@@ -124,7 +118,11 @@ function FormOwner() {
                 ЗАХИАЛГА
               </h1>
               <Show when={error()?._tag === 'CartChanged'}>
-                <section class={errorPanelClass} id="cart-correction" tabIndex={-1}>
+                <section
+                  class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black"
+                  id="cart-correction"
+                  tabIndex={-1}
+                >
                   <h2 class="m-0">Сагсаа засна уу</h2>
                   <p>{error()?.message}</p>
                   <For each={error()?.corrections}>{correction => <p>{correction.message}</p>}</For>
@@ -134,20 +132,29 @@ function FormOwner() {
                 </section>
               </Show>
               <Show when={error()?._tag === 'CartEmpty'}>
-                <section class={errorPanelClass} role="alert">
+                <section
+                  class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black"
+                  role="alert"
+                >
                   <strong>Сагс хоосон.</strong>
                   <p>{error()?.message}</p>
                   <a href="/products">Бараа сонгох →</a>
                 </section>
               </Show>
               <Show when={error()?._tag === 'InvalidCheckoutDetails'}>
-                <section class={errorPanelClass} role="alert">
+                <section
+                  class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black"
+                  role="alert"
+                >
                   <strong>Мэдээллээ шалгана уу.</strong>
                   <p>{error()?.message}</p>
                 </section>
               </Show>
               <Show when={checkout.transportError()}>
-                <section class={errorPanelClass} role="alert">
+                <section
+                  class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black"
+                  role="alert"
+                >
                   <strong>Холболт амжилтгүй.</strong>
                   <p>Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.</p>
                   <Button type="submit" variant="outline">
@@ -155,7 +162,7 @@ function FormOwner() {
                   </Button>
                 </section>
               </Show>
-              <section class={formBandClass}>
+              <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
                 <h2>Холбоо барих</h2>
                 <Checkout.Field name="customer.name">
                   {field => {
@@ -210,7 +217,7 @@ function FormOwner() {
                   }}
                 </Checkout.Field>
               </section>
-              <section class={formBandClass}>
+              <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
                 <h2>Улаанбаатар хүргэлт</h2>
                 <Checkout.Field name="delivery.district">
                   {field => (
@@ -299,15 +306,13 @@ function FormOwner() {
                   }}
                 </Checkout.Field>
                 <Show when={error()?._tag === 'DeliveryUnavailable'}>
-                  <div class={errorPanelClass}>
+                  <div class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black">
                     <strong>Хүргэлт боломжгүй.</strong>
                     <p>{error()?.message}</p>
                   </div>
                 </Show>
               </section>
-              <section
-                class={`${formBandClass} [&_[role=radiogroup]>label]:border-ink [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4`}
-              >
+              <section class="border-ink bg-paper-clean [&>h2]:font-display [&_[role=radiogroup]>label]:border-ink mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
                 <h2>Төлбөр</h2>
                 <Checkout.Field name="paymentMethod">
                   {field => {
@@ -342,7 +347,7 @@ function FormOwner() {
                   }}
                 </Checkout.Field>
                 <Show when={error()?._tag === 'PaymentSetupFailed'}>
-                  <div class={errorPanelClass}>
+                  <div class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black">
                     <p>{error()?.message}</p>
                     <Button type="submit" variant="outline">
                       Дахин оролдох
@@ -378,7 +383,7 @@ function FormOwner() {
               <Checkout.Submit>
                 {state => (
                   <PendingSubmitButton
-                    class={`${actionClass} bg-ink text-paper w-full`}
+                    class="bg-ink text-paper inline-flex min-h-12.5 w-full cursor-pointer items-center justify-center border-3 px-4 py-3 font-black no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
                     pending={state().pending}
                     pendingChildren="Баталгаажуулж байна…"
                     busyLabel="Захиалгыг баталгаажуулж байна"
@@ -411,7 +416,18 @@ export function CheckoutForm() {
         const client = createStorefrontQueryClient()
         return (
           <QueryClientProvider client={client}>
-            <Checkout.Root>
+            <Checkout.Root
+              defaultValues={{
+                customer: { name: '', phone: '' },
+                delivery: {
+                  district: 'Баянзүрх',
+                  khoroo: '',
+                  address: '',
+                  notes: '',
+                },
+                paymentMethod: 'qpay',
+              }}
+            >
               <FormOwner />
             </Checkout.Root>
           </QueryClientProvider>

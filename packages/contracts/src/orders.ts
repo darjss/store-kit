@@ -59,17 +59,9 @@ export const publicOrderSchema = Type.Object(
 )
 
 export type OrderStatus = Static<typeof orderStatusSchema>
-type PublicOrderLineDto = Static<typeof publicOrderLineSchema>
-export type PublicOrderLine = PublicOrderLineDto & {
-  imageR2Key?: string | null
-  imageWidth?: number | null
-  imageHeight?: number | null
-  imageAlt?: string | null
-}
+export type PublicOrderLine = Static<typeof publicOrderLineSchema>
 export type PublicOrderPayment = Static<typeof publicOrderPaymentSchema>
-export type PublicOrder = Omit<Static<typeof publicOrderSchema>, 'lines'> & {
-  lines: PublicOrderLine[]
-}
+export type PublicOrder = Static<typeof publicOrderSchema>
 export type { PrivateOrderError } from './errors'
 export { privateOrderErrorSchema } from './errors'
 export { orderIdPattern, orderStatusSchema } from './common'

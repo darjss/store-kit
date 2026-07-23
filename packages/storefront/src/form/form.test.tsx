@@ -16,7 +16,13 @@ afterEach(cleanup)
 function CheckoutFixture() {
   return (
     <QueryClientProvider client={createStorefrontQueryClient()}>
-      <Checkout.Root>
+      <Checkout.Root
+        defaultValues={{
+          customer: { name: '', phone: '' },
+          delivery: { district: 'Баянзүрх', khoroo: '', address: '', notes: '' },
+          paymentMethod: 'qpay',
+        }}
+      >
         <Checkout.Form>
           <Checkout.Field name="customer.name">
             {field => (

@@ -8,17 +8,6 @@ import { api } from '~/client'
 
 import { resultQueryOptions } from './result'
 
-type StorefrontValidatedCart = Omit<ValidatedCart, 'lines'> & {
-  lines: Array<
-    Omit<ValidatedCart['lines'][number], 'image'> & {
-      imageR2Key: string | null
-      imageWidth: number | null
-      imageHeight: number | null
-      imageAlt: string | null
-    }
-  >
-}
-
 const validate = (items: PersistedCartItem[]) => {
   const queryKey = [
     'cart',
@@ -30,12 +19,7 @@ const validate = (items: PersistedCartItem[]) => {
     })),
   ] as const
 
-  return resultQueryOptions<
-    typeof queryKey,
-    ValidatedCart,
-    StorefrontValidatedCart,
-    CartValidationError
-  >({
+  return resultQueryOptions<typeof queryKey, ValidatedCart, ValidatedCart, CartValidationError>({
     queryKey,
     request: () =>
       api.api.cart.validate.post(
@@ -45,19 +29,7 @@ const validate = (items: PersistedCartItem[]) => {
           previousUnitPriceMnt: unitPriceMnt,
         })),
       ),
-    mapValue: (value: ValidatedCart) => ({
-      ...value,
-      lines: value.lines.map(line => {
-        const { image, ...cartLine } = line
-        return {
-          ...cartLine,
-          imageR2Key: image?.url ?? null,
-          imageWidth: image?.width ?? null,
-          imageHeight: image?.height ?? null,
-          imageAlt: image?.alt ?? null,
-        }
-      }),
-    }),
+    mapValue: value => value,
   })
 }
 

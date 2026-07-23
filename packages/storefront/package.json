@@ -11,6 +11,7 @@
     "./form": "./src/form/index.ts",
     "./format": "./src/format.ts",
     "./media": "./src/media.ts",
+    "./orders/order-status": "./src/orders/order-status.tsx",
     "./purchase": "./src/purchase.ts",
     "./query-client": "./src/query-client.ts",
     "./query-options/cart": "./src/query-options/cart.ts",
@@ -31,6 +32,7 @@
     "@tanstack/solid-form": "^1.33.2",
     "@tanstack/solid-query": "catalog:",
     "better-result": "catalog:",
+    "dismatch": "^2.6.0",
     "solid-js": "catalog:"
   },
   "devDependencies": {
