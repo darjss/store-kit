@@ -8,16 +8,15 @@ import type {
   QPayPaymentInstructions,
 } from '@store-kit/contracts'
 import { checkoutInputSchema } from '@store-kit/contracts/checkout'
-import { query as dbQuery } from '@store-kit/db'
+import { database } from '@store-kit/db'
 import { createOrderId, createOrderLineId, createPaymentId } from '@store-kit/db/ids'
-/* oxlint-disable eslint/no-underscore-dangle */
 import { Result } from 'better-result'
-import { matchAsync } from 'dismatch/async'
 import { Value } from 'typebox/value'
 
-import { createQPayInvoice } from '../adapters/qpay'
-import { inactiveVariant, insufficientStock, missingVariant } from '../cart/errors'
-import { hashStatusToken } from '../orders/status-token'
+import { createQPayInvoice } from '~/adapters/qpay'
+import { inactiveVariant, insufficientStock, missingVariant } from '~/cart/errors'
+import { hashStatusToken } from '~/orders/status-token'
+
 import {
   changedCart,
   checkoutFieldMessage,
@@ -61,51 +60,40 @@ const normalizeCheckoutInput = (input: unknown): unknown => {
   return { ...input, customer, delivery }
 }
 
-type SelectedPaymentMethod = { type: 'qpay' } | { type: 'bank_transfer' }
+type PreparedPayment = {
+  providerInvoiceId: string | null
+  nextAction: PaymentInstructions
+}
 
-const selectPaymentMethod = (method: PaymentMethod): SelectedPaymentMethod =>
-  method === 'qpay' ? { type: 'qpay' } : { type: 'bank_transfer' }
-
-const preparePayment = (
+const preparePayment = async (
   method: PaymentMethod,
   input: { orderNumber: string; totalMnt: number; paymentId: string },
   bankTransfer: BankTransferPaymentInstructions,
-) =>
-  matchAsync(selectPaymentMethod(method))<
-    Result<{ providerInvoiceId: string | null; nextAction: PaymentInstructions }, CheckoutError>
-  >({
-    qpay: async () =>
-      (
-        await createQPayInvoice({
-          orderNumber: input.orderNumber,
-          amountMnt: input.totalMnt,
-          description: `${input.orderNumber} захиалга`,
-          paymentLookupId: input.paymentId,
-        })
-      )
-        .map(
-          (
-            invoice,
-          ): {
-            providerInvoiceId: string
-            nextAction: QPayPaymentInstructions
-          } => ({
-            providerInvoiceId: invoice.invoiceId,
-            nextAction: {
-              type: 'qpay',
-              qrText: invoice.qrText,
-              qrImage: invoice.qrImage,
-              urls: invoice.urls,
-            },
-          }),
-        )
-        .mapError(error => paymentSetupFailed(error.message)),
-    bank_transfer: () =>
-      Result.ok<{ providerInvoiceId: null; nextAction: PaymentInstructions }, CheckoutError>({
-        providerInvoiceId: null,
-        nextAction: bankTransfer,
-      }),
-  })
+) => {
+  if (method === 'bank_transfer') {
+    const prepared = { providerInvoiceId: null, nextAction: bankTransfer } satisfies PreparedPayment
+    return Result.ok<PreparedPayment, CheckoutError>(prepared)
+  }
+
+  return (
+    await createQPayInvoice({
+      orderNumber: input.orderNumber,
+      amountMnt: input.totalMnt,
+      description: `${input.orderNumber} захиалга`,
+      paymentLookupId: input.paymentId,
+    })
+  )
+    .map<PreparedPayment>(invoice => {
+      const nextAction = {
+        type: 'qpay',
+        qrText: invoice.qrText,
+        qrImage: invoice.qrImage,
+        urls: invoice.urls,
+      } satisfies QPayPaymentInstructions
+      return { providerInvoiceId: invoice.invoiceId, nextAction } satisfies PreparedPayment
+    })
+    .mapError<CheckoutError>(error => paymentSetupFailed(error.message))
+}
 
 export const createCheckoutOrder = async (rawInput: unknown) => {
   const input = normalizeCheckoutInput(rawInput)
@@ -142,17 +130,19 @@ export const createCheckoutOrder = async (rawInput: unknown) => {
       ),
     )
 
-  const { settings, variants } = await dbQuery.checkout.prepare(input.items)
+  const { settings, variants } = await database.query.checkout.prepare(input.items)
   if (!settings) return Result.err<CheckoutCreated, CheckoutError>(deliveryUnavailable())
   const byId = new Map(variants.map(variant => [variant.variantId, variant]))
   const corrections = input.items.flatMap<CartCorrection>(item => {
     const variant = byId.get(item.variantId)
     if (!variant) return [missingVariant(item.variantId)]
+
+    const findings: CartCorrection[] = []
     if (!variant.active || variant.productStatus !== 'active')
-      return [inactiveVariant(item.variantId)]
+      findings.push(inactiveVariant(item.variantId))
     if (variant.stockQuantity < item.quantity)
-      return [insufficientStock(item.variantId, variant.stockQuantity)]
-    return []
+      findings.push(insufficientStock(item.variantId, variant.stockQuantity))
+    return findings
   })
   if (corrections.length > 0)
     return Result.err<CheckoutCreated, CheckoutError>(changedCart(corrections))
@@ -177,63 +167,66 @@ export const createCheckoutOrder = async (rawInput: unknown) => {
       accountNumber: settings.bankAccountNumber,
     },
   )
-  if (payment.status === 'error') return Result.err<CheckoutCreated, CheckoutError>(payment.error)
+  return payment.match<Promise<Result<CheckoutCreated, CheckoutError>>>({
+    err: async error => Result.err<CheckoutCreated, CheckoutError>(error),
+    ok: async prepared => {
+      await database.query.checkout.insertOrder({
+        order: {
+          id: orderId,
+          number: orderNumber,
+          statusTokenHash: await hashStatusToken(statusToken),
+          status: 'new',
+          customerName: input.customer.name,
+          customerPhone: input.customer.phone,
+          district: input.delivery.district,
+          khoroo: input.delivery.khoroo,
+          address: input.delivery.address,
+          deliveryNotes: input.delivery.notes ?? null,
+          subtotalMnt,
+          deliveryFeeMnt: settings.deliveryFeeMnt,
+          totalMnt,
+          createdAt: now,
+          updatedAt: now,
+        },
+        lines: input.items.map(item => {
+          const variant = byId.get(item.variantId)!
+          return {
+            id: createOrderLineId(),
+            orderId,
+            productId: variant.productId,
+            variantId: variant.variantId,
+            productName: variant.productName,
+            variantName: variant.variantName,
+            sku: variant.sku,
+            options: variant.options,
+            imageR2Key: variant.imageR2Key,
+            imageWidth: variant.imageWidth,
+            imageHeight: variant.imageHeight,
+            imageAlt: variant.imageAlt,
+            unitPriceMnt: variant.unitPriceMnt,
+            quantity: item.quantity,
+            lineTotalMnt: variant.unitPriceMnt * item.quantity,
+          }
+        }),
+        payment: {
+          id: paymentId,
+          orderId,
+          method: input.paymentMethod,
+          status: 'pending',
+          amountMnt: totalMnt,
+          providerInvoiceId: prepared.providerInvoiceId,
+          createdAt: now,
+          updatedAt: now,
+        },
+      })
 
-  await dbQuery.checkout.insertOrder({
-    order: {
-      id: orderId,
-      number: orderNumber,
-      statusTokenHash: await hashStatusToken(statusToken),
-      status: 'new',
-      customerName: input.customer.name,
-      customerPhone: input.customer.phone,
-      district: input.delivery.district,
-      khoroo: input.delivery.khoroo,
-      address: input.delivery.address,
-      deliveryNotes: input.delivery.notes ?? null,
-      subtotalMnt,
-      deliveryFeeMnt: settings.deliveryFeeMnt,
-      totalMnt,
-      createdAt: now,
-      updatedAt: now,
-    },
-    lines: input.items.map(item => {
-      const variant = byId.get(item.variantId)!
-      return {
-        id: createOrderLineId(),
+      return Result.ok<CheckoutCreated, CheckoutError>({
         orderId,
-        productId: variant.productId,
-        variantId: variant.variantId,
-        productName: variant.productName,
-        variantName: variant.variantName,
-        sku: variant.sku,
-        options: variant.options,
-        imageR2Key: variant.imageR2Key,
-        imageWidth: variant.imageWidth,
-        imageHeight: variant.imageHeight,
-        imageAlt: variant.imageAlt,
-        unitPriceMnt: variant.unitPriceMnt,
-        quantity: item.quantity,
-        lineTotalMnt: variant.unitPriceMnt * item.quantity,
-      }
-    }),
-    payment: {
-      id: paymentId,
-      orderId,
-      method: input.paymentMethod,
-      status: 'pending',
-      amountMnt: totalMnt,
-      providerInvoiceId: payment.value.providerInvoiceId,
-      createdAt: now,
-      updatedAt: now,
+        orderNumber,
+        statusToken,
+        nextAction: prepared.nextAction,
+      })
     },
-  })
-
-  return Result.ok<CheckoutCreated, CheckoutError>({
-    orderId,
-    orderNumber,
-    statusToken,
-    nextAction: payment.value.nextAction,
   })
 }
 

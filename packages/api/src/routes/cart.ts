@@ -3,7 +3,7 @@ import { cartLineInputsSchema } from '@store-kit/contracts/cart'
 import { Result } from 'better-result'
 import { Elysia } from 'elysia'
 
-import { contractBody } from '../typebox-contract'
+import { contractBody } from '~/typebox-contract'
 
 export const cartRoutes = new Elysia({ aot: false, prefix: '/api/cart' }).post(
   '/validate',

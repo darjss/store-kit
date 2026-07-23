@@ -20,29 +20,37 @@ export const ulaanbaatarDistrictSchema = Type.Union([
   Type.Literal('Чингэлтэй'),
 ])
 
-export const checkoutInputSchema = Type.Object(
-  {
-    items: Type.Array(cartLineInputSchema, { minItems: 1, maxItems: 20 }),
-    customer: Type.Object(
-      {
-        name: requiredTextSchema(100),
-        phone: Type.String({ minLength: 8, maxLength: 20 }),
-      },
-      { additionalProperties: false },
-    ),
-    delivery: Type.Object(
-      {
-        district: ulaanbaatarDistrictSchema,
-        khoroo: requiredTextSchema(50),
-        address: requiredTextSchema(500),
-        notes: Type.Optional(Type.String({ maxLength: 500 })),
-      },
-      { additionalProperties: false },
-    ),
-    paymentMethod: paymentMethodSchema,
-  },
-  { additionalProperties: false },
-)
+const createCheckoutSchema = (requireVisibleText: boolean) => {
+  const text = (maxLength: number) =>
+    requireVisibleText ? requiredTextSchema(maxLength) : Type.String({ minLength: 1, maxLength })
+
+  return Type.Object(
+    {
+      items: Type.Array(cartLineInputSchema, { minItems: 1, maxItems: 20 }),
+      customer: Type.Object(
+        {
+          name: text(100),
+          phone: Type.String({ minLength: 8, maxLength: 20 }),
+        },
+        { additionalProperties: false },
+      ),
+      delivery: Type.Object(
+        {
+          district: ulaanbaatarDistrictSchema,
+          khoroo: text(50),
+          address: text(500),
+          notes: Type.Optional(Type.String({ maxLength: 500 })),
+        },
+        { additionalProperties: false },
+      ),
+      paymentMethod: paymentMethodSchema,
+    },
+    { additionalProperties: false },
+  )
+}
+
+export const checkoutRequestSchema = createCheckoutSchema(false)
+export const checkoutInputSchema = createCheckoutSchema(true)
 
 export const qpayPaymentInstructionsSchema = Type.Object(
   {
