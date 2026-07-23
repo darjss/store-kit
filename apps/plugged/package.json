@@ -19,6 +19,7 @@
     "@store-kit/api": "workspace:*",
     "@store-kit/commerce": "workspace:*",
     "@store-kit/config": "workspace:*",
+    "@store-kit/contracts": "workspace:*",
     "@store-kit/storefront": "workspace:*",
     "@store-kit/ui": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",

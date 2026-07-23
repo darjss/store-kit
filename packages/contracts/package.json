@@ -1,0 +1,16 @@
+{
+  "name": "@store-kit/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cart": "./src/cart.ts",
+    "./checkout": "./src/checkout.ts",
+    "./orders": "./src/orders.ts",
+    "./payments": "./src/payments.ts"
+  },
+  "dependencies": {
+    "typebox": "catalog:"
+  }
+}

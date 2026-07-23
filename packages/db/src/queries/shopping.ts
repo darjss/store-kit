@@ -1,10 +1,11 @@
+import type { CartLineInput } from '@store-kit/contracts/cart'
 import { env } from 'cloudflare:workers'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 
 import { db } from '../client'
 import { product, productImage, productVariant, productVariantImage } from '../schema/catalog'
 import { order, orderLine, payment } from '../schema/shopping'
-import type { CartLineInput, NewOrder, NewOrderLine, NewPayment } from '../schemas/shopping'
+import type { NewOrder, NewOrderLine, NewPayment } from '../schemas/shopping'
 
 export type NewOrderAggregate = {
   order: NewOrder

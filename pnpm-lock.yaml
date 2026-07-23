@@ -74,6 +74,9 @@ importers:
       '@store-kit/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@store-kit/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@store-kit/storefront':
         specifier: workspace:*
         version: link:../../packages/storefront
@@ -116,6 +119,9 @@ importers:
       '@store-kit/commerce':
         specifier: workspace:*
         version: link:../commerce
+      '@store-kit/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       better-result:
         specifier: 'catalog:'
         version: 2.10.0
@@ -129,6 +135,9 @@ importers:
 
   packages/commerce:
     dependencies:
+      '@store-kit/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@store-kit/db':
         specifier: workspace:*
         version: link:../db
@@ -148,8 +157,17 @@ importers:
         specifier: 'catalog:'
         version: 1.0.76
 
+  packages/contracts:
+    dependencies:
+      typebox:
+        specifier: 'catalog:'
+        version: 1.0.76
+
   packages/db:
     dependencies:
+      '@store-kit/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       drizzle-orm:
         specifier: 1.0.0-rc.4
         version: 1.0.0-rc.4(@cloudflare/workers-types@5.20260721.1)(@sinclair/typebox@0.34.52)(typebox@1.0.76)(valibot@1.4.2)(zod@4.4.3)
@@ -175,9 +193,9 @@ importers:
       '@store-kit/api':
         specifier: workspace:*
         version: link:../api
-      '@store-kit/db':
+      '@store-kit/contracts':
         specifier: workspace:*
-        version: link:../db
+        version: link:../contracts
       '@store-kit/ui':
         specifier: workspace:*
         version: link:../ui

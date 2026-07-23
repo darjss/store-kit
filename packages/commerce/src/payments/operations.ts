@@ -1,3 +1,8 @@
+import type {
+  PaymentConfirmation,
+  PaymentConfirmationError,
+  PaymentMethod,
+} from '@store-kit/contracts/payments'
 import {
   confirmPaymentAndDecrementStock,
   findOrderWithPayment,
@@ -6,21 +11,9 @@ import {
 } from '@store-kit/db/queries/shopping'
 import { Result } from 'better-result'
 
-export type PaymentConfirmation = {
-  orderId: string
-  paymentStatus: 'paid'
-  orderStatus: 'confirmed' | 'new'
-  stockApplied: boolean
-  needsStaffAction: boolean
-  newlyPaid: boolean
-}
-export type PaymentConfirmationError =
-  | { _tag: 'PaymentMismatch'; message: string }
-  | { _tag: 'InsufficientStock'; message: string; variantIds: string[] }
-
 export const confirmOrderPayment = async (
   orderId: string,
-  reference: { paymentId: string; amountMnt: number; method: 'qpay' | 'bank_transfer' },
+  reference: { paymentId: string; amountMnt: number; method: PaymentMethod },
 ) => {
   const current = await findOrderWithPayment(orderId)
   if (!current?.payment || current.payment.amountMnt !== reference.amountMnt)

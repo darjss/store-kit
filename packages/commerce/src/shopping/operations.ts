@@ -1,33 +1,20 @@
+import type {
+  CartCorrection,
+  CartValidationError,
+  StockStatus,
+  ValidatedCart,
+  ValidatedCartLine,
+} from '@store-kit/contracts'
+import { persistedCartItemsSchema } from '@store-kit/contracts/cart'
 import { findCartVariants, findCheckoutSettings } from '@store-kit/db/queries/shopping'
-import { persistedCartItemsSchema } from '@store-kit/db/schemas/shopping'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
-import type { CartCorrection, CartValidationError, CheckoutSettingsError } from './errors'
+export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
 
-export type { CartLineInput, PersistedCartItem } from '@store-kit/db/schemas/shopping'
-
-export type StockStatus = 'in-stock' | 'low-stock' | 'sold-out'
-
-export type ValidatedCartLine = {
-  variantId: string
-  productSlug: string
-  productName: string
-  variantName: string
-  sku: string
-  options: Record<string, string>
-  imageR2Key: string | null
-  unitPriceMnt: number
-  requestedQuantity: number
-  availableQuantity: number
-  stockStatus: StockStatus
-  lineTotalMnt: number
-}
-
-export type ValidatedCart = {
-  lines: ValidatedCartLine[]
-  corrections: CartCorrection[]
-  subtotalMnt: number
+type CheckoutSettingsError = {
+  _tag: 'CheckoutSettingsNotFound'
+  message: string
 }
 
 const stockStatus = (quantity: number): StockStatus => {

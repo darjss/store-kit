@@ -1,3 +1,12 @@
+import type {
+  BankTransferClaim,
+  BankTransferClaimError,
+  CartCorrection,
+  CheckoutCreated,
+  CheckoutError,
+  PrivateOrderError,
+} from '@store-kit/contracts'
+import { checkoutInputSchema } from '@store-kit/contracts/checkout'
 /* oxlint-disable eslint/no-underscore-dangle */
 import {
   findCartVariants,
@@ -9,7 +18,6 @@ import {
   rejectBankTransferClaim,
   storeTelegramMessageId,
 } from '@store-kit/db/queries/shopping'
-import { checkoutInputSchema } from '@store-kit/db/schemas/shopping'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
@@ -20,16 +28,6 @@ import {
   sendBankClaimMessage,
 } from '../adapters/telegram'
 import { confirmOrderPayment } from '../payments/operations'
-import type { BankTransferClaimError, CartCorrection, CheckoutError } from '../shopping/errors'
-
-type CheckoutCreated = {
-  orderId: string
-  orderNumber: string
-  statusToken: string
-  nextAction:
-    | { type: 'qpay'; qrText: string; qrImage: string; urls: { name: string; link: string }[] }
-    | { type: 'bank_transfer'; bankName: string; accountName: string; accountNumber: string }
-}
 
 const tokenHash = async (token: string) => {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
@@ -227,8 +225,11 @@ export const createCheckoutOrder = async (input: unknown) => {
 export const getPrivateOrderStatus = async (orderId: string, statusToken: string) => {
   const order = await findPrivateOrder(orderId, await tokenHash(statusToken))
   if (!order)
-    return Result.err({ _tag: 'InvalidStatusToken' as const, message: 'Захиалга олдсонгүй.' })
-  return Result.ok(order)
+    return Result.err<NonNullable<typeof order>, PrivateOrderError>({
+      _tag: 'InvalidStatusToken',
+      message: 'Захиалга олдсонгүй.',
+    })
+  return Result.ok<NonNullable<typeof order>, PrivateOrderError>(order)
 }
 
 export const handleBankTransferCallback = async (input: {
@@ -270,25 +271,31 @@ export const handleBankTransferCallback = async (input: {
 
 export const claimBankTransfer = async (orderId: string, statusToken: string) => {
   const privateOrder = await getPrivateOrderStatus(orderId, statusToken)
-  if (privateOrder.status === 'error') return privateOrder
+  if (privateOrder.status === 'error')
+    return Result.err<BankTransferClaim, BankTransferClaimError>(privateOrder.error)
   const order = privateOrder.value
   if (!order.payment || order.payment.method !== 'bank_transfer')
-    return Result.err({
-      _tag: 'BankTransferClaimNotAllowed' as const,
+    return Result.err<BankTransferClaim, BankTransferClaimError>({
+      _tag: 'BankTransferClaimNotAllowed',
       message: 'Энэ төлбөрт мэдэгдэл өгөх боломжгүй.',
+      paymentStatus: order.payment?.status ?? 'failed',
     })
-  if (order.payment.status === 'paid') return Result.ok({ paymentStatus: 'paid' as const })
+  if (order.payment.status === 'paid')
+    return Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'paid' })
   if (order.payment.status !== 'pending' && order.payment.status !== 'claimed')
-    return Result.err<{ paymentStatus: 'claimed' | 'paid' }, BankTransferClaimError>({
+    return Result.err<BankTransferClaim, BankTransferClaimError>({
       _tag: 'BankTransferClaimNotAllowed',
       message: 'Энэ төлбөрт мэдэгдэл өгөх боломжгүй.',
       paymentStatus: order.payment.status,
     })
   if (order.payment.status === 'claimed' && order.payment.telegramMessageId)
-    return Result.ok({ paymentStatus: 'claimed' as const })
+    return Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'claimed' })
   if (order.payment.status === 'pending') {
     const claimed = await markBankTransferClaimed(orderId, Date.now())
-    if (!claimed) return Result.ok({ paymentStatus: order.payment.status })
+    if (!claimed)
+      return Result.ok<BankTransferClaim, BankTransferClaimError>({
+        paymentStatus: order.payment.status,
+      })
   }
   const sent = await sendBankClaimMessage({
     orderId,
@@ -299,11 +306,11 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
   })
   if (sent.status === 'ok') {
     await storeTelegramMessageId(orderId, sent.value.messageId, Date.now())
-    return Result.ok({ paymentStatus: 'claimed' as const })
+    return Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'claimed' })
   }
 
   await rejectBankTransferClaim(orderId, Date.now())
-  return Result.err<{ paymentStatus: 'claimed' | 'paid' }, BankTransferClaimError>({
+  return Result.err<BankTransferClaim, BankTransferClaimError>({
     _tag: 'StaffNotificationFailed',
     message: 'Ажилтанд мэдэгдэл илгээж чадсангүй. Дахин оролдоно уу.',
     retryable: true,

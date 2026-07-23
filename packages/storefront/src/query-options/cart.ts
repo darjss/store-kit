@@ -1,9 +1,22 @@
-import type { PersistedCartItem } from '../cart'
+import type {
+  CartValidationError,
+  PersistedCartItem,
+  ValidatedCart,
+} from '@store-kit/contracts/cart'
+
 import { api } from '../client'
 import { resultQueryOptions } from './result'
 
 const validate = (items: PersistedCartItem[]) =>
-  resultQueryOptions({
+  resultQueryOptions<
+    readonly [
+      'cart',
+      'validation',
+      { variantId: string; quantity: number; unitPriceMnt: number }[],
+    ],
+    ValidatedCart,
+    CartValidationError
+  >({
     queryKey: [
       'cart',
       'validation',
