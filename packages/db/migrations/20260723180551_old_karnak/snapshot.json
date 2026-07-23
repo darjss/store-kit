@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "b4b69492-1cce-4307-b8e0-9d64a4c53771",
+  "id": "f1b63d9c-1b2d-4f80-b8f0-8b53389370ef",
   "prevIds": [
-    "dc29b654-2768-4423-b017-60723c21098e"
+    "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
@@ -48,7 +48,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -118,7 +118,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -198,7 +198,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -328,7 +328,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -408,7 +408,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -558,7 +558,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -638,7 +638,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -788,7 +788,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -878,6 +878,36 @@
     },
     {
       "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "image_width",
+      "entityType": "columns",
+      "table": "order_line"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "image_height",
+      "entityType": "columns",
+      "table": "order_line"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "image_alt",
+      "entityType": "columns",
+      "table": "order_line"
+    },
+    {
+      "type": "integer",
       "notNull": true,
       "autoincrement": false,
       "default": null,
@@ -908,7 +938,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -1182,6 +1212,51 @@
     },
     {
       "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "brand_pk",
+      "entityType": "pks",
+      "table": "brand"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "category_pk",
+      "entityType": "pks",
+      "table": "category"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "product_pk",
+      "entityType": "pks",
+      "table": "product"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "product_image_pk",
+      "entityType": "pks",
+      "table": "product_image"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "product_variant_pk",
+      "entityType": "pks",
+      "table": "product_variant"
+    },
+    {
+      "columns": [
         "variant_id",
         "image_id"
       ],
@@ -1194,82 +1269,37 @@
       "columns": [
         "id"
       ],
-      "nameExplicit": false,
-      "name": "brand_pk",
-      "table": "brand",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "category_pk",
-      "table": "category",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "product_pk",
-      "table": "product",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "product_image_pk",
-      "table": "product_image",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "product_variant_pk",
-      "table": "product_variant",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
+      "nameExplicit": true,
       "name": "checkout_settings_pk",
-      "table": "checkout_settings",
-      "entityType": "pks"
+      "entityType": "pks",
+      "table": "checkout_settings"
     },
     {
       "columns": [
         "id"
       ],
-      "nameExplicit": false,
+      "nameExplicit": true,
       "name": "customer_order_pk",
-      "table": "customer_order",
-      "entityType": "pks"
+      "entityType": "pks",
+      "table": "customer_order"
     },
     {
       "columns": [
         "id"
       ],
-      "nameExplicit": false,
+      "nameExplicit": true,
       "name": "order_line_pk",
-      "table": "order_line",
-      "entityType": "pks"
+      "entityType": "pks",
+      "table": "order_line"
     },
     {
       "columns": [
         "id"
       ],
-      "nameExplicit": false,
+      "nameExplicit": true,
       "name": "payment_pk",
-      "table": "payment",
-      "entityType": "pks"
+      "entityType": "pks",
+      "table": "payment"
     },
     {
       "columns": [
