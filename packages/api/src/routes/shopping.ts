@@ -39,8 +39,49 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   })
   .get(
     '/orders/:id/status',
-    async ({ params, headers }) =>
-      Result.serialize(await getPrivateOrderStatus(params.id, headers['x-order-token'] ?? '')),
+    async ({ params, headers }) => {
+      const result = await getPrivateOrderStatus(params.id, headers['x-order-token'] ?? '')
+      if (result.status === 'error') return Result.serialize<unknown, unknown>(result)
+
+      const order = result.value
+      return Result.serialize<unknown, unknown>(
+        Result.ok({
+          id: order.id,
+          number: order.number,
+          status: order.status,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          district: order.district,
+          khoroo: order.khoroo,
+          address: order.address,
+          deliveryNotes: order.deliveryNotes,
+          subtotalMnt: order.subtotalMnt,
+          deliveryFeeMnt: order.deliveryFeeMnt,
+          totalMnt: order.totalMnt,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          lines: order.lines.map(line => ({
+            productName: line.productName,
+            variantName: line.variantName,
+            sku: line.sku,
+            options: line.options,
+            imageR2Key: line.imageR2Key,
+            unitPriceMnt: line.unitPriceMnt,
+            quantity: line.quantity,
+            lineTotalMnt: line.lineTotalMnt,
+          })),
+          payment: order.payment
+            ? {
+                method: order.payment.method,
+                status: order.payment.status,
+                amountMnt: order.payment.amountMnt,
+                claimedAt: order.payment.claimedAt,
+                paidAt: order.payment.paidAt,
+              }
+            : null,
+        }),
+      )
+    },
     {
       params: t.Object({ id: t.String() }),
       headers: t.Object(
@@ -67,16 +108,17 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
     '/orders/:id/payment/refresh',
     async ({ params, headers }) => {
       const order = await getPrivateOrderStatus(params.id, headers['x-order-token'] ?? '')
-      if (order.status === 'error') return Result.serialize(order)
+      if (order.status === 'error') return Result.serialize<unknown, unknown>(order)
       const invoiceId = order.value.payment?.providerInvoiceId
       if (!invoiceId)
-        return Result.serialize(
+        return Result.serialize<unknown, unknown>(
           Result.err({ _tag: 'PaymentMismatch', message: 'QPay нэхэмжлэл олдсонгүй.' }),
         )
       const verified = await verifyQPayPayment(invoiceId)
-      if (verified.status === 'error') return Result.serialize(verified)
-      if (!verified.value) return Result.serialize(Result.ok({ paymentStatus: 'pending' as const }))
-      return Result.serialize(
+      if (verified.status === 'error') return Result.serialize<unknown, unknown>(verified)
+      if (!verified.value)
+        return Result.serialize<unknown, unknown>(Result.ok({ paymentStatus: 'pending' as const }))
+      return Result.serialize<unknown, unknown>(
         await confirmOrderPayment(params.id, { ...verified.value, method: 'qpay' }),
       )
     },

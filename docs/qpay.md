@@ -1,16 +1,17 @@
 # QPay configuration
 
-The store uses QPay Merchant V2. Set these Worker secrets or variables:
+The store uses QPay Merchant V2. Set these Worker secrets from `apps/plugged`:
 
-- `QPAY_CLIENT_ID` (secret)
-- `QPAY_CLIENT_SECRET` (secret)
-- `QPAY_INVOICE_CODE`
-- `QPAY_ENVIRONMENT` (`sandbox` or `production`)
+```sh
+vp exec wrangler secret put QPAY_USERNAME
+vp exec wrangler secret put QPAY_PASSWORD
+vp exec wrangler secret put QPAY_INVOICE_CODE
+```
 
-Use `vp exec wrangler secret put QPAY_CLIENT_ID` and `vp exec wrangler secret put QPAY_CLIENT_SECRET` from `apps/plugged`. Do not put credential values in Wrangler configuration or source files.
+Set `QPAY_BASE_URL` and `PUBLIC_APP_URL` for each Wrangler environment. Use the QPay sandbox base URL until the merchant check is complete. Do not put credentials in Wrangler configuration or source files.
 
-The adapter authenticates with Basic authentication, then uses the access token for invoice creation and payment inspection. QPay does not document a callback signature for Merchant V2. A callback is not proof of payment. The webhook route must pass the invoice ID to `handleWebhook`, which calls `POST /v2/payment/check`, checks the amount, and only then runs the supplied paid-payment hook.
+The adapter uses Basic authentication to get an access token. It uses this token to create invoices and verify payments. A callback is not proof of payment. The webhook fetches the payment from QPay before it confirms the order.
 
-Provider response bodies and credential values stay inside the adapter. Returned errors contain only safe customer messages.
+Provider response bodies and credentials stay inside the adapter. Returned errors contain only safe customer messages.
 
 Official reference: <https://developer.qpay.mn/mn/docs/merchant?version=2.0.0>

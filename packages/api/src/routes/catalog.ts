@@ -12,6 +12,7 @@ const slugPattern = '^[a-z0-9]+(?:-[a-z0-9]+)*$'
 const productListQuery = t.Object({
   category: t.Optional(t.String({ pattern: slugPattern })),
   brand: t.Optional(t.String({ pattern: slugPattern })),
+  useCase: t.Optional(t.UnionEnum(['first-iem', 'bass', 'vocals', 'gaming', 'daily-carry'])),
   featured: t.Optional(t.BooleanString()),
   query: t.Optional(t.String()),
   minPrice: t.Optional(t.Integer({ minimum: 0 })),

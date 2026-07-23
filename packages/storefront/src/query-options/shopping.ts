@@ -1,8 +1,7 @@
 import type { CheckoutInput } from '@store-kit/db/schemas/shopping'
-import { Result } from 'better-result'
 
 import { api } from '../client'
-import { resultQueryOptions } from './result'
+import { resultMutationOptions, resultQueryOptions } from './result'
 
 export const orderQuery = {
   findPrivateStatus: (orderId: string, getToken: () => string) =>
@@ -13,25 +12,21 @@ export const orderQuery = {
     }),
 }
 
-const deserializeMutation = async (request: Promise<{ data: unknown }>) => {
-  const { data } = await request
-  if (data === null) throw new Error('Eden response did not include result data.')
-  return Result.deserialize(data)
+export const checkoutMutation = {
+  create: () => resultMutationOptions((input: CheckoutInput) => api.api.checkout.post(input)),
 }
 
-export const checkoutMutation = {
-  create: (input: CheckoutInput) => deserializeMutation(api.api.checkout.post(input)),
-}
+type PrivatePaymentInput = { orderId: string; token: string }
 
 export const paymentMutation = {
-  claimBankTransfer: (orderId: string, token: string) =>
-    deserializeMutation(
+  claimBankTransfer: () =>
+    resultMutationOptions(({ orderId, token }: PrivatePaymentInput) =>
       api.api.orders({ id: orderId }).payment.claim.post(null, {
         headers: { 'x-order-token': token },
       }),
     ),
-  refreshQPay: (orderId: string, token: string) =>
-    deserializeMutation(
+  refreshQPay: () =>
+    resultMutationOptions(({ orderId, token }: PrivatePaymentInput) =>
       api.api.orders({ id: orderId }).payment.refresh.post(null, {
         headers: { 'x-order-token': token },
       }),
