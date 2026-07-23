@@ -2,10 +2,15 @@
 import type { CheckoutCreated } from '@store-kit/contracts/checkout'
 import { cartItems, openCart } from '@store-kit/storefront/cart/store'
 import { Checkout, useCheckout } from '@store-kit/storefront/checkout'
-import { PendingSubmitButton, jsonPointerToFieldName } from '@store-kit/storefront/form'
+import type { CheckoutDomainError } from '@store-kit/storefront/checkout'
+import { PendingSubmitButton } from '@store-kit/storefront/form'
 import { formatMnt } from '@store-kit/storefront/format'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
   Button,
   Field,
   FieldDescription,
@@ -15,7 +20,9 @@ import {
   RadioGroupItem,
 } from '@store-kit/ui'
 import { QueryClientProvider } from '@tanstack/solid-query'
+import { match } from 'dismatch'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
+import type { ParentProps } from 'solid-js'
 
 const districts = [
   'Багануур',
@@ -35,24 +42,85 @@ const qpayAction = (order: CheckoutCreated) =>
 const bankAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'bank_transfer' ? order.nextAction : undefined
 
-const fieldMessage = (hasDomainError: boolean, validationErrors: unknown[], message: string) =>
-  hasDomainError || validationErrors.length > 0 ? message : undefined
+const fieldMessage = (validationErrors: unknown[], message: string) =>
+  validationErrors.length > 0 ? message : undefined
+
+function ErrorNotice(props: ParentProps<{ title: string }>) {
+  return (
+    <Alert
+      class="border-warning bg-paper-clean mb-4 border-4 p-4 [&_[data-slot=alert-action]]:static [&_[data-slot=alert-action]]:mt-3 [&_[data-slot=alert-action]]:translate-y-0"
+      variant="destructive"
+    >
+      <AlertTitle>{props.title}</AlertTitle>
+      <AlertDescription>{props.children}</AlertDescription>
+    </Alert>
+  )
+}
+
+function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransfer: () => void }) {
+  return match(
+    props.error,
+    '_tag',
+  )({
+    CartChanged: error => (
+      <ErrorNotice title="Сагсаа засна уу">
+        <For each={error.corrections}>{correction => <p>{correction.message}</p>}</For>
+        <AlertAction>
+          <Button type="button" variant="outline" onClick={openCart}>
+            Сагс нээж засах →
+          </Button>
+        </AlertAction>
+      </ErrorNotice>
+    ),
+    CartEmpty: error => (
+      <ErrorNotice title="Сагс хоосон.">
+        <p>{error.message}</p>
+        <a href="/products">Бараа сонгох →</a>
+      </ErrorNotice>
+    ),
+    InvalidCart: () => (
+      <ErrorNotice title="Сагсаа шалгана уу.">
+        <p>Сагсны мэдээлэл буруу байна. Бараагаа дахин сонгоно уу.</p>
+        <AlertAction>
+          <Button type="button" variant="outline" onClick={openCart}>
+            Сагс нээх →
+          </Button>
+        </AlertAction>
+      </ErrorNotice>
+    ),
+    InvalidCheckoutDetails: () => (
+      <ErrorNotice title="Мэдээллээ шалгана уу.">
+        <p>Тодруулсан талбаруудыг засаад дахин оролдоно уу.</p>
+      </ErrorNotice>
+    ),
+    DeliveryUnavailable: error => (
+      <ErrorNotice title="Хүргэлт боломжгүй.">
+        <p>{error.message}</p>
+      </ErrorNotice>
+    ),
+    PaymentSetupFailed: error => (
+      <ErrorNotice title="Төлбөр үүсгэж чадсангүй.">
+        <p>{error.message}</p>
+        <AlertAction>
+          <div class="flex flex-wrap gap-2">
+            <Button type="submit" variant="outline">
+              Дахин оролдох
+            </Button>
+            <Show when={error.canUseBankTransfer}>
+              <Button type="button" variant="secondary" onClick={props.selectBankTransfer}>
+                Дансаар төлөх
+              </Button>
+            </Show>
+          </div>
+        </AlertAction>
+      </ErrorNotice>
+    ),
+  })
+}
 
 function FormOwner() {
   const checkout = useCheckout()
   const created = checkout.created
-  const error = () =>
-    checkout.domainError() as
-      | {
-          _tag?: string
-          message?: string
-          canUseBankTransfer?: boolean
-          fields?: { path: string }[]
-          corrections?: { message: string }[]
-        }
-      | undefined
-  const fieldError = (name: string) =>
-    Boolean(error()?.fields?.some(item => jsonPointerToFieldName(item.path) === name))
 
   return (
     <Switch>
@@ -68,9 +136,11 @@ function FormOwner() {
                 <div class="border-ink my-4 border-y-4 py-4">
                   <h2>QPay-аар төлөх</h2>
                   <img
-                    class="border-ink w-[min(320px,100%)] border-4"
+                    class="border-ink aspect-square h-auto w-[min(320px,100%)] border-4"
                     src={action().qrImage}
                     alt="QPay төлбөрийн QR код"
+                    width="320"
+                    height="320"
                   />
                   <div class="mt-4 flex flex-wrap gap-2">
                     <For each={action().urls}>
@@ -117,61 +187,32 @@ function FormOwner() {
               <h1 class="font-display text-[clamp(4rem,9vw,6rem)] leading-[0.75] max-md:text-[4.5rem]">
                 ЗАХИАЛГА
               </h1>
-              <Show when={error()?._tag === 'CartChanged'}>
-                <section
-                  class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black"
-                  id="cart-correction"
-                  tabIndex={-1}
-                >
-                  <h2 class="m-0">Сагсаа засна уу</h2>
-                  <p>{error()?.message}</p>
-                  <For each={error()?.corrections}>{correction => <p>{correction.message}</p>}</For>
-                  <Button type="button" variant="outline" onClick={openCart}>
-                    Сагс нээж засах →
-                  </Button>
-                </section>
-              </Show>
-              <Show when={error()?._tag === 'CartEmpty'}>
-                <section
-                  class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black"
-                  role="alert"
-                >
-                  <strong>Сагс хоосон.</strong>
-                  <p>{error()?.message}</p>
-                  <a href="/products">Бараа сонгох →</a>
-                </section>
-              </Show>
-              <Show when={error()?._tag === 'InvalidCheckoutDetails'}>
-                <section
-                  class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black"
-                  role="alert"
-                >
-                  <strong>Мэдээллээ шалгана уу.</strong>
-                  <p>{error()?.message}</p>
-                </section>
+              <Show when={checkout.domainError()} keyed>
+                {error => (
+                  <DomainErrorNotice
+                    error={error}
+                    selectBankTransfer={() =>
+                      checkout.form.setFieldValue('paymentMethod', 'bank_transfer')
+                    }
+                  />
+                )}
               </Show>
               <Show when={checkout.transportError()}>
-                <section
-                  class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black"
-                  role="alert"
-                >
-                  <strong>Холболт амжилтгүй.</strong>
+                <ErrorNotice title="Холболт амжилтгүй.">
                   <p>Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.</p>
-                  <Button type="submit" variant="outline">
-                    Дахин оролдох
-                  </Button>
-                </section>
+                  <AlertAction>
+                    <Button type="submit" variant="outline">
+                      Дахин оролдох
+                    </Button>
+                  </AlertAction>
+                </ErrorNotice>
               </Show>
               <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
                 <h2>Холбоо барих</h2>
                 <Checkout.Field name="customer.name">
                   {field => {
                     const message = () =>
-                      fieldMessage(
-                        fieldError('customer.name'),
-                        field().state.meta.errors,
-                        'Нэрээ оруулна уу.',
-                      )
+                      fieldMessage(field().state.meta.errors, 'Нэрээ оруулна уу.')
                     return (
                       <Field>
                         <FieldLabel for={field().name}>
@@ -192,11 +233,7 @@ function FormOwner() {
                 <Checkout.Field name="customer.phone">
                   {field => {
                     const message = () =>
-                      fieldMessage(
-                        fieldError('customer.phone'),
-                        field().state.meta.errors,
-                        'Утасны дугаараа шалгана уу.',
-                      )
+                      fieldMessage(field().state.meta.errors, 'Утасны дугаараа шалгана уу.')
                     return (
                       <Field>
                         <FieldLabel for={field().name}>
@@ -238,11 +275,7 @@ function FormOwner() {
                 <Checkout.Field name="delivery.khoroo">
                   {field => {
                     const message = () =>
-                      fieldMessage(
-                        fieldError('delivery.khoroo'),
-                        field().state.meta.errors,
-                        'Хороогоо оруулна уу.',
-                      )
+                      fieldMessage(field().state.meta.errors, 'Хороогоо оруулна уу.')
                     return (
                       <Field>
                         <FieldLabel for={field().name}>
@@ -262,11 +295,7 @@ function FormOwner() {
                 <Checkout.Field name="delivery.address">
                   {field => {
                     const message = () =>
-                      fieldMessage(
-                        fieldError('delivery.address'),
-                        field().state.meta.errors,
-                        'Дэлгэрэнгүй хаягаа оруулна уу.',
-                      )
+                      fieldMessage(field().state.meta.errors, 'Дэлгэрэнгүй хаягаа оруулна уу.')
                     return (
                       <Field>
                         <FieldLabel for={field().name}>
@@ -287,7 +316,6 @@ function FormOwner() {
                   {field => {
                     const message = () =>
                       fieldMessage(
-                        fieldError('delivery.notes'),
                         field().state.meta.errors,
                         'Нэмэлт тайлбар 500 тэмдэгтээс ихгүй байна.',
                       )
@@ -305,23 +333,13 @@ function FormOwner() {
                     )
                   }}
                 </Checkout.Field>
-                <Show when={error()?._tag === 'DeliveryUnavailable'}>
-                  <div class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black">
-                    <strong>Хүргэлт боломжгүй.</strong>
-                    <p>{error()?.message}</p>
-                  </div>
-                </Show>
               </section>
               <section class="border-ink bg-paper-clean [&>h2]:font-display [&_[role=radiogroup]>label]:border-ink mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
                 <h2>Төлбөр</h2>
                 <Checkout.Field name="paymentMethod">
                   {field => {
                     const message = () =>
-                      fieldMessage(
-                        fieldError('paymentMethod'),
-                        field().state.meta.errors,
-                        'Төлбөрийн аргаа сонгоно уу.',
-                      )
+                      fieldMessage(field().state.meta.errors, 'Төлбөрийн аргаа сонгоно уу.')
                     return (
                       <Field>
                         <field.RadioGroup
@@ -346,25 +364,6 @@ function FormOwner() {
                     )
                   }}
                 </Checkout.Field>
-                <Show when={error()?._tag === 'PaymentSetupFailed'}>
-                  <div class="border-warning bg-paper-clean [&_button]:border-ink [&_button]:bg-acid mb-4 border-4 p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:px-3 [&_button]:py-2 [&_button]:font-black">
-                    <p>{error()?.message}</p>
-                    <Button type="submit" variant="outline">
-                      Дахин оролдох
-                    </Button>
-                    <Show when={error()?.canUseBankTransfer}>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() =>
-                          checkout.form.setFieldValue('paymentMethod', 'bank_transfer')
-                        }
-                      >
-                        Дансаар төлөх
-                      </Button>
-                    </Show>
-                  </div>
-                </Show>
               </section>
             </div>
             <aside class="border-ink bg-acid sticky top-4 col-[9/13] min-w-0 border-4 p-4 max-md:relative max-md:top-auto max-md:w-full">
