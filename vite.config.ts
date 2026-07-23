@@ -1,9 +1,11 @@
+import solid from 'vite-plugin-solid'
 import { defineConfig } from 'vite-plus'
 
 import formatConfig from './oxfmt.config'
 import lintConfig from './oxlint.config'
 
 export default defineConfig({
+  plugins: [solid({ hot: false })],
   resolve: { tsconfigPaths: true },
   run: {
     tasks: {

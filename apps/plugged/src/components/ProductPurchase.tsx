@@ -9,8 +9,11 @@ import { ProductImage } from './ProductImage'
 
 const actionClass =
   'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
+type ProductPurchaseData = Omit<ProductDetail, 'images'> & {
+  images: (Omit<ProductDetail['images'][number], 'r2Key'> & { url: string })[]
+}
 
-export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: string }) {
+export function ProductPurchase(props: { product: ProductPurchaseData }) {
   const initial =
     props.product.variants.find(variant => variant.stockQuantity > 0) ?? props.product.variants[0]
   const [variantId, setVariantId] = createSignal(initial?.id ?? '')
@@ -66,7 +69,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
       productName: props.product.name,
       variantName: variant.name,
       options: variant.options,
-      imageR2Key: image()?.r2Key ?? null,
+      imageR2Key: image()?.url ?? null,
       imageWidth: image()?.width ?? null,
       imageHeight: image()?.height ?? null,
       imageAlt: image()?.alt ?? null,
@@ -88,7 +91,6 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
               class="h-[90%] w-[90%] object-contain filter-[drop-shadow(0_6px_0_rgb(0_0_0/0.2))] max-md:w-[115%] max-md:max-w-none"
               image={item()}
               layout="detail"
-              mediaBaseUrl={props.mediaBaseUrl}
               priority
             />
           )}

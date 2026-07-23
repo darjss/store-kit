@@ -318,7 +318,7 @@ function Chrome(props: { initialPanel: 'search' | 'cart' }) {
                     when={
                       item.imageR2Key && item.imageWidth && item.imageHeight && item.imageAlt
                         ? {
-                            r2Key: item.imageR2Key,
+                            url: item.imageR2Key,
                             width: item.imageWidth,
                             height: item.imageHeight,
                             alt: item.imageAlt,

@@ -16,6 +16,20 @@ export {
 export type { CartItemsProps, CartLineInput, PersistedCartItem } from './cart'
 export { formatMnt } from './format'
 export { mediaUrl, publicMediaUrl } from './media'
+export {
+  OrderStatus,
+  OrderStatusRoot,
+  orderStatusPollingInterval,
+  useOrderStatus,
+} from './orders/order-status'
+export type {
+  BankTransferClaimFailure,
+  BankTransferClaimOutcome,
+  OrderStatusContextValue,
+  OrderStatusState,
+  QPayRefreshFailure,
+  QPayRefreshOutcome,
+} from './orders/order-status'
 export { clampPurchaseQuantity, maximumPurchaseQuantity } from './purchase'
 export { createStorefrontQueryClient } from './query-client'
 export { cartQuery } from './query-options/cart'
@@ -24,7 +38,7 @@ export type { ProductListFilters } from './query-options/catalog'
 export { checkoutMutation } from './query-options/checkout'
 export { orderQuery } from './query-options/orders'
 export { paymentMutation } from './query-options/payments'
-export { useQueryResult } from './query-options/result'
+export { useMutationResult, useQueryResult } from './query-options/result'
 export { systemStatusOptions } from './query-options/system-status'
 export { orderStatusLabel, paymentStatusLabel, shouldPollOrderStatus } from './status'
 export { cartStorageKey, privateOrderStorageKey } from './storage'

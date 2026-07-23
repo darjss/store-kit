@@ -6,7 +6,7 @@ import { formatMnt } from '@store-kit/storefront/format'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { cartQuery } from '@store-kit/storefront/query-options/cart'
 import { checkoutMutation } from '@store-kit/storefront/query-options/checkout'
-import { useQueryResult } from '@store-kit/storefront/query-options/result'
+import { useMutationResult, useQueryResult } from '@store-kit/storefront/query-options/result'
 import {
   Button,
   Field,
@@ -21,7 +21,7 @@ import {
   Textarea,
 } from '@store-kit/ui'
 import { createForm } from '@tanstack/solid-form'
-import { QueryClientProvider, createMutation } from '@tanstack/solid-query'
+import { QueryClientProvider } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
 import { Value } from 'typebox/value'
 
@@ -100,7 +100,7 @@ const validationError = (errors: unknown[]) =>
   errors.find((item): item is string => typeof item === 'string')
 
 function FormOwner() {
-  const checkout = createMutation(() => checkoutMutation.create())
+  const checkout = useMutationResult(() => checkoutMutation.create())
   const validation = useQueryResult(() => ({
     ...cartQuery.validate([...cartItems()]),
     enabled: false,

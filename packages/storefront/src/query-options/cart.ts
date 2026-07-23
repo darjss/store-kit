@@ -1,6 +1,7 @@
 import type { PersistedCartItem, ValidatedCart } from '@store-kit/contracts/cart'
 
-import { api } from '../client'
+import { api } from '~/client'
+
 import { resultQueryOptions } from './result'
 
 const validate = (items: PersistedCartItem[]) =>
