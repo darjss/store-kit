@@ -1,21 +1,10 @@
 import { makePersisted } from '@solid-primitives/storage'
+import type { CartLineInput, PersistedCartItem } from '@store-kit/db/schemas/shopping'
 import { createSignal } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { isServer } from 'solid-js/web'
 
-export type CartLineInput = {
-  variantId: string
-  quantity: number
-}
-
-export type PersistedCartItem = CartLineInput & {
-  productSlug: string
-  productName: string
-  variantName: string
-  options: Record<string, string>
-  imageR2Key: string | null
-  unitPriceMnt: number
-}
+export type { CartLineInput, PersistedCartItem } from '@store-kit/db/schemas/shopping'
 
 const storageKey = 'store-kit:plugged:cart:v1'
 const [cartItems, setStore] = createStore<PersistedCartItem[]>([])
@@ -31,6 +20,7 @@ function isPersistedCartItem(value: unknown): value is PersistedCartItem {
     typeof item.variantId === 'string' &&
     Number.isInteger(item.quantity) &&
     (item.quantity ?? 0) > 0 &&
+    (item.quantity ?? 11) <= 10 &&
     typeof item.productSlug === 'string' &&
     typeof item.productName === 'string' &&
     typeof item.variantName === 'string' &&
@@ -72,7 +62,7 @@ export function addCartItem(item: PersistedCartItem) {
     existing
       ? cartItems.map(cartItem =>
           cartItem.variantId === item.variantId
-            ? { ...item, quantity: existing.quantity + item.quantity }
+            ? { ...item, quantity: Math.min(existing.quantity + item.quantity, 10) }
             : cartItem,
         )
       : [...cartItems, item],
@@ -80,7 +70,7 @@ export function addCartItem(item: PersistedCartItem) {
 }
 
 export function setCartItemQuantity(variantId: string, quantity: number) {
-  if (!Number.isInteger(quantity) || quantity < 1) return
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) return
 
   setCartItems(cartItems.map(item => (item.variantId === variantId ? { ...item, quantity } : item)))
 }

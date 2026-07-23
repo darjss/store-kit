@@ -10,6 +10,7 @@
     "@elysiajs/eden": "^1.4.9",
     "@solid-primitives/storage": "^4.4.0",
     "@store-kit/api": "workspace:*",
+    "@store-kit/db": "workspace:*",
     "@store-kit/ui": "workspace:*",
     "@tanstack/solid-query": "catalog:",
     "better-result": "catalog:",

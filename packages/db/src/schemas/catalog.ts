@@ -22,6 +22,7 @@ export const productUseCaseSchema = Type.Union([
   Type.Literal('gaming'),
   Type.Literal('daily-carry'),
 ])
+export const productUseCasesSchema = Type.Array(productUseCaseSchema, { uniqueItems: true })
 export const productStatusSchema = Type.Union([
   Type.Literal('draft'),
   Type.Literal('active'),
@@ -49,7 +50,7 @@ const productRefinements = {
   slug: () => slugSchema,
   status: () => productStatusSchema,
   details: () => productDetailsSchema,
-  useCases: () => Type.Array(productUseCaseSchema),
+  useCases: () => productUseCasesSchema,
 }
 
 const productVariantRefinements = {

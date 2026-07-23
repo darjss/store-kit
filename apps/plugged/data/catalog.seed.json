@@ -206,13 +206,5 @@
       ],
       "useCases": ["daily-carry"]
     }
-  ],
-  "checkoutSettings": {
-    "deliveryFeeMnt": 5000,
-    "bankName": "Khan Bank",
-    "bankAccountName": "Plugged",
-    "bankAccountNumber": "0000000000",
-    "checkoutHelpText": "Төлбөрийн талаар тусламж хэрэгтэй бол бидэнтэй холбогдоно уу.",
-    "orderConfirmationText": "Захиалгыг төлбөр баталгаажсаны дараа бэлтгэнэ."
-  }
+  ]
 }

@@ -157,6 +157,9 @@ importers:
       '@store-kit/api':
         specifier: workspace:*
         version: link:../api
+      '@store-kit/db':
+        specifier: workspace:*
+        version: link:../db
       '@store-kit/ui':
         specifier: workspace:*
         version: link:../ui

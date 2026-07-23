@@ -21,11 +21,31 @@ export const paymentStatusSchema = Type.Union([
   Type.Literal('paid'),
   Type.Literal('failed'),
 ])
-export const cartLineInputSchema = Type.Object({
-  variantId: Type.String({ minLength: 1 }),
-  quantity: Type.Integer({ minimum: 1, maximum: 10 }),
-})
+export const cartLineInputSchema = Type.Object(
+  {
+    variantId: Type.String({ minLength: 1 }),
+    quantity: Type.Integer({ minimum: 1, maximum: 10 }),
+  },
+  { additionalProperties: false },
+)
 export const cartLineInputsSchema = Type.Array(cartLineInputSchema, { minItems: 1, maxItems: 20 })
+export const persistedCartItemSchema = Type.Object(
+  {
+    variantId: Type.String({ minLength: 1 }),
+    quantity: Type.Integer({ minimum: 1, maximum: 10 }),
+    productSlug: Type.String({ minLength: 1 }),
+    productName: Type.String({ minLength: 1 }),
+    variantName: Type.String({ minLength: 1 }),
+    options: variantOptionsSchema,
+    imageR2Key: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
+    unitPriceMnt: nonNegativeIntegerSchema,
+  },
+  { additionalProperties: false },
+)
+export const persistedCartItemsSchema = Type.Array(persistedCartItemSchema, {
+  minItems: 1,
+  maxItems: 20,
+})
 
 const settingsRefinements = { deliveryFeeMnt: () => nonNegativeIntegerSchema }
 const orderRefinements = {
@@ -68,6 +88,7 @@ export const insertPaymentSchema = createInsertSchema(payment, paymentRefinement
 export const updatePaymentSchema = createUpdateSchema(payment, paymentRefinements)
 
 export type CartLineInput = Static<typeof cartLineInputSchema>
+export type PersistedCartItem = Static<typeof persistedCartItemSchema>
 export type CheckoutSettings = Static<typeof selectCheckoutSettingsSchema>
 export type NewCheckoutSettings = typeof checkoutSettings.$inferInsert
 export type Order = Static<typeof selectOrderSchema>
