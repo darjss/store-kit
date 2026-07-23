@@ -1,21 +1,8 @@
 import { makePersisted } from '@solid-primitives/storage'
+import type { CartLineInput, PersistedCartItem } from '@store-kit/api'
 import { createSignal } from 'solid-js'
 import { createStore } from 'solid-js/store'
 import { isServer } from 'solid-js/web'
-
-export type CartLineInput = {
-  variantId: string
-  quantity: number
-}
-
-export type PersistedCartItem = CartLineInput & {
-  productSlug: string
-  productName: string
-  variantName: string
-  options: Record<string, string>
-  imageR2Key: string | null
-  unitPriceMnt: number
-}
 
 const storageKey = 'store-kit:plugged:cart:v1'
 const [cartItems, setStore] = createStore<PersistedCartItem[]>([])
@@ -107,3 +94,4 @@ export const cartLineInputs = (): CartLineInput[] =>
   cartItems.map(({ variantId, quantity }) => ({ variantId, quantity }))
 
 export { cartItems, isCartOpen }
+export type { CartLineInput, PersistedCartItem }
