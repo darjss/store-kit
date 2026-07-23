@@ -1,4 +1,4 @@
-import { handleBankTransferCallback } from '@store-kit/commerce/checkout'
+import { commerce } from '@store-kit/commerce'
 import { entityIdPrefixes, hasTypeIdPrefix } from '@store-kit/db/ids'
 import { env } from 'cloudflare:workers'
 import { Elysia, t } from 'elysia'
@@ -15,7 +15,7 @@ export const telegramWebhook = new Elysia({ aot: false, prefix: '/api/webhooks' 
     if (!callback || String(callback.from.id) !== env.TELEGRAM_ADMIN_USER_ID) return { ok: true }
     const match = /^bank:(confirm|reject):(.+)$/.exec(callback.data ?? '')
     if (!match || !hasTypeIdPrefix(match[2]!, entityIdPrefixes.order)) return { ok: true }
-    await handleBankTransferCallback({
+    await commerce.payments.handleBankTransferCallback({
       action: match[1] === 'confirm' ? 'confirm' : 'reject',
       orderId: match[2]!,
       callbackQueryId: callback.id,

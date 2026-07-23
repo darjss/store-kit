@@ -1,33 +1,12 @@
 import type {
   BankTransferClaim,
   BankTransferClaimError,
-  CheckoutCreated,
-  CheckoutError,
-  CheckoutInput,
   PaymentRefresh,
   PaymentRefreshError,
-  PrivateOrderError,
-  PublicOrder,
-} from '@store-kit/contracts'
+} from '@store-kit/contracts/payments'
 
 import { api } from '../client'
-import { resultMutationOptions, resultQueryOptions } from './result'
-
-export const orderQuery = {
-  findPrivateStatus: (orderId: string, getToken: () => string) =>
-    resultQueryOptions<readonly ['order', string], PublicOrder, PrivateOrderError>({
-      queryKey: ['order', orderId] as const,
-      request: () =>
-        api.api.orders({ id: orderId }).status.get({ headers: { 'x-order-token': getToken() } }),
-    }),
-}
-
-export const checkoutMutation = {
-  create: () =>
-    resultMutationOptions<CheckoutInput, CheckoutCreated, CheckoutError>(input =>
-      api.api.checkout.post(input),
-    ),
-}
+import { resultMutationOptions } from './result'
 
 type PrivatePaymentInput = { orderId: string; token: string }
 

@@ -1,78 +1,15 @@
-import type { CartLineInput } from '@store-kit/contracts/cart'
 import { env } from 'cloudflare:workers'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 import { db } from '../client'
-import { defaultCheckoutSettingsId } from '../ids'
-import { product, productImage, productVariant, productVariantImage } from '../schema/catalog'
-import { order, orderLine, payment } from '../schema/shopping'
-import type { NewOrder, NewOrderLine, NewPayment } from '../schemas/shopping'
+import { orderLine, payment } from '../schema/shopping'
 
-export type NewOrderAggregate = {
-  order: NewOrder
-  lines: NewOrderLine[]
-  payment: NewPayment
-}
+type Payment = typeof payment.$inferSelect
 
-export const findCartVariants = async (items: CartLineInput[]) => {
-  if (items.length === 0) return []
-  const variantIds = [...new Set(items.map(item => item.variantId))]
-
-  return db
-    .select({
-      variantId: productVariant.id,
-      productId: product.id,
-      productSlug: product.slug,
-      productName: product.name,
-      productStatus: product.status,
-      variantName: productVariant.name,
-      sku: productVariant.sku,
-      options: productVariant.options,
-      unitPriceMnt: productVariant.priceMnt,
-      stockQuantity: productVariant.stockQuantity,
-      active: productVariant.active,
-      imageR2Key: sql<string | null>`coalesce(
-        (
-          select ${productImage.r2Key} from ${productVariantImage}
-          inner join ${productImage} on ${productImage.id} = ${productVariantImage.imageId}
-          where ${productVariantImage.variantId} = ${productVariant.id}
-          order by ${productImage.sortOrder}
-          limit 1
-        ),
-        (
-          select ${productImage.r2Key} from ${productImage}
-          where ${productImage.productId} = ${product.id}
-          order by ${productImage.sortOrder}
-          limit 1
-        )
-      )`,
-    })
-    .from(productVariant)
-    .innerJoin(product, eq(productVariant.productId, product.id))
-    .where(inArray(productVariant.id, variantIds))
-    .orderBy(productVariant.id)
-}
-
-export const findCheckoutSettings = () =>
-  db.query.checkoutSettings.findFirst({ where: { id: defaultCheckoutSettingsId } })
-
-export const insertOrderWithLinesAndPayment = async (aggregate: NewOrderAggregate) => {
-  await db.batch([
-    db.insert(order).values(aggregate.order),
-    ...aggregate.lines.map(line => db.insert(orderLine).values(line)),
-    db.insert(payment).values(aggregate.payment),
-  ])
-}
-
-export const findPrivateOrder = (id: string, statusTokenHash: string) =>
-  db.query.order.findFirst({
-    where: { id, statusTokenHash },
-    with: { lines: true, payment: true },
-  })
-
-export const findOrderByNumber = (number: string) => db.query.order.findFirst({ where: { number } })
-
-export const markBankTransferClaimed = async (orderId: string, claimedAt: number) => {
+export const markBankTransferClaimed = async (
+  orderId: string,
+  claimedAt: number,
+): Promise<Payment | undefined> => {
   const [updated] = await db
     .update(payment)
     .set({ status: 'claimed', claimedAt, updatedAt: claimedAt })
@@ -87,14 +24,11 @@ export const markBankTransferClaimed = async (orderId: string, claimedAt: number
   return updated
 }
 
-export const findPaymentByProviderInvoiceId = (providerInvoiceId: string) =>
+export const findByProviderInvoiceId = (providerInvoiceId: string): Promise<Payment | undefined> =>
   db.query.payment.findFirst({ where: { providerInvoiceId } })
 
-export const findPaymentByOrderId = (orderId: string) =>
+export const findByOrderId = (orderId: string): Promise<Payment | undefined> =>
   db.query.payment.findFirst({ where: { orderId } })
-
-export const findOrderWithPayment = (id: string) =>
-  db.query.order.findFirst({ where: { id }, with: { lines: true, payment: true } })
 
 export const storeTelegramMessageId = (orderId: string, messageId: string, updatedAt: number) =>
   db
@@ -102,7 +36,7 @@ export const storeTelegramMessageId = (orderId: string, messageId: string, updat
     .set({ telegramMessageId: messageId, updatedAt })
     .where(and(eq(payment.orderId, orderId), eq(payment.status, 'claimed')))
 
-export const rejectBankTransferClaim = (orderId: string, updatedAt: number) =>
+export const rejectBankTransferClaim = (orderId: string, updatedAt: number): Promise<Payment[]> =>
   db
     .update(payment)
     .set({ status: 'pending', claimedAt: null, telegramMessageId: null, updatedAt })
@@ -129,10 +63,10 @@ export type ConfirmPaymentWriteResult =
   | { status: 'insufficient-stock'; method: 'qpay' | 'bank_transfer' }
   | { status: 'payment-mismatch' }
 
-export const confirmPaymentAndDecrementStock = async (
+export const confirmAndDecrementStock = async (
   input: ConfirmPaymentWrite,
 ): Promise<ConfirmPaymentWriteResult> => {
-  const currentPayment = await findPaymentByOrderId(input.orderId)
+  const currentPayment = await findByOrderId(input.orderId)
   if (
     !currentPayment ||
     currentPayment.amountMnt !== input.amountMnt ||
@@ -182,7 +116,7 @@ export const confirmPaymentAndDecrementStock = async (
   const [claimResult] = await env.DB.batch([claim, ...decrements, finishPayment, finishOrder])
   if ((claimResult.meta.changes ?? 0) > 0) return { status: 'confirmed' }
 
-  const paymentAfterBatch = await findPaymentByOrderId(input.orderId)
+  const paymentAfterBatch = await findByOrderId(input.orderId)
   if (paymentAfterBatch?.status === 'paid') {
     const currentOrder = await db.query.order.findFirst({ where: { id: input.orderId } })
     return { status: 'already-paid', stockApplied: currentOrder?.status === 'confirmed' }
@@ -199,4 +133,14 @@ export const markQPayPaidWithoutStock = async (input: ConfirmPaymentWrite) => {
     ).bind(input.providerPaymentId, input.paidAt, input.paidAt, input.orderId, input.amountMnt),
   ])
   return (results[0].meta.changes ?? 0) > 0
+}
+
+export const paymentQuery = {
+  markBankTransferClaimed,
+  findByProviderInvoiceId,
+  findByOrderId,
+  storeTelegramMessageId,
+  rejectBankTransferClaim,
+  confirmAndDecrementStock,
+  markQPayPaidWithoutStock,
 }

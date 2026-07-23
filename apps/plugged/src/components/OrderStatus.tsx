@@ -2,7 +2,8 @@
 import type { PublicOrder } from '@store-kit/contracts/orders'
 import { mediaUrl } from '@store-kit/storefront/media'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
-import { orderQuery, paymentMutation } from '@store-kit/storefront/query-options/shopping'
+import { orderQuery } from '@store-kit/storefront/query-options/orders'
+import { paymentMutation } from '@store-kit/storefront/query-options/payments'
 import { QueryClientProvider, createMutation, createQuery } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
 

@@ -3,7 +3,7 @@ import type { CheckoutCreated, CheckoutError } from '@store-kit/contracts/checko
 import { cartItems, cartLineInputs, clearCart, openCart } from '@store-kit/storefront/cart/store'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { cartQuery } from '@store-kit/storefront/query-options/cart'
-import { checkoutMutation } from '@store-kit/storefront/query-options/shopping'
+import { checkoutMutation } from '@store-kit/storefront/query-options/checkout'
 import { createForm } from '@tanstack/solid-form'
 import { QueryClientProvider, createMutation, createQuery } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'

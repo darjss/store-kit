@@ -1,12 +1,12 @@
-import { getSystemStatus } from '@store-kit/commerce'
-import type { SystemError, SystemStatus } from '@store-kit/commerce'
+import { systemOperations } from '@store-kit/commerce/system'
+import type { SystemError, SystemStatus } from '@store-kit/commerce/system'
 import { Result } from 'better-result'
 import type { SerializedResult } from 'better-result'
 import { expect, expectTypeOf, test } from 'vite-plus/test'
 
 test('the system Result keeps both variants across serialization', () => {
-  const success = Result.serialize(getSystemStatus(true))
-  const failure = Result.serialize(getSystemStatus(false))
+  const success = Result.serialize(systemOperations.getStatus(true))
+  const failure = Result.serialize(systemOperations.getStatus(false))
 
   expectTypeOf(success).toEqualTypeOf<SerializedResult<SystemStatus, SystemError>>()
 

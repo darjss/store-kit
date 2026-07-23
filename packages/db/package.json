@@ -4,10 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/client.ts",
+    ".": "./src/index.ts",
     "./ids": "./src/ids.ts",
-    "./queries": "./src/queries/catalog.ts",
-    "./queries/shopping": "./src/queries/shopping.ts",
     "./schema": "./src/schema/catalog.ts",
     "./schema/shopping": "./src/schema/shopping.ts",
     "./schemas": "./src/schemas/catalog.ts",

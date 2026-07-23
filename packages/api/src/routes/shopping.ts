@@ -1,9 +1,4 @@
-import {
-  claimBankTransfer,
-  createCheckoutOrder,
-  getPrivateOrderStatus,
-} from '@store-kit/commerce/checkout'
-import { confirmOrderPayment, findQPayOrder } from '@store-kit/commerce/payments'
+import { commerce } from '@store-kit/commerce'
 import { verifyQPayCallback, verifyQPayPayment } from '@store-kit/commerce/qpay'
 import { sendPaidOrderMessage } from '@store-kit/commerce/telegram'
 import type { PrivateOrderError, PublicOrder } from '@store-kit/contracts/orders'
@@ -27,13 +22,20 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .onAfterHandle(({ set }) => {
     set.headers['cache-control'] = 'private, no-store'
   })
-  .post('/checkout', async ({ body }) => Result.serialize(await createCheckoutOrder(body)), {
-    body: t.Any(),
-  })
+  .post(
+    '/checkout',
+    async ({ body }) => Result.serialize(await commerce.checkout.createOrder(body)),
+    {
+      body: t.Any(),
+    },
+  )
   .get(
     '/orders/:id/status',
     async ({ params, headers }) => {
-      const result = await getPrivateOrderStatus(params.id, headers['x-order-token'] ?? '')
+      const result = await commerce.orders.getPrivateStatus(
+        params.id,
+        headers['x-order-token'] ?? '',
+      )
       if (result.status === 'error')
         return Result.serialize(Result.err<PublicOrder, PrivateOrderError>(result.error))
 
@@ -88,7 +90,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
     '/orders/:id/payment/claim',
     async ({ params, headers }) =>
       Result.serialize<BankTransferClaim, BankTransferClaimError>(
-        await claimBankTransfer(params.id, headers['x-order-token'] ?? ''),
+        await commerce.payments.claimBankTransfer(params.id, headers['x-order-token'] ?? ''),
       ),
     {
       params: t.Object({ id: t.String({ pattern: typeIdPattern(entityIdPrefixes.order) }) }),
@@ -101,7 +103,10 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .post(
     '/orders/:id/payment/refresh',
     async ({ params, headers }) => {
-      const order = await getPrivateOrderStatus(params.id, headers['x-order-token'] ?? '')
+      const order = await commerce.orders.getPrivateStatus(
+        params.id,
+        headers['x-order-token'] ?? '',
+      )
       if (order.status === 'error')
         return Result.serialize(Result.err<PaymentRefresh, PaymentRefreshError>(order.error))
       const invoiceId = order.value.payment?.providerInvoiceId
@@ -121,7 +126,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
         return Result.serialize(
           Result.ok<PaymentRefresh, PaymentRefreshError>({ paymentStatus: 'pending' }),
         )
-      const confirmation = await confirmOrderPayment(params.id, {
+      const confirmation = await commerce.payments.confirmOrderPayment(params.id, {
         ...verified.value,
         method: 'qpay',
       })
@@ -142,10 +147,10 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
     async ({ body }) => {
       const verified = await verifyQPayCallback(body.payment_id)
       if (verified.status === 'error') return { ok: true }
-      const localPayment = await findQPayOrder(verified.value.invoiceId)
+      const localPayment = await commerce.payments.findQPayOrder(verified.value.invoiceId)
       if (!localPayment) return { ok: true }
       {
-        const confirmation = await confirmOrderPayment(localPayment.orderId, {
+        const confirmation = await commerce.payments.confirmOrderPayment(localPayment.orderId, {
           paymentId: verified.value.paymentId,
           amountMnt: verified.value.amountMnt,
           method: 'qpay',

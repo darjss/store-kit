@@ -11,7 +11,9 @@
     "./query-client": "./src/query-client.ts",
     "./query-options/cart": "./src/query-options/cart.ts",
     "./query-options/catalog": "./src/query-options/catalog.ts",
-    "./query-options/shopping": "./src/query-options/shopping.ts"
+    "./query-options/checkout": "./src/query-options/checkout.ts",
+    "./query-options/orders": "./src/query-options/orders.ts",
+    "./query-options/payments": "./src/query-options/payments.ts"
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",

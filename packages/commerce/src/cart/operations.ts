@@ -6,16 +6,11 @@ import type {
   ValidatedCartLine,
 } from '@store-kit/contracts'
 import { persistedCartItemsSchema } from '@store-kit/contracts/cart'
-import { findCartVariants, findCheckoutSettings } from '@store-kit/db/queries/shopping'
+import { query as dbQuery } from '@store-kit/db'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
 export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
-
-type CheckoutSettingsError = {
-  _tag: 'CheckoutSettingsNotFound'
-  message: string
-}
 
 const stockStatus = (quantity: number): StockStatus => {
   if (quantity === 0) return 'sold-out'
@@ -32,7 +27,7 @@ const invalidCart = (input: unknown) => ({
   })),
 })
 
-export const validateCart = async (input: unknown) => {
+const validate = async (input: unknown) => {
   if (Array.isArray(input) && input.length === 0) {
     return Result.err<ValidatedCart, CartValidationError>({
       _tag: 'CartEmpty',
@@ -54,7 +49,7 @@ export const validateCart = async (input: unknown) => {
     })
   }
 
-  const currentVariants = await findCartVariants(input)
+  const currentVariants = await dbQuery.cart.findVariants(input)
   const variantsById = new Map(currentVariants.map(variant => [variant.variantId, variant]))
   const corrections: CartCorrection[] = []
   const lines: ValidatedCartLine[] = []
@@ -118,12 +113,4 @@ export const validateCart = async (input: unknown) => {
   })
 }
 
-export const getCheckoutSettings = async () => {
-  const settings = await findCheckoutSettings()
-  return settings
-    ? Result.ok(settings)
-    : Result.err<NonNullable<typeof settings>, CheckoutSettingsError>({
-        _tag: 'CheckoutSettingsNotFound',
-        message: 'Төлбөрийн тохиргоо олдсонгүй.',
-      })
-}
+export const cartOperations = { validate }

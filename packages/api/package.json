@@ -14,6 +14,7 @@
     "elysia": "^1.4.29"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260721.1",
     "vite-plus": "catalog:"
   }
 }
