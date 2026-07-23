@@ -7,7 +7,5 @@ declare namespace Cloudflare {
     PUBLIC_APP_URL: string
     TELEGRAM_BOT_TOKEN: string
     TELEGRAM_CHAT_ID: string
-    TELEGRAM_WEBHOOK_SECRET: string
-    TELEGRAM_ADMIN_USER_ID: string
   }
 }

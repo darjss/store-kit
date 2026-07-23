@@ -1,6 +1,5 @@
 import { commerce } from '@store-kit/commerce'
-import { verifyQPayCallback, verifyQPayPayment } from '@store-kit/commerce/qpay'
-import { sendPaidOrderMessage } from '@store-kit/commerce/telegram'
+import { verifyQPayPayment } from '@store-kit/commerce/qpay'
 import { orderIdPattern } from '@store-kit/contracts/orders'
 import type { PrivateOrderError, PublicOrder } from '@store-kit/contracts/orders'
 import type {
@@ -141,28 +140,4 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
         { additionalProperties: true },
       ),
     },
-  )
-  .post(
-    '/webhooks/qpay',
-    async ({ body }) => {
-      const verified = await verifyQPayCallback(body.payment_id)
-      if (verified.status === 'error') return { ok: true }
-      const localPayment = await commerce.payments.findQPayOrder(verified.value.invoiceId)
-      if (!localPayment) return { ok: true }
-      {
-        const confirmation = await commerce.payments.confirmOrderPayment(localPayment.orderId, {
-          paymentId: verified.value.paymentId,
-          amountMnt: verified.value.amountMnt,
-          method: 'qpay',
-        })
-        if (confirmation.status === 'ok' && confirmation.value.newlyPaid) {
-          const label = confirmation.value.needsStaffAction
-            ? `ЯАРАЛТАЙ: үлдэгдэл хүрэлцэхгүй · ${localPayment.orderId}`
-            : localPayment.orderId
-          await sendPaidOrderMessage(label, localPayment.amountMnt)
-        }
-      }
-      return { ok: true }
-    },
-    { body: t.Object({ payment_id: t.String() }) },
   )

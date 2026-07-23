@@ -2,23 +2,53 @@ import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
 import ky from 'ky'
 
-export type TelegramError = { _tag: 'TelegramUnavailable'; message: string }
-const error = (): TelegramError => ({
-  _tag: 'TelegramUnavailable',
+import { parseTelegramActionResponse, parseTelegramMessageResponse } from './telegram-responses'
+import type { ParsedTelegramResponse } from './telegram-responses'
+
+export type TelegramError =
+  | { _tag: 'TelegramRequestFailed'; message: string }
+  | { _tag: 'TelegramResponseInvalid'; message: string }
+
+const requestError = (): TelegramError => ({
+  _tag: 'TelegramRequestFailed',
   message: 'Ажилтанд мэдэгдэл илгээж чадсангүй.',
 })
 
-const call = async <Value>(method: string, json: object, read: (value: unknown) => Value) => {
+const responseError = (): TelegramError => ({
+  _tag: 'TelegramResponseInvalid',
+  message: 'Ажилтанд мэдэгдэл илгээж чадсангүй.',
+})
+
+let client: ReturnType<typeof ky.create> | undefined
+
+const getClient = () => {
+  client ??= ky.create({
+    prefix: `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}`,
+    timeout: 10_000,
+    retry: { limit: 1, methods: ['get', 'post'] },
+    hooks: {
+      beforeError: [() => new Error('Telegram request failed.')],
+    },
+  })
+  return client
+}
+
+const call = async <Value>(
+  method: string,
+  json: object,
+  parse: (value: unknown) => ParsedTelegramResponse<Value>,
+) => {
+  let response: unknown
   try {
-    const response: unknown = await ky
-      .post(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { json })
-      .json()
-    if (!response || typeof response !== 'object' || !('ok' in response) || response.ok !== true)
-      throw new Error('Invalid provider response.')
-    return Result.ok<Value, TelegramError>(read(response))
+    response = await getClient().post(method, { json }).json()
   } catch {
-    return Result.err<Value, TelegramError>(error())
+    return Result.err<Value, TelegramError>(requestError())
   }
+
+  const parsed = parse(response)
+  if (parsed.status === 'invalid') return Result.err<Value, TelegramError>(responseError())
+  if (parsed.status === 'rejected') return Result.err<Value, TelegramError>(requestError())
+  return Result.ok<Value, TelegramError>(parsed.value)
 }
 
 export const sendBankClaimMessage = (input: {
@@ -42,14 +72,7 @@ export const sendBankClaimMessage = (input: {
         ],
       },
     },
-    value => {
-      if (!value || typeof value !== 'object') throw new Error('Invalid provider response.')
-      if (!('result' in value) || !value.result || typeof value.result !== 'object')
-        throw new Error('Invalid provider response.')
-      if (!('message_id' in value.result) || typeof value.result.message_id !== 'number')
-        throw new Error('Invalid provider response.')
-      return { messageId: String(value.result.message_id) }
-    },
+    parseTelegramMessageResponse,
   )
 
 export const sendPaidOrderMessage = (orderNumber: string, amountMnt: number) =>
@@ -59,11 +82,15 @@ export const sendPaidOrderMessage = (orderNumber: string, amountMnt: number) =>
       chat_id: env.TELEGRAM_CHAT_ID,
       text: `✅ Төлбөр төлөгдлөө\n${orderNumber} · ${amountMnt.toLocaleString('mn-MN')}₮`,
     },
-    () => undefined,
+    parseTelegramMessageResponse,
   )
 
 export const answerTelegramCallback = (callbackQueryId: string, text: string) =>
-  call('answerCallbackQuery', { callback_query_id: callbackQueryId, text }, () => undefined)
+  call(
+    'answerCallbackQuery',
+    { callback_query_id: callbackQueryId, text },
+    parseTelegramActionResponse,
+  )
 
 export const editTelegramMessage = (messageId: string, text: string) =>
   call(
@@ -73,5 +100,5 @@ export const editTelegramMessage = (messageId: string, text: string) =>
       message_id: Number(messageId),
       text,
     },
-    () => undefined,
+    parseTelegramActionResponse,
   )
