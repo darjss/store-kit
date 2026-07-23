@@ -8,6 +8,10 @@ import { QueryClientProvider, createMutation, createQuery } from '@tanstack/soli
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
 
 const money = new Intl.NumberFormat('mn-MN')
+const actionClass =
+  'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
+const statusBandClass =
+  'border-4 border-t-0 border-ink bg-paper-clean p-[clamp(1rem,3vw,2rem)] [&>h2]:font-display [&>h2]:text-[3rem] [&>h2]:leading-[0.8]'
 const orderStatusLabels: Record<string, string> = {
   new: 'Төлбөр хүлээж байна',
   confirmed: 'Баталгаажсан',
@@ -104,44 +108,50 @@ function StatusOwner(props: { orderId: string }) {
   return (
     <Switch>
       <Match when={!token()}>
-        <div class="private-empty">
-          <h1>Захиалга олдсонгүй.</h1>
+        <div class="grid min-h-[60vh] place-content-center text-center">
+          <h1 class="font-display text-[5rem] leading-[0.8]">Захиалга олдсонгүй.</h1>
           <p>Энэ холбоос бүрэн биш эсвэл хугацааны мэдээлэл алга.</p>
           <a href="/">Нүүр рүү буцах</a>
         </div>
       </Match>
       <Match when={status.isPending}>
-        <div class="status-loading">Захиалгыг шалгаж байна…</div>
+        <div class="grid min-h-[60vh] place-content-center text-center">
+          Захиалгыг шалгаж байна…
+        </div>
       </Match>
       <Match when={status.isError || status.data?.status === 'error'}>
-        <div class="private-empty">
-          <h1>Захиалга олдсонгүй.</h1>
+        <div class="grid min-h-[60vh] place-content-center text-center">
+          <h1 class="font-display text-[5rem] leading-[0.8]">Захиалга олдсонгүй.</h1>
           <p>Хувийн холбоосоо шалгана уу.</p>
           <a href="/">Нүүр рүү буцах</a>
         </div>
       </Match>
       <Match when={privateOrder()}>
         {order => (
-          <article class="order-status">
-            <header>
-              <p class="stamp">ЗАХИАЛГЫН ТӨЛӨВ</p>
-              <h1>{order().number}</h1>
+          <article class="mx-auto w-[min(900px,100%)]">
+            <header class="border-ink bg-orange border-[5px] p-4">
+              <p class="inline-block -rotate-2 border-3 border-current px-2 py-1 font-black">
+                ЗАХИАЛГЫН ТӨЛӨВ
+              </p>
+              <h1 class="font-display my-2 text-[clamp(4rem,10vw,6rem)] leading-[0.75] text-balance">
+                {order().number}
+              </h1>
               <strong>{orderStatusLabels[order().status] ?? 'Захиалгыг шалгаж байна'}</strong>
             </header>
-            <section class="status-band" aria-busy={claim.isPending || refresh.isPending}>
+            <section class={statusBandClass} aria-busy={claim.isPending || refresh.isPending}>
               <h2>Төлбөр</h2>
               <p>
                 {order().payment?.method === 'qpay' ? 'QPay' : 'Дансаар шилжүүлэх'} ·{' '}
                 {paymentStatusLabels[order().payment?.status ?? ''] ?? 'Төлөв тодорхойгүй'}
               </p>
               <Show when={paymentMessage()}>
-                <div class="inline-status" role="status">
+                <div class="border-warning my-4 border-3 p-3 font-extrabold" role="status">
                   {paymentMessage()}
                 </div>
               </Show>
               <Show when={order().payment?.method === 'qpay' && order().payment?.status !== 'paid'}>
                 <button
-                  class="slam-button"
+                  class={actionClass}
                   type="button"
                   disabled={refresh.isPending}
                   onClick={refreshPayment}
@@ -156,7 +166,7 @@ function StatusOwner(props: { orderId: string }) {
                 }
               >
                 <button
-                  class="slam-button"
+                  class={actionClass}
                   type="button"
                   disabled={claim.isPending}
                   onClick={claimPayment}
@@ -165,16 +175,22 @@ function StatusOwner(props: { orderId: string }) {
                 </button>
               </Show>
               <Show when={order().payment?.status === 'claimed'}>
-                <p class="stamp warning">БАТАЛГААЖУУЛАЛТ ХҮЛЭЭЖ БАЙНА</p>
+                <p class="text-warning inline-block -rotate-2 border-3 border-current px-2 py-1 font-black">
+                  БАТАЛГААЖУУЛАЛТ ХҮЛЭЭЖ БАЙНА
+                </p>
               </Show>
             </section>
-            <section class="status-band">
+            <section class={statusBandClass}>
               <h2>Бараа</h2>
               <For each={order().lines}>
                 {line => (
-                  <div class="order-line">
+                  <div class="border-ink grid grid-cols-[80px_1fr_auto] items-center gap-4 border-b-2 py-3 max-md:grid-cols-[64px_1fr] max-md:[&>strong]:col-2">
                     <Show when={line.imageR2Key}>
-                      <img src={mediaUrl(line.imageR2Key!)} alt="" />
+                      <img
+                        class="size-20 object-contain max-md:size-16"
+                        src={mediaUrl(line.imageR2Key!)}
+                        alt=""
+                      />
                     </Show>
                     <div>
                       <strong>{line.productName}</strong>
@@ -186,12 +202,12 @@ function StatusOwner(props: { orderId: string }) {
                   </div>
                 )}
               </For>
-              <div class="status-total">
+              <div class="flex justify-between pt-4 text-2xl">
                 <span>Нийт</span>
                 <strong>{money.format(order().totalMnt)} ₮</strong>
               </div>
             </section>
-            <section class="status-band">
+            <section class={statusBandClass}>
               <h2>Хүргэлт</h2>
               <p>
                 {order().district}, {order().khoroo}-р хороо
@@ -211,7 +227,14 @@ export function OrderStatus(props: { orderId: string }) {
   onMount(() => setMounted(true))
 
   return (
-    <Show when={mounted()} fallback={<div class="status-loading">Захиалгыг шалгаж байна…</div>}>
+    <Show
+      when={mounted()}
+      fallback={
+        <div class="grid min-h-[60vh] place-content-center text-center">
+          Захиалгыг шалгаж байна…
+        </div>
+      }
+    >
       {_mounted => {
         const client = createStorefrontQueryClient()
         return (

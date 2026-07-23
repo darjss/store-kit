@@ -21,6 +21,12 @@ const districts = [
 ] as const
 const money = new Intl.NumberFormat('mn-MN')
 const fieldErrorId = (name: string) => `${name}-error`
+const actionClass =
+  'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
+const formBandClass =
+  "mb-4 border-4 border-ink bg-paper-clean p-[clamp(1rem,2vw,2rem)] [&>h2]:font-display [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8] [&_label]:mb-4 [&_label]:grid [&_label]:gap-1 [&_label]:font-extrabold [&_input:not([type='radio'])]:min-h-12.5 [&_input:not([type='radio'])]:w-full [&_input:not([type='radio'])]:rounded-none [&_input:not([type='radio'])]:border-3 [&_input:not([type='radio'])]:border-ink [&_input:not([type='radio'])]:bg-white [&_input:not([type='radio'])]:p-3 [&_select]:min-h-12.5 [&_select]:w-full [&_select]:rounded-none [&_select]:border-3 [&_select]:border-ink [&_select]:bg-white [&_select]:p-3 [&_textarea]:min-h-25 [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-none [&_textarea]:border-3 [&_textarea]:border-ink [&_textarea]:bg-white [&_textarea]:p-3"
+const errorPanelClass =
+  'mb-4 border-4 border-warning bg-paper-clean p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:border-ink [&_button]:bg-acid [&_button]:px-3 [&_button]:py-2 [&_button]:font-black'
 
 type TransportError = { _tag: 'TransportError'; message: string }
 
@@ -129,17 +135,27 @@ function FormOwner() {
     <Switch>
       <Match when={created()}>
         {order => (
-          <section class="payment-result">
-            <p class="stamp success">ЗАХИАЛГА ҮҮСЛЭЭ</p>
+          <section class="border-ink bg-paper-clean [&>h1]:font-display mx-auto w-[min(760px,100%)] border-[5px] p-[clamp(1rem,4vw,3rem)] [&>h1]:text-[5rem] [&>h1]:leading-[0.8] max-md:[&>h1]:text-[3.8rem]">
+            <p class="text-success inline-block -rotate-2 border-3 border-current px-2 py-1 font-black">
+              ЗАХИАЛГА ҮҮСЛЭЭ
+            </p>
             <h1>{order().orderNumber}</h1>
             <Show when={qpayAction(order())}>
               {action => (
-                <div class="payment-block">
+                <div class="border-ink my-4 border-y-4 py-4">
                   <h2>QPay-аар төлөх</h2>
-                  <img class="qpay-qr" src={action().qrImage} alt="QPay төлбөрийн QR код" />
-                  <div class="bank-links">
+                  <img
+                    class="border-ink w-[min(320px,100%)] border-4"
+                    src={action().qrImage}
+                    alt="QPay төлбөрийн QR код"
+                  />
+                  <div class="mt-4 flex flex-wrap gap-2">
                     <For each={action().urls}>
-                      {bank => <a href={bank.link}>{bank.name}-аар нээх</a>}
+                      {bank => (
+                        <a class="bg-cobalt text-paper p-3 font-extrabold" href={bank.link}>
+                          {bank.name}-аар нээх
+                        </a>
+                      )}
                     </For>
                   </div>
                 </div>
@@ -147,7 +163,7 @@ function FormOwner() {
             </Show>
             <Show when={bankAction(order())}>
               {action => (
-                <div class="payment-block bank-instructions">
+                <div class="border-ink my-4 border-y-4 py-4 [&>strong]:block [&>strong]:text-[clamp(1.5rem,5vw,3rem)] [&>strong]:tracking-[0.04em]">
                   <h2>Дансаар шилжүүлэх</h2>
                   <p>{action().bankName}</p>
                   <strong>{action().accountNumber}</strong>
@@ -157,7 +173,7 @@ function FormOwner() {
               )}
             </Show>
             <a
-              class="slam-button"
+              class={actionClass}
               href={`/orders/${order().orderId}#token=${encodeURIComponent(order().statusToken)}`}
             >
               Захиалгын төлөв харах →
@@ -167,25 +183,27 @@ function FormOwner() {
       </Match>
       <Match when={true}>
         <Show when={cartItems().length === 0}>
-          <section class="empty-checkout">
-            <h1>Сагс хоосон.</h1>
+          <section class="grid min-h-[60vh] place-content-center text-center">
+            <h1 class="font-display text-[5rem] leading-[0.8]">Сагс хоосон.</h1>
             <a href="/products">Дэлгүүр рүү буцах →</a>
           </section>
         </Show>
         <Show when={cartItems().length > 0}>
           <form
-            class="checkout-form"
+            class="grid grid-cols-12 items-start gap-8 max-md:flex max-md:flex-col"
             aria-busy={checkout.isPending || validation.isFetching}
             onSubmit={event => {
               event.preventDefault()
               void form.handleSubmit()
             }}
           >
-            <div class="checkout-fields">
-              <h1>ЗАХИАЛГА</h1>
+            <div class="col-[1/8] max-md:w-full">
+              <h1 class="font-display text-[clamp(4rem,9vw,6rem)] leading-[0.75] max-md:text-[4.5rem]">
+                ЗАХИАЛГА
+              </h1>
               <Show when={error()?._tag === 'CartChanged'}>
-                <section class="correction-panel" id="cart-correction" tabIndex={-1}>
-                  <h2>Сагсаа засна уу</h2>
+                <section class={errorPanelClass} id="cart-correction" tabIndex={-1}>
+                  <h2 class="m-0">Сагсаа засна уу</h2>
                   <p>{error()?.message}</p>
                   <For each={error()?.corrections}>{correction => <p>{correction.message}</p>}</For>
                   <button type="button" onClick={openCart}>
@@ -194,26 +212,26 @@ function FormOwner() {
                 </section>
               </Show>
               <Show when={error()?._tag === 'CartEmpty'}>
-                <section class="inline-error" role="alert">
+                <section class={errorPanelClass} role="alert">
                   <strong>Сагс хоосон.</strong>
                   <p>{error()?.message}</p>
                   <a href="/products">Бараа сонгох →</a>
                 </section>
               </Show>
               <Show when={error()?._tag === 'InvalidCheckoutDetails'}>
-                <section class="inline-error" role="alert">
+                <section class={errorPanelClass} role="alert">
                   <strong>Мэдээллээ шалгана уу.</strong>
                   <p>{error()?.message}</p>
                 </section>
               </Show>
               <Show when={error()?._tag === 'TransportError'}>
-                <section class="inline-error" role="alert">
+                <section class={errorPanelClass} role="alert">
                   <strong>Холболт амжилтгүй.</strong>
                   <p>{error()?.message}</p>
                   <button type="submit">Дахин оролдох</button>
                 </section>
               </Show>
-              <section class="form-band">
+              <section class={formBandClass}>
                 <h2>Холбоо барих</h2>
                 <form.Field name="name">
                   {field => (
@@ -232,7 +250,10 @@ function FormOwner() {
                         onBlur={() => field().handleBlur()}
                         autocomplete="name"
                       />
-                      <small class="field-error" id={fieldErrorId('name')}>
+                      <small
+                        class="text-warning min-h-[1.2em] font-extrabold"
+                        id={fieldErrorId('name')}
+                      >
                         {fieldError('name')}
                       </small>
                     </label>
@@ -257,14 +278,17 @@ function FormOwner() {
                         placeholder="9911 2233"
                         autocomplete="tel"
                       />
-                      <small class="field-error" id={fieldErrorId('phone')}>
+                      <small
+                        class="text-warning min-h-[1.2em] font-extrabold"
+                        id={fieldErrorId('phone')}
+                      >
                         {fieldError('phone')}
                       </small>
                     </label>
                   )}
                 </form.Field>
               </section>
-              <section class="form-band">
+              <section class={formBandClass}>
                 <h2>Улаанбаатар хүргэлт</h2>
                 <form.Field name="district">
                   {field => (
@@ -298,7 +322,10 @@ function FormOwner() {
                           clearFieldError('khoroo')
                         }}
                       />
-                      <small class="field-error" id={fieldErrorId('khoroo')}>
+                      <small
+                        class="text-warning min-h-[1.2em] font-extrabold"
+                        id={fieldErrorId('khoroo')}
+                      >
                         {fieldError('khoroo')}
                       </small>
                     </label>
@@ -321,7 +348,10 @@ function FormOwner() {
                           clearFieldError('address')
                         }}
                       />
-                      <small class="field-error" id={fieldErrorId('address')}>
+                      <small
+                        class="text-warning min-h-[1.2em] font-extrabold"
+                        id={fieldErrorId('address')}
+                      >
                         {fieldError('address')}
                       </small>
                     </label>
@@ -340,13 +370,15 @@ function FormOwner() {
                   )}
                 </form.Field>
                 <Show when={error()?._tag === 'DeliveryUnavailable'}>
-                  <div class="inline-error">
+                  <div class={errorPanelClass}>
                     <strong>Хүргэлт боломжгүй.</strong>
                     <p>{error()?.message}</p>
                   </div>
                 </Show>
               </section>
-              <section class="form-band payment-choice">
+              <section
+                class={`${formBandClass} [&_[role=radiogroup]>label]:border-ink [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4`}
+              >
                 <h2>Төлбөр</h2>
                 <form.Field name="paymentMethod">
                   {field => (
@@ -373,7 +405,7 @@ function FormOwner() {
                   )}
                 </form.Field>
                 <Show when={error()?._tag === 'PaymentSetupFailed'}>
-                  <div class="inline-error">
+                  <div class={errorPanelClass}>
                     <p>{error()?.message}</p>
                     <button type="submit">Дахин оролдох</button>
                     <Show when={error()?.canUseBankTransfer}>
@@ -388,11 +420,11 @@ function FormOwner() {
                 </Show>
               </section>
             </div>
-            <aside class="order-summary">
-              <h2>Таны сагс</h2>
+            <aside class="border-ink bg-acid sticky top-4 col-[9/13] min-w-0 border-4 p-4 max-md:relative max-md:top-auto max-md:w-full">
+              <h2 class="font-display text-[3rem] leading-[0.8]">Таны сагс</h2>
               <For each={cartItems()}>
                 {item => (
-                  <div class="summary-line">
+                  <div class="border-ink flex flex-wrap justify-between gap-4 border-b-2 py-3">
                     <span>
                       {item.productName} × {item.quantity}
                     </span>
@@ -400,10 +432,12 @@ function FormOwner() {
                   </div>
                 )}
               </For>
-              <div class="summary-note">
-                Хүргэлтийн төлбөрийг сервер баталгаажуулж нийт дүнд нэмнэ.
-              </div>
-              <button class="slam-button" type="submit" disabled={checkout.isPending}>
+              <div class="py-4">Хүргэлтийн төлбөрийг сервер баталгаажуулж нийт дүнд нэмнэ.</div>
+              <button
+                class={`${actionClass} bg-ink text-paper w-full`}
+                type="submit"
+                disabled={checkout.isPending}
+              >
                 {checkout.isPending ? 'Баталгаажуулж байна…' : 'Захиалга үүсгэх →'}
               </button>
             </aside>
@@ -419,7 +453,12 @@ export function CheckoutForm() {
   onMount(() => setMounted(true))
 
   return (
-    <Show when={mounted()} fallback={<div class="status-loading">Сагсыг шалгаж байна…</div>}>
+    <Show
+      when={mounted()}
+      fallback={
+        <div class="grid min-h-[60vh] place-content-center text-center">Сагсыг шалгаж байна…</div>
+      }
+    >
       {_mounted => {
         const client = createStorefrontQueryClient()
         return (

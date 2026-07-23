@@ -14,16 +14,16 @@ const factLabels: Record<string, string> = { driverConfiguration: "Драйве�
 ---
 
 <Layout title={`${product.name} · Plugged`} description={product.shortDescription} publicPage>
-  <main id="main-content" class="product-detail poster-surface">
-    <div class="detail-title"><p>{product.brand?.name ?? "PLUGGED"} / {product.category?.name}</p><h1>{product.name}</h1><strong class="price">{money.format(firstPrice)} ₮-С</strong></div>
-    <div class="detail-grid">
-      <div class="detail-purchase"><ProductPurchase product={product} mediaBaseUrl={new URL(publicMediaBaseUrl, Astro.url).toString()} client:load /></div>
-      <div class="detail-info">
-        <div class="use-case-stamps">{product.useCases.map(item => <span>{useCaseLabels[item]}</span>)}</div>
-        <p class="detail-lede">{product.shortDescription}</p><p>{product.description}</p>
-        <div class="delivery-reassurance"><strong>УБ ХҮРГЭЛТ</strong><span>QPay / Дансаар</span><span>Төлбөрийн дараа үлдэгдэл баталгаажна</span></div>
+  <main id="main-content" class="pb-24 [background:url('/textures/paper-grain.avif')_repeat,var(--color-paper)] [background-blend-mode:multiply]">
+    <div class="relative border-b-[5px] border-ink px-[max(0.75rem,3vw)] pt-8 pb-4"><p>{product.brand?.name ?? "PLUGGED"} / {product.category?.name}</p><h1 class="m-0 max-w-[11ch] font-body text-[clamp(2.8rem,8vw,5.5rem)] leading-[0.92] font-black tracking-[-0.04em] text-balance max-md:text-[4.5rem] max-[340px]:text-[3.8rem]">{product.name}</h1><strong class="absolute right-[3vw] bottom-4 rotate-2 border-4 border-ink bg-acid p-3 font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums max-md:relative max-md:right-auto max-md:bottom-auto max-md:mt-[-0.5rem] max-md:inline-block">{money.format(firstPrice)} ₮-С</strong></div>
+    <div class="grid grid-cols-[7fr_5fr] max-md:flex max-md:flex-col">
+      <div class="min-w-0 border-r-[5px] border-ink max-md:border-r-0"><ProductPurchase product={product} mediaBaseUrl={new URL(publicMediaBaseUrl, Astro.url).toString()} client:load /></div>
+      <div class="p-[clamp(1rem,4vw,4rem)] max-md:p-4">
+        <div class="mb-8 flex flex-wrap gap-2">{product.useCases.map(item => <span class="-rotate-1 border-3 border-ink bg-acid p-2 font-black">{useCaseLabels[item]}</span>)}</div>
+        <p class="text-[clamp(1.4rem,2.5vw,2.2rem)] leading-[1.2] font-extrabold">{product.shortDescription}</p><p class="max-w-[65ch] text-pretty">{product.description}</p>
+        <div class="mt-12 grid border-y-4 border-ink py-4"><strong>УБ ХҮРГЭЛТ</strong><span>QPay / Дансаар</span><span>Төлбөрийн дараа үлдэгдэл баталгаажна</span></div>
       </div>
     </div>
-    <section class="facts-rip" aria-labelledby="facts-title"><h2 id="facts-title">ХЭРЭГТЭЙ БАРИМТ</h2><div>{Object.entries(product.details).map(([key, value]) => <dl><dt>{factLabels[key] ?? key}</dt><dd>{Array.isArray(value) ? value.join(" · ") : typeof value === "boolean" ? value ? "Тийм" : "Үгүй" : `${value}${key === "impedanceOhms" ? " Ω" : key === "weightGrams" ? " г" : ""}`}</dd></dl>)}</div></section>
+    <section class="-rotate-[0.5deg] border-y-[5px] border-ink bg-cobalt px-[max(1rem,3vw)] py-8 text-paper max-md:rotate-0" aria-labelledby="facts-title"><h2 class="font-display text-[4rem] leading-[0.8] max-md:text-[3.5rem]" id="facts-title">ХЭРЭГТЭЙ БАРИМТ</h2><div class="flex gap-4 overflow-x-auto">{Object.entries(product.details).map(([key, value]) => <dl class="m-0 min-w-45 border-2 border-paper p-3"><dt class="font-extrabold">{factLabels[key] ?? key}</dt><dd class="mt-1 ml-0">{Array.isArray(value) ? value.join(" · ") : typeof value === "boolean" ? value ? "Тийм" : "Үгүй" : `${value}${key === "impedanceOhms" ? " Ω" : key === "weightGrams" ? " г" : ""}`}</dd></dl>)}</div></section>
   </main>
 </Layout>

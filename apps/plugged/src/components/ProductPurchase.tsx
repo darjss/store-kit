@@ -5,6 +5,8 @@ import { animate } from 'motion'
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js'
 
 const money = new Intl.NumberFormat('mn-MN')
+const actionClass =
+  'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
 
 export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: string }) {
   const initial =
@@ -63,11 +65,15 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
   }
 
   return (
-    <section class="purchase-owner" aria-label="Барааны сонголт">
-      <div class="variant-stage" ref={element => (imageStage = element)}>
+    <section class="contents" aria-label="Барааны сонголт">
+      <div
+        class="bg-orange sticky top-0 grid min-h-[min(700px,72svh)] place-items-center overflow-clip max-md:relative max-md:min-h-[70svh]"
+        ref={element => (imageStage = element)}
+      >
         <Show when={image()}>
           {item => (
             <img
+              class="h-[90%] w-[90%] object-contain filter-[drop-shadow(0_6px_0_rgb(0_0_0/0.2))] max-md:w-[115%] max-md:max-w-none"
               src={imageUrl(item().r2Key)}
               alt={item().alt ?? props.product.name}
               fetchpriority="high"
@@ -75,14 +81,15 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
           )}
         </Show>
       </div>
-      <fieldset class="variant-options">
-        <legend>Сонголт</legend>
+      <fieldset class="bg-paper m-0 border-0 p-4">
+        <legend class="text-xl font-black">Сонголт</legend>
         <For each={props.product.variants}>
           {variant => (
             <label
+              class="border-ink has-focus-visible:outline-acid mb-2 grid min-h-14.5 cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 border-3 p-3 has-focus-visible:outline-4 has-focus-visible:outline-offset-3"
               classList={{
-                selected: variant.id === variantId(),
-                unavailable: variant.stockQuantity === 0,
+                'bg-acid': variant.id === variantId(),
+                'opacity-60 line-through': variant.stockQuantity === 0,
               }}
             >
               <input
@@ -94,7 +101,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
               />
               <span>{variant.name}</span>
               <strong>{money.format(variant.priceMnt)} ₮</strong>
-              <small>
+              <small class="col-2">
                 {variant.stockQuantity === 0
                   ? 'Дууссан'
                   : variant.stockQuantity <= 3
@@ -105,17 +112,19 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
           )}
         </For>
       </fieldset>
-      <div class="purchase-bar">
-        <div class="quantity" aria-label="Тоо ширхэг">
+      <div class="border-ink bg-paper-clean sticky bottom-0 z-10 flex min-w-0 gap-3 border-t-4 p-4 max-[340px]:flex-col max-md:bottom-[calc(68px+env(safe-area-inset-bottom))] max-md:flex-wrap max-md:p-2">
+        <div class="border-ink flex border-3 max-[340px]:self-start" aria-label="Тоо ширхэг">
           <button
+            class="bg-paper w-12 border-0 font-black max-md:w-11"
             type="button"
             onClick={() => setQuantity(value => Math.max(1, value - 1))}
             aria-label="Нэгээр хасах"
           >
             −
           </button>
-          <output>{quantity()}</output>
+          <output class="grid min-w-10 place-items-center font-black">{quantity()}</output>
           <button
+            class="bg-paper w-12 border-0 font-black max-md:w-11"
             type="button"
             disabled={quantity() >= maximumQuantity()}
             onClick={() => setQuantity(value => Math.min(maximumQuantity(), value + 1))}
@@ -125,7 +134,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
           </button>
         </div>
         <button
-          class="slam-button"
+          class={`${actionClass} flex-1 max-md:p-2 max-md:text-[0.82rem]`}
           type="button"
           disabled={!selected() || selected()!.stockQuantity === 0}
           onClick={add}
