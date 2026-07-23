@@ -5,7 +5,7 @@ import type { ProductListFilters } from '@store-kit/db/schemas'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
-import { createProductNotFound } from '../errors'
+import { createProductNotFound } from '~/errors'
 
 export type ProductDetail = NonNullable<
   Awaited<ReturnType<typeof database.query.catalog.findPublishedProductBySlug>>

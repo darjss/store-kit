@@ -2,7 +2,7 @@ import { commerce } from '@store-kit/commerce'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
-import { publicImage } from '../media'
+import { publicImage } from '~/media'
 
 const slugPattern = '^[a-z0-9]+(?:-[a-z0-9]+)*$'
 

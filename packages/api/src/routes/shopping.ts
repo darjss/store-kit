@@ -1,13 +1,18 @@
 import { commerce } from '@store-kit/commerce'
 import { checkoutInputSchema } from '@store-kit/contracts/checkout'
 import { orderIdPattern } from '@store-kit/contracts/orders'
-import type { PrivateOrderError, PublicOrder } from '@store-kit/contracts/orders'
-import type { BankTransferClaim, BankTransferClaimError } from '@store-kit/contracts/payments'
+import type { PublicOrder } from '@store-kit/contracts/orders'
+import type {
+  BankTransferClaim,
+  BankTransferClaimError,
+  PaymentRefresh,
+  PaymentRefreshError,
+} from '@store-kit/contracts/payments'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
-import { nullablePublicImage } from '../media'
-import { contractBody } from '../typebox-contract'
+import { nullablePublicImage } from '~/media'
+import { contractBody } from '~/typebox-contract'
 
 export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .onAfterHandle(({ set }) => {
@@ -22,61 +27,55 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   )
   .get(
     '/orders/:id/status',
-    async ({ params, headers, request }) => {
-      const result = await commerce.orders.getPrivateStatus(
-        params.id,
-        headers['x-order-token'] ?? '',
-      )
-      if (result.status === 'error')
-        return Result.serialize(Result.err<PublicOrder, PrivateOrderError>(result.error))
-
-      const order = result.value
-      return Result.serialize(
-        Result.ok<PublicOrder, PrivateOrderError>({
-          id: order.id,
-          number: order.number,
-          status: order.status,
-          customerName: order.customerName,
-          customerPhone: order.customerPhone,
-          district: order.district,
-          khoroo: order.khoroo,
-          address: order.address,
-          deliveryNotes: order.deliveryNotes,
-          subtotalMnt: order.subtotalMnt,
-          deliveryFeeMnt: order.deliveryFeeMnt,
-          totalMnt: order.totalMnt,
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt,
-          lines: order.lines.map(line => ({
-            productName: line.productName,
-            variantName: line.variantName,
-            sku: line.sku,
-            options: line.options,
-            image: nullablePublicImage(
-              {
-                r2Key: line.imageR2Key,
-                width: line.imageWidth,
-                height: line.imageHeight,
-                alt: line.imageAlt,
-              },
-              request,
-            ),
-            unitPriceMnt: line.unitPriceMnt,
-            quantity: line.quantity,
-            lineTotalMnt: line.lineTotalMnt,
-          })),
-          payment: order.payment
-            ? {
-                method: order.payment.method,
-                status: order.payment.status,
-                amountMnt: order.payment.amountMnt,
-                claimedAt: order.payment.claimedAt,
-                paidAt: order.payment.paidAt,
-              }
-            : null,
-        }),
-      )
-    },
+    async ({ params, headers, request }) =>
+      Result.serialize(
+        (await commerce.orders.getPrivateStatus(params.id, headers['x-order-token'] ?? '')).map(
+          order =>
+            ({
+              id: order.id,
+              number: order.number,
+              status: order.status,
+              customerName: order.customerName,
+              customerPhone: order.customerPhone,
+              district: order.district,
+              khoroo: order.khoroo,
+              address: order.address,
+              deliveryNotes: order.deliveryNotes,
+              subtotalMnt: order.subtotalMnt,
+              deliveryFeeMnt: order.deliveryFeeMnt,
+              totalMnt: order.totalMnt,
+              createdAt: order.createdAt,
+              updatedAt: order.updatedAt,
+              lines: order.lines.map(line => ({
+                productName: line.productName,
+                variantName: line.variantName,
+                sku: line.sku,
+                options: line.options,
+                image: nullablePublicImage(
+                  {
+                    r2Key: line.imageR2Key,
+                    width: line.imageWidth,
+                    height: line.imageHeight,
+                    alt: line.imageAlt,
+                  },
+                  request,
+                ),
+                unitPriceMnt: line.unitPriceMnt,
+                quantity: line.quantity,
+                lineTotalMnt: line.lineTotalMnt,
+              })),
+              payment: order.payment
+                ? {
+                    method: order.payment.method,
+                    status: order.payment.status,
+                    amountMnt: order.payment.amountMnt,
+                    claimedAt: order.payment.claimedAt,
+                    paidAt: order.payment.paidAt,
+                  }
+                : null,
+            }) satisfies PublicOrder,
+        ),
+      ),
     {
       params: t.Object({ id: t.String({ pattern: orderIdPattern }) }),
       headers: t.Object(
@@ -102,7 +101,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .post(
     '/orders/:id/payment/refresh',
     async ({ params, headers }) =>
-      Result.serialize(
+      Result.serialize<PaymentRefresh, PaymentRefreshError>(
         await commerce.payments.refreshQPayPayment(params.id, headers['x-order-token'] ?? ''),
       ),
     {

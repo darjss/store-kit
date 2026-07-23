@@ -8,6 +8,7 @@ import { cartValidationInputsSchema } from '@store-kit/contracts/cart'
 import type { CartValidationInput } from '@store-kit/contracts/cart'
 import { database } from '@store-kit/db'
 import { Result } from 'better-result'
+import { match } from 'dismatch'
 import { Value } from 'typebox/value'
 
 import {
@@ -18,15 +19,22 @@ import {
   insufficientStock,
   invalidCart,
   missingVariant,
-} from '../errors'
+} from '~/errors'
 
 export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
 
-const stockStatus = (quantity: number): StockStatus => {
-  if (quantity === 0) return 'sold-out'
-  if (quantity <= 3) return 'low-stock'
-  return 'in-stock'
-}
+const stockStatus = (quantity: number): StockStatus =>
+  match(
+    quantity === 0
+      ? { type: 'sold-out' as const }
+      : quantity <= 3
+        ? { type: 'low-stock' as const }
+        : { type: 'in-stock' as const },
+  )({
+    'sold-out': () => 'sold-out',
+    'low-stock': () => 'low-stock',
+    'in-stock': () => 'in-stock',
+  })
 
 type ServerValidatedCartLine = Omit<ValidatedCartLine, 'image'> & {
   imageR2Key: string | null
