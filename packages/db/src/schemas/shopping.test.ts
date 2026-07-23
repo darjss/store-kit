@@ -3,6 +3,7 @@ import { expect, test } from 'vite-plus/test'
 
 import {
   cartLineInputsSchema,
+  checkoutInputSchema,
   insertOrderLineSchema,
   persistedCartItemSchema,
   insertOrderSchema,
@@ -60,6 +61,27 @@ test('cart input limits line count and quantity', () => {
   expect(Value.Check(cartLineInputsSchema, [{ variantId: 'variant-1', quantity: 1 }])).toBe(true)
   expect(Value.Check(cartLineInputsSchema, [{ variantId: 'variant-1', quantity: 11 }])).toBe(false)
   expect(Value.Check(cartLineInputsSchema, [])).toBe(false)
+})
+
+test('checkout input accepts Ulaanbaatar delivery and rejects other districts', () => {
+  const checkout = {
+    items: [{ variantId: 'variant-1', quantity: 1 }],
+    customer: { name: 'Бат', phone: '99112233' },
+    delivery: {
+      district: 'Баянзүрх',
+      khoroo: '1-р хороо',
+      address: 'Энхтайвны өргөн чөлөө',
+    },
+    paymentMethod: 'bank_transfer',
+  }
+
+  expect(Value.Check(checkoutInputSchema, checkout)).toBe(true)
+  expect(
+    Value.Check(checkoutInputSchema, {
+      ...checkout,
+      delivery: { ...checkout.delivery, district: 'Дархан' },
+    }),
+  ).toBe(false)
 })
 
 test('persisted cart items contain only the allowed display snapshot', () => {
