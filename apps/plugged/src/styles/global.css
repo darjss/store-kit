@@ -1,1 +1,326 @@
 @import '@store-kit/ui/styles.css';
+@import '@fontsource-variable/golos-text';
+
+@font-face {
+  font-family: 'Outward Block';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('/fonts/outward-block.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Outward Borders';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('/fonts/outward-borders.woff2') format('woff2');
+}
+
+:root {
+  --paper: oklch(0.94 0.015 82);
+  --paper-clean: oklch(0.985 0.004 82);
+  --ink: oklch(0.15 0.012 40);
+  --orange: oklch(0.68 0.22 38);
+  --acid: oklch(0.88 0.22 122);
+  --cobalt: oklch(0.43 0.22 264);
+  --warning: oklch(0.62 0.24 27);
+  --success: oklch(0.47 0.15 145);
+
+  --font-display: 'Outward Block', Impact, sans-serif;
+  --font-display-outline: 'Outward Borders', Impact, sans-serif;
+  --font-body: 'Golos Text Variable', Arial, sans-serif;
+  --ease-slam: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --z-base: 0;
+  --z-collage: 10;
+  --z-sticky: 20;
+  --z-navigation: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-clean);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-clean);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper-clean);
+  --secondary: var(--orange);
+  --secondary-foreground: var(--ink);
+  --muted: oklch(0.88 0.018 82);
+  --muted-foreground: oklch(0.36 0.018 40);
+  --accent: var(--acid);
+  --accent-foreground: var(--ink);
+  --destructive: var(--warning);
+  --border: var(--ink);
+  --input: var(--ink);
+  --ring: var(--cobalt);
+  --radius: 0;
+}
+
+html {
+  min-width: 20rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100svh;
+  margin: 0;
+  overflow-x: clip;
+  background:
+    url('/textures/paper-grain.avif') repeat,
+    var(--paper);
+  background-blend-mode: multiply;
+  color: var(--ink);
+  font: 400 1rem / 1.5 var(--font-body);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img,
+picture,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.18em;
+}
+
+:focus-visible {
+  outline: 3px solid var(--cobalt);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--acid);
+  color: var(--ink);
+}
+
+.poster-surface {
+  background:
+    url('/textures/paper-grain.avif') repeat,
+    var(--paper);
+  background-blend-mode: multiply;
+}
+
+.poster-type {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 13vw, 6rem);
+  font-weight: 400;
+  line-height: 0.72;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.poster-type--outline {
+  font-family: var(--font-display-outline);
+}
+
+.price {
+  font: 900 clamp(1.4rem, 4vw, 2.5rem) / 0.9 var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.page-rail {
+  --gutter: clamp(0.75rem, 2.4vw, 2.25rem);
+  display: grid;
+  grid-template-columns:
+    [full-start] minmax(var(--gutter), 1fr)
+    [content-start] repeat(12, minmax(0, 6rem))
+    [content-end] minmax(var(--gutter), 1fr)
+    [full-end];
+}
+
+.page-rail > * {
+  grid-column: content;
+  min-width: 0;
+}
+
+.page-rail > .full-bleed {
+  grid-column: full;
+}
+
+.poster-collage {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+}
+
+.product-cutout {
+  width: clamp(18rem, 48vw, 52rem);
+  max-width: none;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 0 rgb(0 0 0 / 20%));
+}
+
+.poster-decoration {
+  position: absolute;
+  z-index: var(--z-collage);
+  pointer-events: none;
+  user-select: none;
+}
+
+.poster-tape {
+  width: min(32rem, 64vw);
+  height: auto;
+}
+
+.stock-stamp {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0.4rem 0.7rem;
+  border: 3px solid currentColor;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.stock-stamp[data-stock='in-stock'] {
+  background: var(--acid);
+  color: var(--ink);
+}
+
+.stock-stamp[data-stock='low-stock'] {
+  background: var(--orange);
+  color: var(--ink);
+}
+
+.stock-stamp[data-stock='sold-out'] {
+  background: var(--ink);
+  color: var(--paper-clean);
+  text-decoration: line-through;
+  text-decoration-thickness: 0.18em;
+}
+
+.ticker {
+  overflow: hidden;
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: plugged-ticker 22s linear infinite;
+}
+
+.ticker:hover .ticker-track,
+.ticker:focus-within .ticker-track {
+  animation-play-state: paused;
+}
+
+@keyframes plugged-ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.z-button,
+.z-input,
+.z-native-select,
+.z-textarea,
+.z-radio-group-item {
+  border-width: 2px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.z-button,
+.z-input,
+.z-native-select {
+  min-height: 3rem;
+}
+
+.z-button {
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.z-dialog-content,
+.z-sheet-content,
+.z-alert,
+.z-empty,
+.z-command,
+.z-command-dialog {
+  border-radius: 0 !important;
+}
+
+.z-dialog-overlay,
+.z-sheet-overlay {
+  z-index: var(--z-modal-backdrop);
+  background: rgb(0 0 0 / 62%);
+  backdrop-filter: none;
+}
+
+.z-dialog-content,
+.z-sheet-content {
+  z-index: var(--z-modal);
+  border: 3px solid var(--ink);
+  box-shadow: none;
+}
+
+.z-sheet-overlay {
+  transition-duration: 180ms;
+}
+
+.z-sheet-content {
+  transition-duration: 280ms;
+  transition-timing-function: var(--ease-slam);
+}
+
+@media (max-width: 47.999rem) {
+  .page-rail {
+    grid-template-columns:
+      [full-start] minmax(0, var(--gutter))
+      [content-start] repeat(4, minmax(0, 1fr))
+      [content-end] minmax(0, var(--gutter))
+      [full-end];
+  }
+
+  .z-sheet-content[data-side='right'],
+  .z-sheet-content[data-side='left'] {
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    height: min(100svh, 100%);
+    border: 0;
+    border-top: 3px solid var(--ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .ticker-track {
+    transform: none;
+  }
+
+  .ticker-copy[aria-hidden='true'] {
+    display: none;
+  }
+}
