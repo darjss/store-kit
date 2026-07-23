@@ -1,8 +1,10 @@
+import { TrashBinTrash } from '@solar-icons/solid/Outline'
 import { Cart } from '@store-kit/storefront/cart/components'
 import {
   cartItemCount,
   cartItems,
   isCartOpen,
+  openCart,
   refreshCartItemSnapshots,
   removeCartItem,
   setCartItemQuantity,
@@ -20,6 +22,8 @@ import {
   DialogDescription,
   DialogTitle,
   DialogTrigger,
+  Button,
+  Input,
   Sheet,
 } from '@store-kit/ui'
 import { QueryClientProvider } from '@tanstack/solid-query'
@@ -50,11 +54,16 @@ const errorPanelClass =
   'mb-4 border-4 border-warning bg-paper-clean p-4 [&_button]:min-h-11 [&_button]:cursor-pointer [&_button]:border-3 [&_button]:border-ink [&_button]:bg-acid [&_button]:px-3 [&_button]:py-2 [&_button]:font-black'
 const searchPromptClass = 'm-0 grid min-h-48 place-items-center text-center text-xl font-extrabold'
 
-function Search() {
-  const [open, setOpen] = createSignal(false)
+function Search(props: { initialOpen: boolean }) {
+  const [open, setOpen] = createSignal(props.initialOpen)
   const [queryText, setQueryText] = createSignal('')
   const [debouncedQuery, setDebouncedQuery] = createSignal('')
   const [input, setInput] = createSignal<HTMLInputElement>()
+  let trigger: HTMLButtonElement | undefined = undefined
+
+  onMount(() => {
+    if (props.initialOpen) requestAnimationFrame(() => input()?.focus())
+  })
 
   createEffect(() => {
     const value = queryText().trim()
@@ -67,9 +76,14 @@ function Search() {
     enabled: debouncedQuery().length > 1,
   }))
 
+  const setDialogOpen = (value: boolean) => {
+    setOpen(value)
+    if (!value) requestAnimationFrame(() => trigger?.focus())
+  }
+
   return (
-    <Dialog open={open()} onOpenChange={setOpen}>
-      <DialogTrigger class={navTriggerClass}>
+    <Dialog open={open()} onOpenChange={setDialogOpen}>
+      <DialogTrigger class={navTriggerClass} ref={element => (trigger = element)}>
         <StoreIcon name="search" size={24} />
         <small>Хайх</small>
       </DialogTrigger>
@@ -103,9 +117,9 @@ function Search() {
         >
           <span class="sr-only">Бараа хайх</span>
           <StoreIcon name="search" size={30} />
-          <input
+          <Input
             ref={setInput}
-            class="text-ink placeholder:text-ink/75 min-w-0 border-0 bg-transparent text-[clamp(1.5rem,5vw,3rem)] font-black outline-none"
+            class="text-ink placeholder:text-ink/75 min-w-0 rounded-none border-0 bg-transparent text-[clamp(1.5rem,5vw,3rem)] font-black shadow-none outline-none"
             id="store-search"
             value={queryText()}
             onInput={event => setQueryText(event.currentTarget.value)}
@@ -173,7 +187,7 @@ function Search() {
   )
 }
 
-function Chrome() {
+function Chrome(props: { initialPanel: 'search' | 'cart' }) {
   const validation = useQueryResult(() => ({
     ...cartQuery.validate([...cartItems()]),
     enabled: cartItems().length > 0 && isCartOpen(),
@@ -183,6 +197,8 @@ function Chrome() {
   let correctionHeading: HTMLHeadingElement | undefined = undefined
 
   onMount(() => {
+    if (props.initialPanel === 'cart') openCart()
+
     const handler = () => {
       setTransportMessage('Сүлжээ тасалдлаа. Дахин оролдоно уу.')
       window.setTimeout(() => setTransportMessage(''), 4000)
@@ -242,7 +258,7 @@ function Chrome() {
           <StoreIcon name="shop" size={24} />
           <small>Дэлгүүр</small>
         </a>
-        <Search />
+        <Search initialOpen={props.initialPanel === 'search'} />
         <Sheet.Trigger class={navTriggerClass}>
           <span aria-hidden="true">
             <StoreIcon name="cart" size={24} />
@@ -289,9 +305,9 @@ function Chrome() {
           <Show when={validation.isError}>
             <div class={errorPanelClass} role="alert">
               <p>Сагсыг шалгаж чадсангүй.</p>
-              <button type="button" onClick={() => void validation.refetch()}>
+              <Button type="button" variant="outline" onClick={() => void validation.refetch()}>
                 Дахин шалгах
-              </button>
+              </Button>
             </div>
           </Show>
           <div>
@@ -345,49 +361,57 @@ function Chrome() {
                               correction.availableQuantity > 0
                             }
                           >
-                            <button
+                            <Button
                               type="button"
+                              variant="outline"
                               onClick={() =>
                                 correction._tag === 'InsufficientStock' &&
                                 setCartItemQuantity(item.variantId, correction.availableQuantity)
                               }
                             >
                               Үлдэгдэлд тааруулах
-                            </button>
+                            </Button>
                           </Show>
                         </div>
                       )}
                     </For>
-                    <div class="[&_button]:border-ink [&_button]:bg-paper-clean mt-3 flex flex-wrap items-center gap-1 [&_button]:min-h-11 [&_button]:min-w-11 [&_button]:border-2 [&_output]:min-w-10 [&_output]:text-center">
-                      <button
+                    <div class="[&_button]:border-ink [&_button]:bg-paper-clean mt-3 flex flex-wrap items-center gap-1 [&_button]:min-h-11 [&_button]:min-w-11 [&_button]:rounded-none [&_button]:border-2 [&_output]:min-w-10 [&_output]:text-center">
+                      <Button
                         type="button"
+                        variant="outline"
                         disabled={correctionsFor(item.variantId).some(
                           item => item._tag === 'InactiveVariant' || item._tag === 'MissingVariant',
                         )}
                         onClick={() =>
                           setCartItemQuantity(item.variantId, Math.max(1, item.quantity - 1))
                         }
+                        aria-label={`${item.productName} тоог нэгээр хасах`}
                       >
                         −
-                      </button>
+                      </Button>
                       <output>{item.quantity}</output>
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
                         disabled={
                           item.quantity >= 10 ||
                           correctionsFor(item.variantId).some(item => item._tag !== 'PriceChanged')
                         }
                         onClick={() => setCartItemQuantity(item.variantId, item.quantity + 1)}
+                        aria-label={`${item.productName} тоог нэгээр нэмэх`}
                       >
                         +
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
-                        class="text-warning ml-auto"
+                        variant="outline"
+                        class="text-warning ml-auto min-w-24 gap-2 px-3"
                         onClick={() => removeCartItem(item.variantId)}
+                        aria-label={`${item.productName} сагснаас хасах`}
                       >
-                        Хасах
-                      </button>
+                        <TrashBinTrash aria-hidden="true" size={20} />
+                        <span>Хасах</span>
+                      </Button>
                     </div>
                   </div>
                 </article>
@@ -423,11 +447,11 @@ function Chrome() {
   )
 }
 
-export default function StoreChromeInteractive() {
+export default function StoreChromeInteractive(props: { initialPanel: 'search' | 'cart' }) {
   const client = createStorefrontQueryClient()
   return (
     <QueryClientProvider client={client}>
-      <Chrome />
+      <Chrome initialPanel={props.initialPanel} />
     </QueryClientProvider>
   )
 }

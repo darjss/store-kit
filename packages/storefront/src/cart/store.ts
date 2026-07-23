@@ -121,6 +121,7 @@ export function clearCart() {
 
 export function openCart() {
   setIsCartOpen(true)
+  if (!isServer) window.dispatchEvent(new CustomEvent('storefront:cart-opened'))
 }
 
 export function closeCart() {

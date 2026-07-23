@@ -250,7 +250,11 @@ function FormOwner() {
             noValidate
             onSubmit={event => {
               event.preventDefault()
-              void form.handleSubmit()
+              const formElement = event.currentTarget
+              void form.handleSubmit().then(() => {
+                formElement.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+                return undefined
+              })
             }}
           >
             <div class="col-[1/8] max-md:w-full">

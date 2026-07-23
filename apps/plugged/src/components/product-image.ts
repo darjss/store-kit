@@ -18,7 +18,11 @@ export const productImageLayouts = {
     breakpoints: [320, 480, 640, 800],
     sizes: '(max-width: 767px) 50vw, 45vw',
   },
-  listing: {
+  listingHalf: {
+    breakpoints: [240, 320, 480, 640, 800],
+    sizes: '(max-width: 767px) 50vw, 45vw',
+  },
+  listingFull: {
     breakpoints: [320, 480, 640, 800],
     sizes: '(max-width: 767px) 100vw, 45vw',
   },

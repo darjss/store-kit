@@ -1,7 +1,6 @@
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
 import type { PublicOrder } from '@store-kit/contracts/orders'
 import { formatMnt } from '@store-kit/storefront/format'
-import { mediaUrl } from '@store-kit/storefront/media'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { orderQuery } from '@store-kit/storefront/query-options/orders'
 import { paymentMutation } from '@store-kit/storefront/query-options/payments'
@@ -14,6 +13,8 @@ import {
 import { privateOrderStorageKey } from '@store-kit/storefront/storage'
 import { QueryClientProvider, createMutation } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
+
+import { ProductImage } from './ProductImage'
 
 const actionClass =
   'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
@@ -152,6 +153,7 @@ function StatusOwner(props: { orderId: string }) {
               </Show>
               <Show when={shouldPollOrderStatus(order())}>
                 <button
+                  class={`${actionClass} mr-2`}
                   type="button"
                   disabled={status.isFetching}
                   onClick={() => void status.refetch()}
@@ -195,12 +197,25 @@ function StatusOwner(props: { orderId: string }) {
               <For each={order().lines}>
                 {line => (
                   <div class="border-ink grid grid-cols-[80px_1fr_auto] items-center gap-4 border-b-2 py-3 max-md:grid-cols-[64px_1fr] max-md:[&>strong]:col-2">
-                    <Show when={line.imageR2Key}>
-                      <img
-                        class="size-20 object-contain max-md:size-16"
-                        src={mediaUrl(line.imageR2Key!)}
-                        alt=""
-                      />
+                    <Show
+                      when={
+                        line.imageR2Key && line.imageWidth && line.imageHeight && line.imageAlt
+                          ? {
+                              r2Key: line.imageR2Key,
+                              width: line.imageWidth,
+                              height: line.imageHeight,
+                              alt: line.imageAlt,
+                            }
+                          : undefined
+                      }
+                    >
+                      {image => (
+                        <ProductImage
+                          class="size-20 object-contain max-md:size-16"
+                          image={image()}
+                          layout="thumbnail"
+                        />
+                      )}
                     </Show>
                     <div>
                       <strong>{line.productName}</strong>

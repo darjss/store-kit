@@ -62,12 +62,29 @@ const priceOf = (product: (typeof products)[number] | undefined) => product?.var
     <section class="grid grid-cols-[1.3fr_0.9fr_1.1fr] border-y-[5px] border-ink max-md:grid-cols-1"><a class="flex min-h-55 flex-col justify-between border-r-4 border-ink bg-orange p-4 no-underline max-md:min-h-38 max-md:border-r-0 max-md:border-b-4" href="/products?category=in-ear-monitors"><span class="font-display text-8xl leading-[0.7] max-md:text-[5rem]">IEM</span><strong>Чихэвч / эхний сонголт</strong></a><a class="flex min-h-55 flex-col justify-between border-r-4 border-ink bg-cobalt p-4 text-paper no-underline max-md:min-h-38 max-md:border-r-0 max-md:border-b-4" href="/products?category=portable-audio"><span class="font-display text-8xl leading-[0.7] max-md:text-[5rem]">DAC</span><strong>Утаснаас цэвэр гаралт</strong></a><a class="flex min-h-55 flex-col justify-between bg-acid p-4 no-underline max-md:min-h-38" href="/products?category=cables"><span class="font-display text-8xl leading-[0.7] max-md:text-[5rem]">CABLE</span><strong>Солих / холбох</strong></a></section>
   </main>
   <script>
-    import { animate, stagger } from "motion";
-
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      animate("[data-wall-block]", { clipPath: ["inset(0 100% 0 0)", "inset(0 0 0 0)"] }, { duration: .24, ease: [0.16, 1, 0.3, 1] });
-      animate("[data-wall-lead] img", { transform: ["translateY(32px) rotate(-9deg)", "translateY(0) rotate(-5deg)"] }, { duration: .32, delay: .18, ease: [0.16, 1, 0.3, 1] });
-      animate("[data-wall-copy] strong, [data-stock-stamp]", { scale: [1.12, 1] }, { duration: .16, delay: stagger(.055, { start: .42 }) });
+      const easing = "cubic-bezier(0.16, 1, 0.3, 1)";
+      document.querySelectorAll("[data-wall-block]").forEach(element =>
+        element.animate(
+          [{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }],
+          { duration: 240, easing },
+        ),
+      );
+      document.querySelector("[data-wall-lead] img")?.animate(
+        [
+          { translate: "0 32px", rotate: "-9deg" },
+          { translate: "0 0", rotate: "-5deg" },
+        ],
+        { duration: 320, delay: 180, easing, fill: "backwards" },
+      );
+      document.querySelectorAll("[data-wall-copy] strong, [data-stock-stamp]").forEach((element, index) =>
+        element.animate([{ scale: 1.12 }, { scale: 1 }], {
+          duration: 160,
+          delay: 420 + index * 55,
+          easing,
+          fill: "backwards",
+        }),
+      );
     }
   </script>
 </Layout>

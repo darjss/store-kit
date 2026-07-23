@@ -3,7 +3,6 @@ import type { ProductDetail } from '@store-kit/commerce/catalog'
 import { addCartItem, openCart } from '@store-kit/storefront/cart/store'
 import { formatMnt } from '@store-kit/storefront/format'
 import { clampPurchaseQuantity, maximumPurchaseQuantity } from '@store-kit/storefront/purchase'
-import { animate } from 'motion'
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js'
 
 import { ProductImage } from './ProductImage'
@@ -28,11 +27,18 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
   })
   let imageStage: HTMLDivElement | undefined = undefined
 
-  onMount(() => {
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!reduced && imageStage)
-      animate(imageStage, { opacity: [0, 1], scale: [1.025, 1] }, { duration: 0.2 })
-  })
+  const animateImageStage = () => {
+    if (!imageStage || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    imageStage.animate(
+      [
+        { opacity: 0, transform: 'scale(1.025)' },
+        { opacity: 1, transform: 'scale(1)' },
+      ],
+      { duration: 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+    )
+  }
+
+  onMount(animateImageStage)
 
   createEffect(() => {
     const current = quantity()
@@ -47,9 +53,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
 
   const chooseVariant = (id: string) => {
     setVariantId(id)
-    if (imageStage && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      animate(imageStage, { opacity: [0, 1], scale: [1.025, 1] }, { duration: 0.2 })
-    }
+    animateImageStage()
   }
 
   const add = () => {
@@ -75,7 +79,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
   return (
     <section class="contents" aria-label="Барааны сонголт">
       <div
-        class="bg-orange sticky top-0 grid min-h-[min(700px,72svh)] place-items-center overflow-clip max-md:relative max-md:min-h-[70svh]"
+        class="bg-orange sticky top-0 grid min-h-[min(700px,72svh)] place-items-center overflow-clip max-md:relative max-md:min-h-[52svh]"
         ref={element => (imageStage = element)}
       >
         <Show when={image()}>
@@ -106,6 +110,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
                 name="variant"
                 value={variant.id}
                 checked={variant.id === variantId()}
+                disabled={variant.stockQuantity === 0}
                 onChange={() => chooseVariant(variant.id)}
               />
               <span>{variant.name}</span>
