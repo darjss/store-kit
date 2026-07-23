@@ -70,7 +70,7 @@ function StatusOwner(props: { orderId: string }) {
         setPaymentMessage(`Одоогийн төлөв: ${paymentStatusLabel(paymentStatus)}`)
         await status.refetch()
       } else {
-        setPaymentMessage(`${failure.message || 'Мэдэгдэл илгээж чадсангүй.'} Дахин оролдоно уу.`)
+        setPaymentMessage(failure.message || 'Мэдэгдэл илгээж чадсангүй. Дахин оролдоно уу.')
       }
     } catch {
       setPaymentMessage('Сүлжээний алдаа гарлаа. Дахин оролдоно уу.')

@@ -246,7 +246,8 @@ function FormOwner() {
         <Show when={cartItems().length > 0}>
           <form
             class="grid grid-cols-12 items-start gap-8 max-md:flex max-md:flex-col"
-            aria-busy={form.state.isSubmitting}
+            aria-busy={checkout.isPending || validation.isFetching}
+            noValidate
             onSubmit={event => {
               event.preventDefault()
               void form.handleSubmit()
@@ -283,7 +284,7 @@ function FormOwner() {
                 <section class={errorPanelClass} role="alert">
                   <strong>Холболт амжилтгүй.</strong>
                   <p>{error()?.message}</p>
-                  <Button type="submit" variant="outline" disabled={form.state.isSubmitting}>
+                  <Button type="submit" variant="outline">
                     Дахин оролдох
                   </Button>
                 </section>
@@ -502,14 +503,13 @@ function FormOwner() {
                 <Show when={error()?._tag === 'PaymentSetupFailed'}>
                   <div class={errorPanelClass}>
                     <p>{error()?.message}</p>
-                    <Button type="submit" variant="outline" disabled={form.state.isSubmitting}>
+                    <Button type="submit" variant="outline">
                       Дахин оролдох
                     </Button>
                     <Show when={error()?.canUseBankTransfer}>
                       <Button
                         type="button"
                         variant="secondary"
-                        disabled={form.state.isSubmitting}
                         onClick={() => form.setFieldValue('paymentMethod', 'bank_transfer')}
                       >
                         Дансаар төлөх
