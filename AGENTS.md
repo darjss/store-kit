@@ -12,6 +12,20 @@ Manage the background server with `astro dev stop`, `astro dev status`, and `ast
 
 Tests must exercise real behavior. Never add mocks, stubs, fake implementations, placeholder assertions, or tests that only prove the mock setup. If a useful test cannot run against the real implementation, do not add that test.
 
+## Coding conventions
+
+- Read `docs/product-preferences.md` before changing architecture, data flow, commerce, or storefront UI.
+- Use `~/` for package-local `src` imports. Do not add multi-level parent imports.
+- Use plain feature namespaces for database queries, commerce operations, and TanStack query options.
+- Use TypeID with a stable entity prefix for every database entity ID.
+- Put browser-safe cross-layer schemas and types in `@store-kit/contracts`. Never import database types into client code.
+- Use Dismatch for exhaustive tagged-union matches, Better Result for fallible pipelines, and es-toolkit `flow` for reusable pure composition.
+- Use the current TanStack Solid Query `useQuery` API and `useQueryResult`. Do not add new `createQuery` calls.
+- Use TanStack Form with shared TypeBox contracts and `@store-kit/ui` Zaidan controls for forms.
+- Use Tailwind for all application styling. Do not add ordinary page or component selector blocks.
+- Use Unpic with Cloudflare Image Transformations for product images.
+- Keep provider credentials in Cloudflare secrets. Validate external responses with TypeBox and never expose secrets, tokens, or raw provider bodies.
+
 ## Documentation
 
 Full documentation: https://docs.astro.build

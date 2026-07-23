@@ -95,6 +95,10 @@ Do not use MVC folders. Do not add controllers, class-based services, or generic
 
 Database query files can import the shared server-only `db` directly. Do not pass a database object through every function.
 
+Expose database access through plain feature namespaces such as `db.query.checkout.insertOrder(...)`. Expose commerce behavior through plain feature namespaces such as `commerce.payments.claimBankTransfer(...)`. Do not add classes, generic repositories, or dependency-injection containers.
+
+Use `~/` for package-local imports from `src`. Short same-folder `./` imports are acceptable. Do not use multi-level parent traversals.
+
 Operations can call multiple query modules. Routes, webhooks, scripts, and future integrations must call operations instead of duplicating business rules.
 
 ## API and errors
@@ -142,13 +146,15 @@ The shared headless storefront package owns:
 
 Store apps own all storefront presentation.
 
-Export named TanStack option factories directly:
+Group TanStack option factories in plain feature namespaces:
 
 ```ts
-export const productDetailOptions = (slug: string) => queryOptions({ ... });
+export const catalogQuery = {
+  productDetail: (slug: string) => queryOptions({ ... }),
+};
 ```
 
-Do not create one global nested query object.
+Use the current TanStack Solid Query `useQuery` API for new code. Use the shared `useQueryResult` helper for Better Result data. Do not add new `createQuery` calls or repeat Result deserialization in components.
 
 Use a module-scoped native Solid `createStore` for cart state shared between separate Astro islands. Persist the guest cart with `makePersisted` from `@solid-primitives/storage`. Keep cart drawer visibility in a separate, non-persisted Solid signal.
 
@@ -156,7 +162,7 @@ Do not use Nano Stores. The project uses only Solid islands, and the Nano Stores
 
 ## UI foundation
 
-Use Tailwind CSS 4.
+Use Tailwind CSS 4 for all application styling. Component markup must use Tailwind utilities. CSS entry files may contain Tailwind imports, `@theme`, `@font-face`, `@keyframes`, the smallest base reset, and reusable Tailwind `@utility` definitions. Do not add page or component selector blocks for ordinary styling.
 
 Use the Zaidan SolidJS registry with:
 
@@ -172,7 +178,9 @@ Use the Zaidan SolidJS registry with:
 
 Zaidan copies components into the repository. Customize the copied components and tokens when the shared admin needs a better theme.
 
-Use Solar icons through the Solid package. Use Unpic for storefront product images.
+Use Solar icons through the Solid package.
+
+Use Unpic for storefront product images. Generate responsive candidates through Cloudflare Image Transformations over the R2 custom media domain. Supply source dimensions, accurate `sizes`, alt text, and explicit LCP priority. Lazy-load noncritical images. Product image requests must not pass through the Astro Worker.
 
 The shared admin has one consistent interface for all stores. Store data and feature availability can change, but the admin layout must not fork per store.
 
@@ -242,7 +250,7 @@ Do not build an enterprise option and attribute engine.
 
 Use Drizzle's built-in TypeBox schema generation through `drizzle-orm/typebox`. Do not install a separate Drizzle schema package.
 
-Keep reusable TypeBox schemas with their current owners. A shared schema package is not justified yet: the seed tool already consumes the database-owned catalog schemas, while store configuration has no second consumer.
+Keep persistence-only TypeBox schemas with their database owner. Put schemas and inferred types that cross the server/browser boundary in the browser-safe `@store-kit/contracts` package. Contracts must not import Drizzle, D1, Cloudflare bindings, Elysia, or server adapters.
 
 Discount codes and promotional pricing are later features.
 
@@ -326,6 +334,8 @@ The confirmation callback must be safe to repeat.
 
 Use Ky for direct Telegram Bot API HTTP calls. Do not add a Telegram framework for `sendMessage`, `answerCallbackQuery`, and `editMessageText`.
 
+Keep QPay and Telegram credentials in Cloudflare Worker secrets. Never put them in `store.json`, source, public environment variables, responses, or logs. Use one configured Ky client per provider. Cache QPay bearer tokens only in isolate memory with expiry and refresh skew, deduplicate concurrent refresh, invalidate and retry once on 401, and never persist access tokens in D1 or KV.
+
 ## Order and payment statuses
 
 Keep order status separate from payment status.
@@ -386,7 +396,7 @@ These libraries are approved when the corresponding feature uses them:
 ### Solid and client data
 
 - TanStack Solid Query
-- TanStack Solid Form
+- TanStack Solid Form as the checkout form-state owner
 - native Solid signals and stores for shared client state
 - `@solid-primitives/storage` for guest-cart persistence
 - TanStack Solid Table for real admin tables
@@ -399,7 +409,9 @@ Do not add TanStack Virtual until real row counts require it.
 ### Utilities and media
 
 - Dismatch for exhaustive functional switches
-- es-toolkit for small general utilities
+- Better Result `map`, `mapError`, `andThen`, and `match` for fallible pipelines
+- es-toolkit `flow` for reusable pure composition and small general utilities
+- TypeID for every database entity ID, with stable table-specific prefixes
 - Solar icons for Solid
 - Unpic for Solid
 - Ky for outbound HTTP requests to QPay, Telegram, SMS, and future delivery APIs
@@ -434,6 +446,9 @@ Prefer:
 - direct procedural flows
 - schemas as type sources
 - one owner for each state category
+- shared Zaidan controls from `@store-kit/ui`
+- TanStack Form fields wired to shared TypeBox contracts
+- Dismatch for tagged-union matches and native exhaustive switches when clearer
 
 Avoid:
 
