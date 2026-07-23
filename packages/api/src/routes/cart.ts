@@ -1,5 +1,6 @@
 import { commerce } from '@store-kit/commerce'
 import { cartValidationInputsSchema } from '@store-kit/contracts/cart'
+import type { CartValidationError, ValidatedCart } from '@store-kit/contracts/cart'
 import { Result } from 'better-result'
 import { Elysia } from 'elysia'
 
@@ -10,7 +11,7 @@ export const cartRoutes = new Elysia({ aot: false, prefix: '/api/cart' }).post(
   '/validate',
   async ({ body, request, set }) => {
     set.headers['cache-control'] = 'private, no-store'
-    return Result.serialize(
+    return Result.serialize<ValidatedCart, CartValidationError>(
       (await commerce.cart.validate(body)).map(value => ({
         ...value,
         lines: value.lines.map(line => {

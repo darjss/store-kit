@@ -1,4 +1,4 @@
-import type { PersistedCartItem } from '@store-kit/contracts/cart'
+import type { PersistedCartItem, ValidatedCart } from '@store-kit/contracts/cart'
 
 import { api } from '../client'
 import { resultQueryOptions } from './result'
@@ -22,7 +22,7 @@ const validate = (items: PersistedCartItem[]) =>
           previousUnitPriceMnt: unitPriceMnt,
         })),
       ),
-    mapValue: value => ({
+    mapValue: (value: ValidatedCart) => ({
       ...value,
       lines: value.lines.map(line => {
         const { image, ...cartLine } = line
