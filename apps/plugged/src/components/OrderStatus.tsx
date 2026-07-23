@@ -1,41 +1,47 @@
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
 import type { PublicOrder } from '@store-kit/contracts/orders'
+import { formatMnt } from '@store-kit/storefront/format'
 import { mediaUrl } from '@store-kit/storefront/media'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { orderQuery } from '@store-kit/storefront/query-options/orders'
 import { paymentMutation } from '@store-kit/storefront/query-options/payments'
-import { QueryClientProvider, createMutation, createQuery } from '@tanstack/solid-query'
+import { useQueryResult } from '@store-kit/storefront/query-options/result'
+import {
+  orderStatusLabel,
+  paymentStatusLabel,
+  shouldPollOrderStatus,
+} from '@store-kit/storefront/status'
+import { privateOrderStorageKey } from '@store-kit/storefront/storage'
+import { QueryClientProvider, createMutation } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
 
-const money = new Intl.NumberFormat('mn-MN')
 const actionClass =
   'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
 const statusBandClass =
   'border-4 border-t-0 border-ink bg-paper-clean p-[clamp(1rem,3vw,2rem)] [&>h2]:font-display [&>h2]:text-[3rem] [&>h2]:leading-[0.8]'
-const orderStatusLabels: Record<string, string> = {
-  new: 'Төлбөр хүлээж байна',
-  confirmed: 'Баталгаажсан',
-  preparing: 'Бэлтгэж байна',
-  delivering: 'Хүргэлтэд гарсан',
-  completed: 'Хүлээлгэн өгсөн',
-  cancelled: 'Цуцлагдсан',
-}
-const paymentStatusLabels: Record<string, string> = {
-  pending: 'Төлбөр хүлээж байна',
-  claimed: 'Шилжүүлгийг шалгаж байна',
-  confirming: 'Баталгаажуулж байна',
-  paid: 'Төлөгдсөн',
-  failed: 'Төлбөр амжилтгүй',
+const pollingInterval = 5_000
+const paymentSummary = (order: PublicOrder) => {
+  const payment = order.payment
+  if (!payment) return 'Төлөв тодорхойгүй'
+  const method = payment.method === 'qpay' ? 'QPay' : 'Дансаар шилжүүлэх'
+  return `${method} · ${paymentStatusLabel(payment.status)}`
 }
 
 function StatusOwner(props: { orderId: string }) {
-  const storageKey = `plugged:order-token:${props.orderId}`
+  const storageKey = privateOrderStorageKey('plugged', props.orderId)
   const [token, setToken] = createSignal('')
   const [paymentMessage, setPaymentMessage] = createSignal('')
-  const status = createQuery(() => ({
+  const status = useQueryResult(() => ({
     ...orderQuery.findPrivateStatus(props.orderId, token),
     enabled: token().length > 0,
     retry: false,
+    refetchInterval: query => {
+      const result = query.state.data
+      return result?.status === 'ok' && shouldPollOrderStatus(result.value)
+        ? pollingInterval
+        : false
+    },
+    refetchIntervalInBackground: false,
   }))
   const claim = createMutation(() => paymentMutation.claimBankTransfer())
   const refresh = createMutation(() => paymentMutation.refreshQPay())
@@ -61,9 +67,7 @@ function StatusOwner(props: { orderId: string }) {
       const failure = result.error
       if (failure._tag === 'BankTransferClaimNotAllowed') {
         const paymentStatus = failure.paymentStatus
-        setPaymentMessage(
-          `Одоогийн төлөв: ${paymentStatusLabels[paymentStatus] ?? 'Баталгаажуулж байна'}`,
-        )
+        setPaymentMessage(`Одоогийн төлөв: ${paymentStatusLabel(paymentStatus)}`)
         await status.refetch()
       } else {
         setPaymentMessage(`${failure.message || 'Мэдэгдэл илгээж чадсангүй.'} Дахин оролдоно уу.`)
@@ -136,18 +140,24 @@ function StatusOwner(props: { orderId: string }) {
               <h1 class="font-display my-2 text-[clamp(4rem,10vw,6rem)] leading-[0.75] text-balance">
                 {order().number}
               </h1>
-              <strong>{orderStatusLabels[order().status] ?? 'Захиалгыг шалгаж байна'}</strong>
+              <strong>{orderStatusLabel(order().status)}</strong>
             </header>
             <section class={statusBandClass} aria-busy={claim.isPending || refresh.isPending}>
               <h2>Төлбөр</h2>
-              <p>
-                {order().payment?.method === 'qpay' ? 'QPay' : 'Дансаар шилжүүлэх'} ·{' '}
-                {paymentStatusLabels[order().payment?.status ?? ''] ?? 'Төлөв тодорхойгүй'}
-              </p>
+              <p>{paymentSummary(order())}</p>
               <Show when={paymentMessage()}>
                 <div class="border-warning my-4 border-3 p-3 font-extrabold" role="status">
                   {paymentMessage()}
                 </div>
+              </Show>
+              <Show when={shouldPollOrderStatus(order())}>
+                <button
+                  type="button"
+                  disabled={status.isFetching}
+                  onClick={() => void status.refetch()}
+                >
+                  {status.isFetching ? 'Шинэчилж байна…' : 'Төлөв шинэчлэх'}
+                </button>
               </Show>
               <Show when={order().payment?.method === 'qpay' && order().payment?.status !== 'paid'}>
                 <button
@@ -198,13 +208,13 @@ function StatusOwner(props: { orderId: string }) {
                         {line.variantName} · {line.quantity} ш
                       </p>
                     </div>
-                    <strong>{money.format(line.lineTotalMnt)} ₮</strong>
+                    <strong>{formatMnt(line.lineTotalMnt)}</strong>
                   </div>
                 )}
               </For>
               <div class="flex justify-between pt-4 text-2xl">
                 <span>Нийт</span>
-                <strong>{money.format(order().totalMnt)} ₮</strong>
+                <strong>{formatMnt(order().totalMnt)}</strong>
               </div>
             </section>
             <section class={statusBandClass}>

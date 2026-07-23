@@ -1,5 +1,6 @@
 ---
 import { commerce } from "@store-kit/commerce";
+import { formatMnt } from "@store-kit/storefront/format";
 import { ProductPurchase } from "~/components/ProductPurchase";
 import Layout from "~/layouts/Layout.astro";
 import { publicMediaBaseUrl } from "~/media-url";
@@ -9,7 +10,6 @@ if (result.status === "error") return new Response(null, { status: 404 });
 const product = result.value;
 const isLocal = ["localhost", "127.0.0.1"].includes(Astro.url.hostname);
 const mediaBaseUrl = isLocal ? new URL("/media/", Astro.url) : new URL(publicMediaBaseUrl, Astro.url);
-const money = new Intl.NumberFormat("mn-MN");
 const firstPrice = product.variants[0]?.priceMnt ?? 0;
 const useCaseLabels: Record<string, string> = { "first-iem": "АНХНЫ IEM-Д ТОХИРНО", bass: "BASS ИЛҮҮ МЭДРЭГДЭНЭ", vocals: "ХООЛОЙ ЦЭВЭР", gaming: "ТОГЛООМЫН БАЙРШИЛ", "daily-carry": "ӨДӨР ТУТМЫН АВЧ ЯВАЛТ" };
 const factLabels: Record<string, string> = { driverConfiguration: "Драйвер", impedanceOhms: "Эсэргүүцэл", detachableCable: "Салдаг кабель", included: "Дагалдах", input: "Оролт", output: "Гаралт", maximumSampleRate: "Нягтаршил", weightGrams: "Жин", connector: "Холбогч", lengthMeters: "Урт" };
@@ -17,7 +17,7 @@ const factLabels: Record<string, string> = { driverConfiguration: "Драйве�
 
 <Layout title={`${product.name} · Plugged`} description={product.shortDescription} publicPage>
   <main id="main-content" class="pb-24 [background:url('/textures/paper-grain.avif')_repeat,var(--color-paper)] [background-blend-mode:multiply]">
-    <div class="relative border-b-[5px] border-ink px-[max(0.75rem,3vw)] pt-8 pb-4"><p>{product.brand?.name ?? "PLUGGED"} / {product.category?.name}</p><h1 class="m-0 max-w-[11ch] font-body text-[clamp(2.8rem,8vw,5.5rem)] leading-[0.92] font-black tracking-[-0.04em] text-balance max-md:text-[4.5rem] max-[340px]:text-[3.8rem]">{product.name}</h1><strong class="absolute right-[3vw] bottom-4 rotate-2 border-4 border-ink bg-acid p-3 font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums max-md:relative max-md:right-auto max-md:bottom-auto max-md:mt-[-0.5rem] max-md:inline-block">{money.format(firstPrice)} ₮-С</strong></div>
+    <div class="relative border-b-[5px] border-ink px-[max(0.75rem,3vw)] pt-8 pb-4"><p>{product.brand?.name ?? "PLUGGED"} / {product.category?.name}</p><h1 class="m-0 max-w-[11ch] font-body text-[clamp(2.8rem,8vw,5.5rem)] leading-[0.92] font-black tracking-[-0.04em] text-balance max-md:text-[4.5rem] max-[340px]:text-[3.8rem]">{product.name}</h1><strong class="absolute right-[3vw] bottom-4 rotate-2 border-4 border-ink bg-acid p-3 font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums max-md:relative max-md:right-auto max-md:bottom-auto max-md:mt-[-0.5rem] max-md:inline-block">{formatMnt(firstPrice)}-С</strong></div>
     <div class="grid grid-cols-[7fr_5fr] max-md:flex max-md:flex-col">
       <div class="min-w-0 border-r-[5px] border-ink max-md:border-r-0"><ProductPurchase product={product} mediaBaseUrl={mediaBaseUrl.toString()} client:load /></div>
       <div class="p-[clamp(1rem,4vw,4rem)] max-md:p-4">

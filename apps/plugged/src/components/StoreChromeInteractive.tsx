@@ -7,9 +7,11 @@ import {
   removeCartItem,
   setCartItemQuantity,
 } from '@store-kit/storefront/cart/store'
+import { formatMnt } from '@store-kit/storefront/format'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { cartQuery } from '@store-kit/storefront/query-options/cart'
 import { catalogQuery } from '@store-kit/storefront/query-options/catalog'
+import { useQueryResult } from '@store-kit/storefront/query-options/result'
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
 import {
   Dialog,
@@ -20,7 +22,7 @@ import {
   DialogTrigger,
   Sheet,
 } from '@store-kit/ui'
-import { QueryClientProvider, createQuery } from '@tanstack/solid-query'
+import { QueryClientProvider } from '@tanstack/solid-query'
 import {
   For,
   Match,
@@ -36,7 +38,6 @@ import {
 import { ProductImage } from './ProductImage'
 
 const StoreIcon = lazy(() => import('./StoreIcon'))
-const money = new Intl.NumberFormat('mn-MN')
 const navClass =
   'fixed top-[0.45rem] right-3 z-30 flex border-3 border-ink bg-paper-clean text-ink max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:grid max-md:min-h-[calc(68px+env(safe-area-inset-bottom))] max-md:grid-cols-4 max-md:border-0 max-md:border-t-4 max-md:border-orange max-md:bg-ink max-md:pb-[env(safe-area-inset-bottom)] max-md:text-paper'
 const navLinkClass =
@@ -61,7 +62,7 @@ function Search() {
     onCleanup(() => window.clearTimeout(timer))
   })
 
-  const results = createQuery(() => ({
+  const results = useQueryResult(() => ({
     ...catalogQuery.findAllProducts({ query: debouncedQuery(), limit: 8 }),
     enabled: debouncedQuery().length > 1,
   }))
@@ -156,7 +157,7 @@ function Search() {
                             </small>
                           </span>
                           <b class="border-ink bg-acid border-3 p-2 tabular-nums max-md:col-2 max-md:justify-self-start">
-                            {variant ? `${money.format(variant.priceMnt)} ₮` : '—'}
+                            {variant ? formatMnt(variant.priceMnt) : '—'}
                           </b>
                         </a>
                       )
@@ -173,7 +174,7 @@ function Search() {
 }
 
 function Chrome() {
-  const validation = createQuery(() => ({
+  const validation = useQueryResult(() => ({
     ...cartQuery.validate([...cartItems()]),
     enabled: cartItems().length > 0 && isCartOpen(),
     staleTime: 15_000,
@@ -322,7 +323,7 @@ function Chrome() {
                       <strong>{item.productName}</strong>
                     </a>
                     <p>{item.variantName}</p>
-                    <strong>{money.format(item.unitPriceMnt * item.quantity)} ₮</strong>
+                    <strong>{formatMnt(item.unitPriceMnt * item.quantity)}</strong>
                     <For each={correctionsFor(item.variantId)}>
                       {correction => (
                         <div class="border-ink bg-orange [&_button]:border-ink [&_button]:bg-paper my-2 border-2 p-2 [&_button]:border-2 [&_button]:font-extrabold">
@@ -330,12 +331,12 @@ function Chrome() {
                           <Show when={correction._tag === 'PriceChanged'}>
                             <small>
                               Хуучин:{' '}
-                              {money.format(
+                              {formatMnt(
                                 correction._tag === 'PriceChanged'
                                   ? correction.previousUnitPriceMnt
                                   : 0,
                               )}{' '}
-                              ₮ · Одоо: {money.format(item.unitPriceMnt)} ₮
+                              · Одоо: {formatMnt(item.unitPriceMnt)}
                             </small>
                           </Show>
                           <Show
@@ -397,12 +398,11 @@ function Chrome() {
             <div class="flex flex-wrap justify-between gap-2 py-4 text-xl">
               <span>Барааны дүн</span>
               <strong>
-                {money.format(
+                {formatMnt(
                   validation.data?.status === 'ok'
                     ? validation.data.value.subtotalMnt
                     : cartItems().reduce((sum, item) => sum + item.unitPriceMnt * item.quantity, 0),
-                )}{' '}
-                ₮
+                )}
               </strong>
             </div>
             <a class={`${actionClass} w-full`} href="/checkout" onClick={continueCheckout}>

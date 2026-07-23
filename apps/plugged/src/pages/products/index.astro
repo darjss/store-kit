@@ -1,6 +1,7 @@
 ---
 import { commerce } from "@store-kit/commerce";
 import type { ProductListFilters } from "@store-kit/commerce/catalog";
+import { formatMnt } from "@store-kit/storefront/format";
 import ProductImage from "~/components/ProductImage.astro";
 import Layout from "~/layouts/Layout.astro";
 
@@ -21,7 +22,6 @@ const [result, categories, brands] = await Promise.all([
 ]);
 if (result.status === "error") throw new Error("Catalog could not be loaded.");
 const products = result.value.items;
-const money = new Intl.NumberFormat("mn-MN");
 const labels = { "first-iem": "Анхны IEM", bass: "Bass", vocals: "Vocals", gaming: "Gaming", "daily-carry": "Daily carry" };
 const treatments = [
   "col-[1/13] grid-cols-[7fr_5fr] border-4 border-ink bg-orange",
@@ -44,7 +44,7 @@ const filterClass = "shrink-0 border-3 border-ink bg-paper px-3 py-2 font-extrab
         const stock = product.variants.reduce((sum, item) => sum + item.stockQuantity, 0);
         return <article class:list={["grid min-w-0 max-md:mb-6 max-md:grid-cols-[1.05fr_1fr] max-md:!transform-none max-md:[&:nth-child(4n+2)]:block max-md:[&:nth-child(4n+2)>div]:-mt-12 max-md:[&:nth-child(4n+2)>div]:w-[88%] max-md:[&:nth-child(4n+2)>div]:border-3 max-md:[&:nth-child(4n+2)>div]:border-ink max-md:[&:nth-child(4n+2)>div]:bg-orange max-md:[&:nth-child(4n+3)]:grid-cols-[0.8fr_1.2fr] max-md:[&:nth-child(4n+4)>a>img]:h-80 max-md:[&:nth-child(4n+4)>a>img]:object-cover", treatments[index % 4]]}>
           <a class="border-4 border-ink bg-paper-clean" href={`/products/${product.slug}`}>{image && <ProductImage class="h-full w-full object-contain" image={image} layout="listing" priority={index === 0} />}</a>
-          <div class="relative p-4 max-md:p-3"><p class="mb-1 font-black uppercase">{product.useCases.map(item => labels[item]).join(" / ")}</p><h2 class="my-1 mb-4 font-body text-[clamp(1.8rem,3.7vw,3.8rem)] leading-[0.95] font-black tracking-[-0.03em] text-balance max-md:text-[2.4rem] max-[340px]:text-[2rem]"><a class="no-underline" href={`/products/${product.slug}`}>{product.name}</a></h2><p class="max-md:hidden">{product.shortDescription}</p>{variant && <><strong class="my-3 mr-2 inline-block font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums">{money.format(variant.priceMnt)} ₮</strong>{variant.compareAtPriceMnt && <del class="font-bold max-md:hidden">{money.format(variant.compareAtPriceMnt)} ₮</del>}</>}<span class:list={["inline-block -rotate-3 border-3 border-ink bg-acid px-2 py-1 font-black max-md:m-0", stock > 0 && stock <= 3 && "bg-orange", stock === 0 && "bg-ink text-paper line-through"]}>{stock === 0 ? "ДУУССАН" : stock <= 3 ? "ЦӨӨН" : "БЭЛЭН"}</span><a class="mt-2 block bg-ink p-3 text-center font-black text-paper" href={`/products/${product.slug}`}>СОНГОХ →</a></div>
+          <div class="relative p-4 max-md:p-3"><p class="mb-1 font-black uppercase">{product.useCases.map(item => labels[item]).join(" / ")}</p><h2 class="my-1 mb-4 font-body text-[clamp(1.8rem,3.7vw,3.8rem)] leading-[0.95] font-black tracking-[-0.03em] text-balance max-md:text-[2.4rem] max-[340px]:text-[2rem]"><a class="no-underline" href={`/products/${product.slug}`}>{product.name}</a></h2><p class="max-md:hidden">{product.shortDescription}</p>{variant && <><strong class="my-3 mr-2 inline-block font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums">{formatMnt(variant.priceMnt)}</strong>{variant.compareAtPriceMnt && <del class="font-bold max-md:hidden">{formatMnt(variant.compareAtPriceMnt)}</del>}</>}<span class:list={["inline-block -rotate-3 border-3 border-ink bg-acid px-2 py-1 font-black max-md:m-0", stock > 0 && stock <= 3 && "bg-orange", stock === 0 && "bg-ink text-paper line-through"]}>{stock === 0 ? "ДУУССАН" : stock <= 3 ? "ЦӨӨН" : "БЭЛЭН"}</span><a class="mt-2 block bg-ink p-3 text-center font-black text-paper" href={`/products/${product.slug}`}>СОНГОХ →</a></div>
         </article>;
       })}
     </section>}

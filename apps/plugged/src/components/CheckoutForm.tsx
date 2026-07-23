@@ -2,9 +2,11 @@
 import type { CheckoutCreated, CheckoutError, CheckoutInput } from '@store-kit/contracts/checkout'
 import { checkoutInputSchema } from '@store-kit/contracts/checkout'
 import { cartItems, cartLineInputs, clearCart, openCart } from '@store-kit/storefront/cart/store'
+import { formatMnt } from '@store-kit/storefront/format'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { cartQuery } from '@store-kit/storefront/query-options/cart'
 import { checkoutMutation } from '@store-kit/storefront/query-options/checkout'
+import { useQueryResult } from '@store-kit/storefront/query-options/result'
 import {
   Button,
   Field,
@@ -19,7 +21,7 @@ import {
   Textarea,
 } from '@store-kit/ui'
 import { createForm } from '@tanstack/solid-form'
-import { QueryClientProvider, createMutation, createQuery } from '@tanstack/solid-query'
+import { QueryClientProvider, createMutation } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
 import { Value } from 'typebox/value'
 
@@ -34,7 +36,6 @@ const districts = [
   'Хан-Уул',
   'Чингэлтэй',
 ] as const
-const money = new Intl.NumberFormat('mn-MN')
 const fieldErrorId = (name: string) => `${name}-error`
 const actionClass =
   'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
@@ -100,7 +101,7 @@ const validationError = (errors: unknown[]) =>
 
 function FormOwner() {
   const checkout = createMutation(() => checkoutMutation.create())
-  const validation = createQuery(() => ({
+  const validation = useQueryResult(() => ({
     ...cartQuery.validate([...cartItems()]),
     enabled: false,
   }))
@@ -526,7 +527,7 @@ function FormOwner() {
                     <span>
                       {item.productName} × {item.quantity}
                     </span>
-                    <strong>{money.format(item.unitPriceMnt * item.quantity)} ₮</strong>
+                    <strong>{formatMnt(item.unitPriceMnt * item.quantity)}</strong>
                   </div>
                 )}
               </For>

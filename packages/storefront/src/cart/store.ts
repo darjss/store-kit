@@ -1,12 +1,13 @@
 import { makePersisted } from '@solid-primitives/storage'
 import { variantIdPattern } from '@store-kit/contracts/cart'
 import type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
+import { cartStorageKey } from '@store-kit/storefront/storage'
 import { createSignal } from 'solid-js'
 import { isServer } from 'solid-js/web'
 
 export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
 
-const storageKey = 'store-kit:plugged:cart:v1'
+const storageKey = cartStorageKey('plugged')
 const [cartItems, setNativeCartItems] = createSignal<PersistedCartItem[]>([])
 const variantIdExpression = new RegExp(variantIdPattern)
 let setCartItems = setNativeCartItems

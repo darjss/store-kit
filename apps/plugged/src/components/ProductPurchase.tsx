@@ -1,12 +1,13 @@
 /* oxlint-disable tailwindcss/no-unknown-classes */
 import type { ProductDetail } from '@store-kit/commerce/catalog'
 import { addCartItem, openCart } from '@store-kit/storefront/cart/store'
+import { formatMnt } from '@store-kit/storefront/format'
+import { clampPurchaseQuantity, maximumPurchaseQuantity } from '@store-kit/storefront/purchase'
 import { animate } from 'motion'
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js'
 
 import { ProductImage } from './ProductImage'
 
-const money = new Intl.NumberFormat('mn-MN')
 const actionClass =
   'inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 border-ink bg-orange px-4 py-3 font-black text-ink no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none'
 
@@ -19,7 +20,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
   const selected = createMemo(() =>
     props.product.variants.find(variant => variant.id === variantId()),
   )
-  const maximumQuantity = createMemo(() => Math.min(10, selected()?.stockQuantity ?? 0))
+  const maximumQuantity = createMemo(() => maximumPurchaseQuantity(selected()?.stockQuantity ?? 0))
   const image = createMemo(() => {
     const variant = selected()
     const linked = variant?.imageLinks[0]
@@ -34,11 +35,14 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
   })
 
   createEffect(() => {
+    const current = quantity()
     const maximum = maximumQuantity()
-    if (maximum > 0 && quantity() > maximum) {
-      setQuantity(maximum)
+    const clamped = clampPurchaseQuantity(current, selected()?.stockQuantity ?? 0)
+    if (clamped === current) return
+
+    setQuantity(clamped)
+    if (maximum > 0 && current > maximum)
       setAnnouncement(`Энэ сонголтоос ${maximum} ширхэг үлдсэн байна.`)
-    }
   })
 
   const chooseVariant = (id: string) => {
@@ -105,7 +109,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
                 onChange={() => chooseVariant(variant.id)}
               />
               <span>{variant.name}</span>
-              <strong>{money.format(variant.priceMnt)} ₮</strong>
+              <strong>{formatMnt(variant.priceMnt)}</strong>
               <small class="col-2">
                 {variant.stockQuantity === 0
                   ? 'Дууссан'
@@ -144,7 +148,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
           disabled={!selected() || selected()!.stockQuantity === 0}
           onClick={add}
         >
-          Сагсанд нэмэх · {selected() ? money.format(selected()!.priceMnt * quantity()) : 0} ₮
+          Сагсанд нэмэх · {selected() ? formatMnt(selected()!.priceMnt * quantity()) : formatMnt(0)}
         </button>
       </div>
       <p class="sr-only" aria-live="polite">
