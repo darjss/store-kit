@@ -39,32 +39,34 @@ const imageValue = <Value>(column: AnySQLiteColumn) => sql<Value | null>`coalesc
   )
 )`
 
-export const findVariants = async (items: CartLineInput[]): Promise<CartVariant[]> => {
-  if (items.length === 0) return []
+export const selectVariants = (items: CartLineInput[]) => {
   const variantIds = [...new Set(items.map(item => item.variantId))]
 
   return db
     .select({
-      variantId: productVariant.id,
-      productId: product.id,
+      variantId: sql<string>`${productVariant.id}`.as('variant_id'),
+      productId: sql<string>`${product.id}`.as('product_id'),
       productSlug: product.slug,
-      productName: product.name,
+      productName: sql<string>`${product.name}`.as('product_name'),
       productStatus: product.status,
-      variantName: productVariant.name,
+      variantName: sql<string>`${productVariant.name}`.as('variant_name'),
       sku: productVariant.sku,
       options: productVariant.options,
       unitPriceMnt: productVariant.priceMnt,
       stockQuantity: productVariant.stockQuantity,
       active: productVariant.active,
-      imageR2Key: imageValue<string>(productImage.r2Key),
-      imageWidth: imageValue<number>(productImage.width),
-      imageHeight: imageValue<number>(productImage.height),
-      imageAlt: imageValue<string>(productImage.alt),
+      imageR2Key: imageValue<string>(productImage.r2Key).as('image_r2_key'),
+      imageWidth: imageValue<number>(productImage.width).as('image_width'),
+      imageHeight: imageValue<number>(productImage.height).as('image_height'),
+      imageAlt: imageValue<string>(productImage.alt).as('image_alt'),
     })
     .from(productVariant)
     .innerJoin(product, eq(productVariant.productId, product.id))
     .where(inArray(productVariant.id, variantIds))
     .orderBy(productVariant.id)
 }
+
+export const findVariants = async (items: CartLineInput[]): Promise<CartVariant[]> =>
+  items.length === 0 ? [] : selectVariants(items)
 
 export const cartQuery = { findVariants }

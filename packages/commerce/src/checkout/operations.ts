@@ -28,6 +28,38 @@ import {
 } from './errors'
 
 const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').replace(/^976/, '')
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+const trimString = (value: unknown) => (typeof value === 'string' ? value.trim() : value)
+const trimOptionalString = (value: unknown) => {
+  const trimmed = trimString(value)
+  return trimmed === '' ? undefined : trimmed
+}
+
+const normalizeCheckoutInput = (input: unknown): unknown => {
+  if (!isRecord(input)) return input
+
+  const customer = isRecord(input.customer)
+    ? {
+        ...input.customer,
+        name: trimString(input.customer.name),
+        phone:
+          typeof input.customer.phone === 'string'
+            ? normalizePhone(input.customer.phone)
+            : input.customer.phone,
+      }
+    : input.customer
+  const delivery = isRecord(input.delivery)
+    ? {
+        ...input.delivery,
+        khoroo: trimString(input.delivery.khoroo),
+        address: trimString(input.delivery.address),
+        notes: trimOptionalString(input.delivery.notes),
+      }
+    : input.delivery
+
+  return { ...input, customer, delivery }
+}
 
 type SelectedPaymentMethod = { type: 'qpay' } | { type: 'bank_transfer' }
 
@@ -36,7 +68,7 @@ const selectPaymentMethod = (method: PaymentMethod): SelectedPaymentMethod =>
 
 const preparePayment = (
   method: PaymentMethod,
-  input: { orderNumber: string; totalMnt: number },
+  input: { orderNumber: string; totalMnt: number; paymentId: string },
   bankTransfer: BankTransferPaymentInstructions,
 ) =>
   matchAsync(selectPaymentMethod(method))<
@@ -48,6 +80,7 @@ const preparePayment = (
           orderNumber: input.orderNumber,
           amountMnt: input.totalMnt,
           description: `${input.orderNumber} захиалга`,
+          paymentLookupId: input.paymentId,
         })
       )
         .map(
@@ -74,7 +107,8 @@ const preparePayment = (
       }),
   })
 
-export const createCheckoutOrder = async (input: unknown) => {
+export const createCheckoutOrder = async (rawInput: unknown) => {
+  const input = normalizeCheckoutInput(rawInput)
   if (
     input !== null &&
     typeof input === 'object' &&
@@ -100,8 +134,7 @@ export const createCheckoutOrder = async (input: unknown) => {
         'Нэг барааны сонголтыг давхар оруулах боломжгүй.',
       ),
     )
-  const phone = normalizePhone(input.customer.phone)
-  if (!/^[6789]\d{7}$/.test(phone))
+  if (!/^[6789]\d{7}$/.test(input.customer.phone))
     return Result.err<CheckoutCreated, CheckoutError>(
       invalidCheckoutDetails(
         [{ path: '/customer/phone', message: 'Монголын 8 оронтой дугаар оруулна уу.' }],
@@ -109,10 +142,7 @@ export const createCheckoutOrder = async (input: unknown) => {
       ),
     )
 
-  const [settings, variants] = await Promise.all([
-    dbQuery.checkout.findSettings(),
-    dbQuery.cart.findVariants(input.items),
-  ])
+  const { settings, variants } = await dbQuery.checkout.prepare(input.items)
   if (!settings) return Result.err<CheckoutCreated, CheckoutError>(deliveryUnavailable())
   const byId = new Map(variants.map(variant => [variant.variantId, variant]))
   const corrections = input.items.flatMap<CartCorrection>(item => {
@@ -128,6 +158,7 @@ export const createCheckoutOrder = async (input: unknown) => {
     return Result.err<CheckoutCreated, CheckoutError>(changedCart(corrections))
 
   const orderId = createOrderId()
+  const paymentId = createPaymentId()
   const orderNumber = `PLG-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
   const statusToken = `${crypto.randomUUID()}${crypto.randomUUID()}`
   const subtotalMnt = input.items.reduce(
@@ -138,7 +169,7 @@ export const createCheckoutOrder = async (input: unknown) => {
   const now = Date.now()
   const payment = await preparePayment(
     input.paymentMethod,
-    { orderNumber, totalMnt },
+    { orderNumber, totalMnt, paymentId },
     {
       type: 'bank_transfer',
       bankName: settings.bankName,
@@ -154,12 +185,12 @@ export const createCheckoutOrder = async (input: unknown) => {
       number: orderNumber,
       statusTokenHash: await hashStatusToken(statusToken),
       status: 'new',
-      customerName: input.customer.name.trim(),
-      customerPhone: phone,
+      customerName: input.customer.name,
+      customerPhone: input.customer.phone,
       district: input.delivery.district,
-      khoroo: input.delivery.khoroo.trim(),
-      address: input.delivery.address.trim(),
-      deliveryNotes: input.delivery.notes?.trim() || null,
+      khoroo: input.delivery.khoroo,
+      address: input.delivery.address,
+      deliveryNotes: input.delivery.notes ?? null,
       subtotalMnt,
       deliveryFeeMnt: settings.deliveryFeeMnt,
       totalMnt,
@@ -187,7 +218,7 @@ export const createCheckoutOrder = async (input: unknown) => {
       }
     }),
     payment: {
-      id: createPaymentId(),
+      id: paymentId,
       orderId,
       method: input.paymentMethod,
       status: 'pending',

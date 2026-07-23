@@ -17,7 +17,7 @@ describe('Telegram response validation', () => {
     ).toEqual({ status: 'ok', value: { messageId: '123' } })
     expect(parseTelegramActionResponse({ ok: true, result: true })).toEqual({
       status: 'ok',
-      value: undefined,
+      value: true,
     })
   })
 
@@ -33,5 +33,9 @@ describe('Telegram response validation', () => {
       status: 'invalid',
     })
     expect(parseTelegramActionResponse({ ok: true })).toEqual({ status: 'invalid' })
+    expect(parseTelegramActionResponse({ ok: true, result: false })).toEqual({
+      status: 'ok',
+      value: false,
+    })
   })
 })

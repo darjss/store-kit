@@ -5,6 +5,9 @@ import { cartCorrectionSchema, cartLineInputSchema } from './cart'
 import { orderIdSchema, validationIssueSchema } from './common'
 import { paymentMethodSchema } from './payments'
 
+const requiredTextSchema = (maxLength: number) =>
+  Type.String({ minLength: 1, maxLength, pattern: '\\S' })
+
 export const ulaanbaatarDistrictSchema = Type.Union([
   Type.Literal('Багануур'),
   Type.Literal('Багахангай'),
@@ -22,7 +25,7 @@ export const checkoutInputSchema = Type.Object(
     items: Type.Array(cartLineInputSchema, { minItems: 1, maxItems: 20 }),
     customer: Type.Object(
       {
-        name: Type.String({ minLength: 1, maxLength: 100 }),
+        name: requiredTextSchema(100),
         phone: Type.String({ minLength: 8, maxLength: 20 }),
       },
       { additionalProperties: false },
@@ -30,8 +33,8 @@ export const checkoutInputSchema = Type.Object(
     delivery: Type.Object(
       {
         district: ulaanbaatarDistrictSchema,
-        khoroo: Type.String({ minLength: 1, maxLength: 50 }),
-        address: Type.String({ minLength: 1, maxLength: 500 }),
+        khoroo: requiredTextSchema(50),
+        address: requiredTextSchema(500),
         notes: Type.Optional(Type.String({ maxLength: 500 })),
       },
       { additionalProperties: false },

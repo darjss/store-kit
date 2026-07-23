@@ -1,7 +1,7 @@
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
 
-import { orderIdSchema, variantIdSchema } from './common'
+import { orderIdSchema, orderStatusSchema, variantIdSchema } from './common'
 
 export const paymentMethodSchema = Type.Union([Type.Literal('qpay'), Type.Literal('bank_transfer')])
 
@@ -28,7 +28,7 @@ export const paymentConfirmationSchema = Type.Object(
   {
     orderId: orderIdSchema,
     paymentStatus: Type.Literal('paid'),
-    orderStatus: Type.Union([Type.Literal('confirmed'), Type.Literal('new')]),
+    orderStatus: orderStatusSchema,
     stockApplied: Type.Boolean(),
     needsStaffAction: Type.Boolean(),
     newlyPaid: Type.Boolean(),

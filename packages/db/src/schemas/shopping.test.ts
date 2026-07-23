@@ -77,6 +77,12 @@ test('checkout settings require the singleton cfg TypeID when an ID is supplied'
   }
 
   expect(Value.Check(insertCheckoutSettingsSchema, settings)).toBe(true)
+  expect(
+    Value.Check(insertCheckoutSettingsSchema, {
+      ...settings,
+      id: 'cfg_00000000000000000000000002',
+    }),
+  ).toBe(false)
   expect(Value.Check(insertCheckoutSettingsSchema, { ...settings, id: createOrderId() })).toBe(
     false,
   )

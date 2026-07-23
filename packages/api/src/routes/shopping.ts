@@ -1,9 +1,12 @@
 import { commerce } from '@store-kit/commerce'
+import { checkoutInputSchema } from '@store-kit/contracts/checkout'
 import { orderIdPattern } from '@store-kit/contracts/orders'
 import type { PrivateOrderError, PublicOrder } from '@store-kit/contracts/orders'
 import type { BankTransferClaim, BankTransferClaimError } from '@store-kit/contracts/payments'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
+
+import { contractBody } from '../typebox-contract'
 
 export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .onAfterHandle(({ set }) => {
@@ -13,7 +16,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
     '/checkout',
     async ({ body }) => Result.serialize(await commerce.checkout.createOrder(body)),
     {
-      body: t.Any(),
+      body: contractBody(checkoutInputSchema),
     },
   )
   .get(

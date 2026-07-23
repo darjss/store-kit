@@ -8,6 +8,14 @@ export const variantIdPattern = `^var_${typeIdSuffixPattern}$`
 export const orderIdPattern = `^ord_${typeIdSuffixPattern}$`
 export const variantIdSchema = Type.String({ pattern: variantIdPattern })
 export const orderIdSchema = Type.String({ pattern: orderIdPattern })
+export const orderStatusSchema = Type.Union([
+  Type.Literal('new'),
+  Type.Literal('confirmed'),
+  Type.Literal('preparing'),
+  Type.Literal('delivering'),
+  Type.Literal('completed'),
+  Type.Literal('cancelled'),
+])
 export const validationIssueSchema = Type.Object(
   {
     path: Type.String(),

@@ -1,11 +1,12 @@
 CREATE TABLE `brand` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`slug` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text,
 	`website_url` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
+	CONSTRAINT `brand_pk` PRIMARY KEY(`id`),
 	CONSTRAINT "brand_id_typeid_check" CHECK(length("id") = 30
     and substr("id", 1, 4) = 'brd_'
     and substr("id", 5, 1) glob '[0-7]'
@@ -13,7 +14,7 @@ CREATE TABLE `brand` (
 );
 --> statement-breakpoint
 CREATE TABLE `category` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`slug` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text,
@@ -21,6 +22,7 @@ CREATE TABLE `category` (
 	`active` integer DEFAULT true NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
+	CONSTRAINT `category_pk` PRIMARY KEY(`id`),
 	CONSTRAINT "category_id_typeid_check" CHECK(length("id") = 30
     and substr("id", 1, 4) = 'cat_'
     and substr("id", 5, 1) glob '[0-7]'
@@ -28,7 +30,7 @@ CREATE TABLE `category` (
 );
 --> statement-breakpoint
 CREATE TABLE `product` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`slug` text NOT NULL,
 	`brand_id` text,
 	`category_id` text,
@@ -41,6 +43,7 @@ CREATE TABLE `product` (
 	`use_cases` text DEFAULT '[]' NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
+	CONSTRAINT `product_pk` PRIMARY KEY(`id`),
 	CONSTRAINT `fk_product_brand_id_brand_id_fk` FOREIGN KEY (`brand_id`) REFERENCES `brand`(`id`) ON DELETE SET NULL,
 	CONSTRAINT `fk_product_category_id_category_id_fk` FOREIGN KEY (`category_id`) REFERENCES `category`(`id`) ON DELETE SET NULL,
 	CONSTRAINT "product_status_check" CHECK("status" in ('draft', 'active', 'archived')),
@@ -51,12 +54,13 @@ CREATE TABLE `product` (
 );
 --> statement-breakpoint
 CREATE TABLE `product_image` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`product_id` text NOT NULL,
 	`r2_key` text NOT NULL,
 	`alt` text,
 	`sort_order` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL,
+	CONSTRAINT `product_image_pk` PRIMARY KEY(`id`),
 	CONSTRAINT `fk_product_image_product_id_product_id_fk` FOREIGN KEY (`product_id`) REFERENCES `product`(`id`) ON DELETE CASCADE,
 	CONSTRAINT "product_image_id_typeid_check" CHECK(length("id") = 30
     and substr("id", 1, 4) = 'img_'
@@ -65,7 +69,7 @@ CREATE TABLE `product_image` (
 );
 --> statement-breakpoint
 CREATE TABLE `product_variant` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`product_id` text NOT NULL,
 	`sku` text NOT NULL,
 	`name` text NOT NULL,
@@ -77,6 +81,7 @@ CREATE TABLE `product_variant` (
 	`sort_order` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
+	CONSTRAINT `product_variant_pk` PRIMARY KEY(`id`),
 	CONSTRAINT `fk_product_variant_product_id_product_id_fk` FOREIGN KEY (`product_id`) REFERENCES `product`(`id`) ON DELETE CASCADE,
 	CONSTRAINT "product_variant_price_mnt_check" CHECK("price_mnt" >= 0),
 	CONSTRAINT "product_variant_compare_at_price_mnt_check" CHECK("compare_at_price_mnt" is null or "compare_at_price_mnt" >= 0),
@@ -97,7 +102,7 @@ CREATE TABLE `product_variant_image` (
 );
 --> statement-breakpoint
 CREATE TABLE `checkout_settings` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`delivery_fee_mnt` integer NOT NULL,
 	`bank_name` text NOT NULL,
 	`bank_account_name` text NOT NULL,
@@ -105,12 +110,13 @@ CREATE TABLE `checkout_settings` (
 	`checkout_help_text` text,
 	`order_confirmation_text` text,
 	`updated_at` integer NOT NULL,
+	CONSTRAINT `checkout_settings_pk` PRIMARY KEY(`id`),
 	CONSTRAINT "checkout_settings_id_check" CHECK("id" = 'cfg_00000000000000000000000001'),
 	CONSTRAINT "checkout_settings_delivery_fee_mnt_check" CHECK("delivery_fee_mnt" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE `customer_order` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`number` text NOT NULL,
 	`status_token_hash` text NOT NULL,
 	`status` text NOT NULL,
@@ -125,6 +131,7 @@ CREATE TABLE `customer_order` (
 	`total_mnt` integer NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
+	CONSTRAINT `customer_order_pk` PRIMARY KEY(`id`),
 	CONSTRAINT "customer_order_status_check" CHECK("status" in ('new', 'confirmed', 'preparing', 'delivering', 'completed', 'cancelled')),
 	CONSTRAINT "customer_order_money_check" CHECK("subtotal_mnt" >= 0 and "delivery_fee_mnt" >= 0 and "total_mnt" >= 0),
 	CONSTRAINT "customer_order_total_check" CHECK("total_mnt" = "subtotal_mnt" + "delivery_fee_mnt"),
@@ -135,7 +142,7 @@ CREATE TABLE `customer_order` (
 );
 --> statement-breakpoint
 CREATE TABLE `order_line` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`order_id` text NOT NULL,
 	`product_id` text,
 	`variant_id` text,
@@ -147,6 +154,7 @@ CREATE TABLE `order_line` (
 	`unit_price_mnt` integer NOT NULL,
 	`quantity` integer NOT NULL,
 	`line_total_mnt` integer NOT NULL,
+	CONSTRAINT `order_line_pk` PRIMARY KEY(`id`),
 	CONSTRAINT `fk_order_line_order_id_customer_order_id_fk` FOREIGN KEY (`order_id`) REFERENCES `customer_order`(`id`) ON DELETE CASCADE,
 	CONSTRAINT `fk_order_line_product_id_product_id_fk` FOREIGN KEY (`product_id`) REFERENCES `product`(`id`) ON DELETE SET NULL,
 	CONSTRAINT `fk_order_line_variant_id_product_variant_id_fk` FOREIGN KEY (`variant_id`) REFERENCES `product_variant`(`id`) ON DELETE SET NULL,
@@ -161,7 +169,7 @@ CREATE TABLE `order_line` (
 );
 --> statement-breakpoint
 CREATE TABLE `payment` (
-	`id` text PRIMARY KEY,
+	`id` text NOT NULL,
 	`order_id` text NOT NULL,
 	`method` text NOT NULL,
 	`status` text NOT NULL,
@@ -173,6 +181,7 @@ CREATE TABLE `payment` (
 	`paid_at` integer,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
+	CONSTRAINT `payment_pk` PRIMARY KEY(`id`),
 	CONSTRAINT `fk_payment_order_id_customer_order_id_fk` FOREIGN KEY (`order_id`) REFERENCES `customer_order`(`id`) ON DELETE CASCADE,
 	CONSTRAINT "payment_method_check" CHECK("method" in ('qpay', 'bank_transfer')),
 	CONSTRAINT "payment_status_check" CHECK("status" in ('pending', 'claimed', 'confirming', 'paid', 'failed')),
