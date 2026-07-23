@@ -2,6 +2,7 @@ import { Cart } from '@store-kit/storefront/cart/components'
 import {
   cartItemCount,
   cartItems,
+  isCartOpen,
   refreshCartItemSnapshots,
   removeCartItem,
   setCartItemQuantity,
@@ -39,10 +40,18 @@ const money = new Intl.NumberFormat('mn-MN')
 function Search() {
   const [open, setOpen] = createSignal(false)
   const [queryText, setQueryText] = createSignal('')
+  const [debouncedQuery, setDebouncedQuery] = createSignal('')
   const [input, setInput] = createSignal<HTMLInputElement>()
+
+  createEffect(() => {
+    const value = queryText().trim()
+    const timer = window.setTimeout(() => setDebouncedQuery(value), 250)
+    onCleanup(() => window.clearTimeout(timer))
+  })
+
   const results = createQuery(() => ({
-    ...catalogQuery.findAllProducts({ query: queryText(), limit: 8 }),
-    enabled: queryText().trim().length > 1,
+    ...catalogQuery.findAllProducts({ query: debouncedQuery(), limit: 8 }),
+    enabled: debouncedQuery().length > 1,
   }))
 
   return (
@@ -135,7 +144,7 @@ function Search() {
 function Chrome() {
   const validation = createQuery(() => ({
     ...cartQuery.validate([...cartItems()]),
-    enabled: cartItems().length > 0,
+    enabled: cartItems().length > 0 && isCartOpen(),
     staleTime: 15_000,
   }))
   const [transportMessage, setTransportMessage] = createSignal('')
@@ -180,6 +189,10 @@ function Chrome() {
       window.location.assign('/checkout')
       return
     }
+    if (!result.data || result.data.status === 'error') {
+      setTransportMessage('Сагсыг шалгаж чадсангүй. Дахин оролдоно уу.')
+      return
+    }
     correctionHeading?.focus()
   }
 
@@ -213,7 +226,7 @@ function Chrome() {
             <span aria-hidden="true">×</span>
           </Sheet.Close>
         </div>
-        <div class="cart-body">
+        <div class="cart-body" aria-busy={validation.isFetching}>
           <Cart.Empty>
             <div class="empty-state">
               <strong>Сагс хоосон.</strong>
@@ -229,6 +242,14 @@ function Chrome() {
               </h2>
               <p>Үргэлжлүүлэхийн өмнө доорх өөрчлөлтийг шалгана уу.</p>
             </section>
+          </Show>
+          <Show when={validation.isError}>
+            <div class="inline-error" role="alert">
+              <p>Сагсыг шалгаж чадсангүй.</p>
+              <button type="button" onClick={() => void validation.refetch()}>
+                Дахин шалгах
+              </button>
+            </div>
           </Show>
           <div class="cart-lines">
             <Cart.Items>

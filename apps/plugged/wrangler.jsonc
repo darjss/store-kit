@@ -24,7 +24,7 @@
   "vars": {
     "PUBLIC_APP_URL": "https://plugged.mn",
     "PUBLIC_MEDIA_BASE_URL": "https://media.plugged.mn/",
-    "QPAY_BASE_URL": "https://merchant-sandbox.qpay.mn",
+    "QPAY_BASE_URL": "https://merchant.qpay.mn",
   },
   "observability": {
     "enabled": true,

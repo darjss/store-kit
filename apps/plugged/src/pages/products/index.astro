@@ -22,7 +22,7 @@ const labels = { "first-iem": "Анхны IEM", bass: "Bass", vocals: "Vocals", 
 ---
 
 <Layout title="Бүх бараа · Plugged" description="IEM, portable DAC, cable сонгох." publicPage>
-  <main class="catalog-page poster-surface">
+  <main id="main-content" class="catalog-page poster-surface">
     <header class="catalog-mast"><div><p>PLUGGED CATALOG / {products.length} БАРАА</p><h1>ЧАМАЙГ<br />ЮУ <em>ТАТДАГ</em> ВЭ?</h1></div><form action="/products" method="get" role="search"><label for="catalog-search">Бараа хайх</label><div><input id="catalog-search" name="query" value={params.get("query") ?? ""} placeholder="IEM, DAC, cable…" /><button type="submit">ХАЙ →</button></div></form></header>
     <nav class="filter-rip" aria-label="Хэрэглээний шүүлтүүр"><a class:list={["all", { active: !filters.useCase }]} href="/products">Бүгд</a>{validUseCases.map(slug => <a class:list={{ active: filters.useCase === slug }} href={`/products?useCase=${slug}`}>{labels[slug]}</a>)}</nav>
     <details class="more-filters"><summary>Төрөл / брэндээр шүүх</summary><div><a href="/products">Бүх төрөл</a>{categories.map(category => <a class:list={{ active: filters.category === category.slug }} href={`/products?category=${category.slug}`}>{category.name}</a>)}{brands.map(brand => <a class:list={{ active: filters.brand === brand.slug }} href={`/products?brand=${brand.slug}`}>{brand.name}</a>)}</div></details>

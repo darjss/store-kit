@@ -2,7 +2,7 @@
 import type { ProductDetail } from '@store-kit/commerce/catalog'
 import { addCartItem, openCart } from '@store-kit/storefront/cart/store'
 import { animate } from 'motion'
-import { For, Show, createMemo, createSignal, onMount } from 'solid-js'
+import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js'
 
 const money = new Intl.NumberFormat('mn-MN')
 
@@ -16,6 +16,7 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
   const selected = createMemo(() =>
     props.product.variants.find(variant => variant.id === variantId()),
   )
+  const maximumQuantity = createMemo(() => Math.min(10, selected()?.stockQuantity ?? 0))
   const image = createMemo(() => {
     const variant = selected()
     const linked = variant?.imageLinks[0]
@@ -27,6 +28,14 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
     if (!reduced && imageStage)
       animate(imageStage, { opacity: [0, 1], scale: [1.025, 1] }, { duration: 0.2 })
+  })
+
+  createEffect(() => {
+    const maximum = maximumQuantity()
+    if (maximum > 0 && quantity() > maximum) {
+      setQuantity(maximum)
+      setAnnouncement(`Энэ сонголтоос ${maximum} ширхэг үлдсэн байна.`)
+    }
   })
 
   const chooseVariant = (id: string) => {
@@ -57,7 +66,13 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
     <section class="purchase-owner" aria-label="Барааны сонголт">
       <div class="variant-stage" ref={element => (imageStage = element)}>
         <Show when={image()}>
-          {item => <img src={imageUrl(item().r2Key)} alt={item().alt ?? props.product.name} />}
+          {item => (
+            <img
+              src={imageUrl(item().r2Key)}
+              alt={item().alt ?? props.product.name}
+              fetchpriority="high"
+            />
+          )}
         </Show>
       </div>
       <fieldset class="variant-options">
@@ -102,8 +117,9 @@ export function ProductPurchase(props: { product: ProductDetail; mediaBaseUrl: s
           <output>{quantity()}</output>
           <button
             type="button"
-            onClick={() => setQuantity(value => Math.min(10, value + 1))}
-            aria-label="Нэгээр нэмэх"
+            disabled={quantity() >= maximumQuantity()}
+            onClick={() => setQuantity(value => Math.min(maximumQuantity(), value + 1))}
+            aria-label={`Нэгээр нэмэх. Дээд хэмжээ ${maximumQuantity()}`}
           >
             +
           </button>

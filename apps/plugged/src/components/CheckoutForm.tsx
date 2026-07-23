@@ -19,6 +19,7 @@ const districts = [
   'Чингэлтэй',
 ] as const
 const money = new Intl.NumberFormat('mn-MN')
+const fieldErrorId = (name: string) => `${name}-error`
 
 type NextAction =
   | { type: 'qpay'; qrText: string; qrImage: string; urls: { name: string; link: string }[] }
@@ -55,44 +56,58 @@ function FormOwner() {
     },
     onSubmit: async ({ value }) => {
       setDomainError()
-      const cart = await validation.refetch()
-      if (cart.data?.status !== 'ok' || cart.data.value.corrections.length > 0) {
-        setDomainError({
-          _tag: 'CartChanged',
-          message: 'Сагсны бараа өөрчлөгдсөн байна.',
-          corrections: cart.data?.status === 'ok' ? cart.data.value.corrections : [],
+      try {
+        const cart = await validation.refetch()
+        if (cart.data?.status !== 'ok') {
+          setDomainError({
+            _tag: 'TransportError',
+            message: 'Сагсыг шалгаж чадсангүй. Мэдээллээ хадгалсан тул дахин оролдоно уу.',
+          })
+          return
+        }
+        if (cart.data.value.corrections.length > 0) {
+          setDomainError({
+            _tag: 'CartChanged',
+            message: 'Сагсны бараа өөрчлөгдсөн байна.',
+            corrections: cart.data.value.corrections,
+          })
+          requestAnimationFrame(() =>
+            document.querySelector<HTMLElement>('#cart-correction')?.focus(),
+          )
+          return
+        }
+        const result = await checkout.mutateAsync({
+          items: cartLineInputs(),
+          customer: { name: value.name, phone: value.phone },
+          delivery: {
+            district: value.district,
+            khoroo: value.khoroo,
+            address: value.address,
+            ...(value.notes ? { notes: value.notes } : {}),
+          },
+          paymentMethod: value.paymentMethod,
         })
-        requestAnimationFrame(() =>
-          document.querySelector<HTMLElement>('#cart-correction')?.focus(),
-        )
-        return
-      }
-      const result = await checkout.mutateAsync({
-        items: cartLineInputs(),
-        customer: { name: value.name, phone: value.phone },
-        delivery: {
-          district: value.district,
-          khoroo: value.khoroo,
-          address: value.address,
-          ...(value.notes ? { notes: value.notes } : {}),
-        },
-        paymentMethod: value.paymentMethod,
-      })
-      if (result.status === 'ok') {
-        clearCart()
-        setCreated(result.value)
-        return
-      }
-      setDomainError(result.error)
-      if (result.error._tag === 'InvalidCheckoutDetails') {
-        const first = result.error.fields[0]?.path.split('/').at(-1)
-        requestAnimationFrame(() =>
-          document.querySelector<HTMLElement>(`[name="${first}"]`)?.focus(),
-        )
-      } else if (result.error._tag === 'CartChanged') {
-        requestAnimationFrame(() =>
-          document.querySelector<HTMLElement>('#cart-correction')?.focus(),
-        )
+        if (result.status === 'ok') {
+          clearCart()
+          setCreated(result.value)
+          return
+        }
+        setDomainError(result.error)
+        if (result.error._tag === 'InvalidCheckoutDetails') {
+          const first = result.error.fields[0]?.path.split('/').at(-1)
+          requestAnimationFrame(() =>
+            document.querySelector<HTMLElement>(`[name="${first}"]`)?.focus(),
+          )
+        } else if (result.error._tag === 'CartChanged') {
+          requestAnimationFrame(() =>
+            document.querySelector<HTMLElement>('#cart-correction')?.focus(),
+          )
+        }
+      } catch {
+        setDomainError({
+          _tag: 'TransportError',
+          message: 'Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.',
+        })
       }
     },
   }))
@@ -107,11 +122,13 @@ function FormOwner() {
           corrections?: { message: string }[]
         }
       | undefined
-  const fieldError = (name: string) => {
-    if (!error()?.fields?.some(item => item.path.endsWith(`/${name}`))) return undefined
-    return name === 'phone'
-      ? 'Монголын 8 оронтой утасны дугаар оруулна уу.'
-      : 'Энэ талбарыг бөглөнө үү.'
+  const fieldError = (name: string) =>
+    error()?.fields?.find(item => item.path.endsWith(`/${name}`))?.message
+  const clearFieldError = (name: string) => {
+    const current = error()
+    if (current?._tag !== 'InvalidCheckoutDetails' || !current.fields) return
+    const fields = current.fields.filter(item => !item.path.endsWith(`/${name}`))
+    setDomainError(fields.length > 0 ? { ...current, fields } : undefined)
   }
 
   return (
@@ -164,6 +181,7 @@ function FormOwner() {
         <Show when={cartItems().length > 0}>
           <form
             class="checkout-form"
+            aria-busy={checkout.isPending || validation.isFetching}
             onSubmit={event => {
               event.preventDefault()
               void form.handleSubmit()
@@ -194,37 +212,60 @@ function FormOwner() {
                   <p>{error()?.message}</p>
                 </section>
               </Show>
+              <Show when={error()?._tag === 'TransportError'}>
+                <section class="inline-error" role="alert">
+                  <strong>Холболт амжилтгүй.</strong>
+                  <p>{error()?.message}</p>
+                  <button type="submit">Дахин оролдох</button>
+                </section>
+              </Show>
               <section class="form-band">
                 <h2>Холбоо барих</h2>
                 <form.Field name="name">
                   {field => (
                     <label>
-                      Нэр
+                      Нэр <span aria-hidden="true">*</span>
                       <input
                         name="name"
+                        required
                         value={field().state.value}
-                        onInput={e => field().handleChange(e.currentTarget.value)}
+                        aria-invalid={Boolean(fieldError('name'))}
+                        aria-describedby={fieldError('name') ? fieldErrorId('name') : undefined}
+                        onInput={e => {
+                          field().handleChange(e.currentTarget.value)
+                          clearFieldError('name')
+                        }}
                         onBlur={() => field().handleBlur()}
                         autocomplete="name"
                       />
-                      <small class="field-error">{fieldError('name')}</small>
+                      <small class="field-error" id={fieldErrorId('name')}>
+                        {fieldError('name')}
+                      </small>
                     </label>
                   )}
                 </form.Field>
                 <form.Field name="phone">
                   {field => (
                     <label>
-                      Утас
+                      Утас <span aria-hidden="true">*</span>
                       <input
                         name="phone"
                         inputmode="tel"
+                        required
                         value={field().state.value}
-                        onInput={e => field().handleChange(e.currentTarget.value)}
+                        aria-invalid={Boolean(fieldError('phone'))}
+                        aria-describedby={fieldError('phone') ? fieldErrorId('phone') : undefined}
+                        onInput={e => {
+                          field().handleChange(e.currentTarget.value)
+                          clearFieldError('phone')
+                        }}
                         onBlur={() => field().handleBlur()}
                         placeholder="9911 2233"
                         autocomplete="tel"
                       />
-                      <small class="field-error">{fieldError('phone')}</small>
+                      <small class="field-error" id={fieldErrorId('phone')}>
+                        {fieldError('phone')}
+                      </small>
                     </label>
                   )}
                 </form.Field>
@@ -234,9 +275,10 @@ function FormOwner() {
                 <form.Field name="district">
                   {field => (
                     <label>
-                      Дүүрэг
+                      Дүүрэг <span aria-hidden="true">*</span>
                       <select
                         name="district"
+                        required
                         value={field().state.value}
                         onChange={e =>
                           field().handleChange(e.currentTarget.value as (typeof districts)[number])
@@ -250,26 +292,44 @@ function FormOwner() {
                 <form.Field name="khoroo">
                   {field => (
                     <label>
-                      Хороо
+                      Хороо <span aria-hidden="true">*</span>
                       <input
                         name="khoroo"
+                        required
                         value={field().state.value}
-                        onInput={e => field().handleChange(e.currentTarget.value)}
+                        aria-invalid={Boolean(fieldError('khoroo'))}
+                        aria-describedby={fieldError('khoroo') ? fieldErrorId('khoroo') : undefined}
+                        onInput={e => {
+                          field().handleChange(e.currentTarget.value)
+                          clearFieldError('khoroo')
+                        }}
                       />
-                      <small class="field-error">{fieldError('khoroo')}</small>
+                      <small class="field-error" id={fieldErrorId('khoroo')}>
+                        {fieldError('khoroo')}
+                      </small>
                     </label>
                   )}
                 </form.Field>
                 <form.Field name="address">
                   {field => (
                     <label>
-                      Дэлгэрэнгүй хаяг
+                      Дэлгэрэнгүй хаяг <span aria-hidden="true">*</span>
                       <textarea
                         name="address"
+                        required
                         value={field().state.value}
-                        onInput={e => field().handleChange(e.currentTarget.value)}
+                        aria-invalid={Boolean(fieldError('address'))}
+                        aria-describedby={
+                          fieldError('address') ? fieldErrorId('address') : undefined
+                        }
+                        onInput={e => {
+                          field().handleChange(e.currentTarget.value)
+                          clearFieldError('address')
+                        }}
                       />
-                      <small class="field-error">{fieldError('address')}</small>
+                      <small class="field-error" id={fieldErrorId('address')}>
+                        {fieldError('address')}
+                      </small>
                     </label>
                   )}
                 </form.Field>

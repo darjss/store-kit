@@ -71,20 +71,28 @@ export const confirmOrderPayment = async (
     })
 
   if (reference.method === 'qpay') {
-    await markQPayPaidWithoutStock({
+    const newlyPaid = await markQPayPaidWithoutStock({
       orderId,
       providerPaymentId: reference.paymentId,
       amountMnt: reference.amountMnt,
       method: reference.method,
       paidAt,
     })
+    if (!newlyPaid) {
+      const existing = await findOrderWithPayment(orderId)
+      if (existing?.payment?.status !== 'paid')
+        return Result.err<PaymentConfirmation, PaymentConfirmationError>({
+          _tag: 'PaymentMismatch',
+          message: 'Төлбөрийн мэдээлэл таарахгүй байна.',
+        })
+    }
     return Result.ok<PaymentConfirmation, PaymentConfirmationError>({
       orderId,
       paymentStatus: 'paid',
       orderStatus: 'new',
       stockApplied: false,
       needsStaffAction: true,
-      newlyPaid: true,
+      newlyPaid,
     })
   }
   return Result.err<PaymentConfirmation, PaymentConfirmationError>({

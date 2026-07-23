@@ -14,7 +14,7 @@ const factLabels: Record<string, string> = { driverConfiguration: "Драйве�
 ---
 
 <Layout title={`${product.name} · Plugged`} description={product.shortDescription} publicPage>
-  <main class="product-detail poster-surface">
+  <main id="main-content" class="product-detail poster-surface">
     <div class="detail-title"><p>{product.brand?.name ?? "PLUGGED"} / {product.category?.name}</p><h1>{product.name}</h1><strong class="price">{money.format(firstPrice)} ₮-С</strong></div>
     <div class="detail-grid">
       <div class="detail-purchase"><ProductPurchase product={product} mediaBaseUrl={new URL(publicMediaBaseUrl, Astro.url).toString()} client:load /></div>

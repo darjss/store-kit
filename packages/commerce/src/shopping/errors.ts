@@ -39,6 +39,16 @@ export type PrivateOrderError =
   | { _tag: 'OrderNotFound'; message: string }
   | { _tag: 'InvalidStatusToken'; message: string }
 
+export type BankTransferClaimError =
+  | { _tag: 'InvalidStatusToken'; message: string }
+  | { _tag: 'BankTransferClaimNotAllowed'; message: string; paymentStatus: string }
+  | { _tag: 'StaffNotificationFailed'; message: string; retryable: boolean }
+
+export type PaymentRefreshError =
+  | { _tag: 'InvalidStatusToken'; message: string }
+  | { _tag: 'PaymentVerificationFailed'; message: string; retryable: boolean }
+  | { _tag: 'PaymentMismatch'; message: string }
+
 export type PaymentConfirmationError =
   | { _tag: 'PaymentMismatch'; message: string }
   | { _tag: 'InsufficientStock'; message: string; variantIds: string[] }

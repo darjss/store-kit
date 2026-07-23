@@ -6,6 +6,21 @@ import { QueryClientProvider, createMutation, createQuery } from '@tanstack/soli
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
 
 const money = new Intl.NumberFormat('mn-MN')
+const orderStatusLabels: Record<string, string> = {
+  new: 'Төлбөр хүлээж байна',
+  confirmed: 'Баталгаажсан',
+  preparing: 'Бэлтгэж байна',
+  delivering: 'Хүргэлтэд гарсан',
+  completed: 'Хүлээлгэн өгсөн',
+  cancelled: 'Цуцлагдсан',
+}
+const paymentStatusLabels: Record<string, string> = {
+  pending: 'Төлбөр хүлээж байна',
+  claimed: 'Шилжүүлгийг шалгаж байна',
+  confirming: 'Баталгаажуулж байна',
+  paid: 'Төлөгдсөн',
+  failed: 'Төлбөр амжилтгүй',
+}
 
 type PrivateOrder = {
   number: string
@@ -49,42 +64,57 @@ function StatusOwner(props: { orderId: string }) {
   })
 
   const claimPayment = async () => {
-    const result = await claim.mutateAsync({ orderId: props.orderId, token: token() })
-    if (result.status === 'ok') {
-      setPaymentMessage('Төлбөрийн мэдэгдэл хүлээн авлаа. Ажилтан баталгаажуулна.')
-      await status.refetch()
-      return
-    }
-    const failure = domainValue(result.error)
-    if (failure._tag === 'BankTransferClaimNotAllowed') {
-      setPaymentMessage(`Одоогийн төлөв: ${String(failure.paymentStatus ?? 'баталгаажуулж байна')}`)
-      await status.refetch()
+    try {
+      const result = await claim.mutateAsync({ orderId: props.orderId, token: token() })
+      if (result.status === 'ok') {
+        setPaymentMessage('Төлбөрийн мэдэгдэл хүлээн авлаа. Ажилтан баталгаажуулна.')
+        await status.refetch()
+        return
+      }
+      const failure = domainValue(result.error)
+      if (failure._tag === 'BankTransferClaimNotAllowed') {
+        const paymentStatus = String(failure.paymentStatus ?? 'confirming')
+        setPaymentMessage(
+          `Одоогийн төлөв: ${paymentStatusLabels[paymentStatus] ?? 'Баталгаажуулж байна'}`,
+        )
+        await status.refetch()
+      } else {
+        setPaymentMessage(
+          `${String(failure.message ?? 'Мэдэгдэл илгээж чадсангүй.')} Дахин оролдоно уу.`,
+        )
+      }
+    } catch {
+      setPaymentMessage('Сүлжээний алдаа гарлаа. Дахин оролдоно уу.')
     }
   }
 
   const refreshPayment = async () => {
-    const result = await refresh.mutateAsync({ orderId: props.orderId, token: token() })
-    if (result.status === 'ok') {
-      const value = domainValue(result.value)
-      if (value.needsStaffAction === true)
+    try {
+      const result = await refresh.mutateAsync({ orderId: props.orderId, token: token() })
+      if (result.status === 'ok') {
+        const value = domainValue(result.value)
+        if (value.needsStaffAction === true)
+          setPaymentMessage(
+            'Төлбөр орсон. Барааны үлдэгдлийг гараар шалгаж байна. Дэлгүүр тантай холбогдоно.',
+          )
+        else if (value.paymentStatus === 'pending')
+          setPaymentMessage('Төлбөр одоогоор хүлээгдэж байна.')
+        else setPaymentMessage('Төлбөр баталгаажлаа.')
+        await status.refetch()
+        return
+      }
+      const failure = domainValue(result.error)
+      if (failure._tag === 'PaymentVerificationFailed')
         setPaymentMessage(
-          'Төлбөр орсон. Барааны үлдэгдлийг гараар шалгаж байна. Дэлгүүр тантай холбогдоно.',
+          failure.retryable === true
+            ? `${String(failure.message)} Дахин оролдоно уу.`
+            : `${String(failure.message)} Дэлгүүртэй холбогдоно уу.`,
         )
-      else if (value.paymentStatus === 'pending')
-        setPaymentMessage('Төлбөр одоогоор хүлээгдэж байна.')
-      else setPaymentMessage('Төлбөр баталгаажлаа.')
-      await status.refetch()
-      return
+      else if (failure._tag === 'PaymentMismatch')
+        setPaymentMessage('Төлбөрийн мэдээллийг ажилтнаар шалгуулах шаардлагатай.')
+    } catch {
+      setPaymentMessage('Сүлжээний алдаа гарлаа. Дахин оролдоно уу.')
     }
-    const failure = domainValue(result.error)
-    if (failure._tag === 'PaymentVerificationFailed')
-      setPaymentMessage(
-        failure.retryable === true
-          ? `${String(failure.message)} Дахин оролдоно уу.`
-          : `${String(failure.message)} Дэлгүүртэй холбогдоно уу.`,
-      )
-    else if (failure._tag === 'PaymentMismatch')
-      setPaymentMessage('Төлбөрийн мэдээллийг шалгах шаардлагатай. Дэлгүүртэй холбогдоно уу.')
   }
 
   const privateOrder = () =>
@@ -115,19 +145,13 @@ function StatusOwner(props: { orderId: string }) {
             <header>
               <p class="stamp">ЗАХИАЛГЫН ТӨЛӨВ</p>
               <h1>{order().number}</h1>
-              <strong>
-                {order().status === 'confirmed'
-                  ? 'Баталгаажсан'
-                  : order().status === 'new'
-                    ? 'Төлбөр хүлээж байна'
-                    : order().status}
-              </strong>
+              <strong>{orderStatusLabels[order().status] ?? 'Захиалгыг шалгаж байна'}</strong>
             </header>
-            <section class="status-band">
+            <section class="status-band" aria-busy={claim.isPending || refresh.isPending}>
               <h2>Төлбөр</h2>
               <p>
                 {order().payment?.method === 'qpay' ? 'QPay' : 'Дансаар шилжүүлэх'} ·{' '}
-                {order().payment?.status}
+                {paymentStatusLabels[order().payment?.status ?? ''] ?? 'Төлөв тодорхойгүй'}
               </p>
               <Show when={paymentMessage()}>
                 <div class="inline-status" role="status">
