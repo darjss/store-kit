@@ -3,6 +3,7 @@ import { expect, test } from 'vite-plus/test'
 import { formatMnt } from './format'
 import { publicMediaUrl } from './media'
 import { clampPurchaseQuantity, maximumPurchaseQuantity } from './purchase'
+import { orderQuery } from './query-options/orders'
 import { orderStatusLabel, paymentStatusLabel, shouldPollOrderStatus } from './status'
 import { cartStorageKey, privateOrderStorageKey } from './storage'
 
@@ -13,6 +14,17 @@ test('formats MNT with the shared Mongolian currency format', () => {
 test('builds storefront storage keys', () => {
   expect(cartStorageKey('plugged')).toBe('store-kit:plugged:cart:v1')
   expect(privateOrderStorageKey('plugged', 'ord_123')).toBe('plugged:order-token:ord_123')
+})
+
+test('scopes private-order queries by their credential', () => {
+  expect(orderQuery.findPrivateStatus('ord_123', 'token-a').queryKey).toEqual([
+    'order',
+    'ord_123',
+    'token-a',
+  ])
+  expect(orderQuery.findPrivateStatus('ord_123', 'token-b').queryKey).not.toEqual(
+    orderQuery.findPrivateStatus('ord_123', 'token-a').queryKey,
+  )
 })
 
 test('builds encoded public media URLs', () => {

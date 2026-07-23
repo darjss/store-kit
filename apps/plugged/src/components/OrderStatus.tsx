@@ -33,7 +33,7 @@ function StatusOwner(props: { orderId: string }) {
   const [token, setToken] = createSignal('')
   const [paymentMessage, setPaymentMessage] = createSignal('')
   const status = useQueryResult(() => ({
-    ...orderQuery.findPrivateStatus(props.orderId, token),
+    ...orderQuery.findPrivateStatus(props.orderId, token()),
     enabled: token().length > 0,
     retry: false,
     refetchInterval: query => {

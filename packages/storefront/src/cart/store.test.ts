@@ -5,6 +5,7 @@ import {
   cartItemCount,
   cartLineInputs,
   clearCart,
+  deserializeCart,
   removeCartItem,
   setCartItemQuantity,
 } from './store'
@@ -53,4 +54,16 @@ test('quantity commands keep quantities positive integers', () => {
 
   removeCartItem(item.variantId)
   expect(cartItemCount()).toBe(0)
+})
+
+test('persisted carts keep legacy items and add nullable image metadata', () => {
+  const { imageWidth: _width, imageHeight: _height, imageAlt: _alt, ...legacyItem } = item
+
+  expect(deserializeCart(JSON.stringify([legacyItem]))).toEqual([
+    { ...legacyItem, imageWidth: null, imageHeight: null, imageAlt: null },
+  ])
+})
+
+test('persisted carts reject non-string variant identifiers', () => {
+  expect(deserializeCart(JSON.stringify([{ ...item, variantId: [item.variantId] }]))).toEqual([])
 })
