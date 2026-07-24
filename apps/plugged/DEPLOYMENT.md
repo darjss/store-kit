@@ -5,6 +5,20 @@ Catalog media is always read from a remote R2 custom domain. The production orig
 domain; it may never fall back to the production origin. The Astro Worker has no public R2 read
 binding or media route.
 
+The non-production client demo uses:
+
+- Worker: `plugged-client-demo`
+- application: `https://storekit.plugged.darjs.dev`
+- D1: `plugged-client-demo`
+- KV: `plugged-client-demo-cache`, `plugged-client-demo-auth`, and
+  `plugged-client-demo-session`
+- R2: `plugged-development-media`
+- media: `https://storekitcdn.plugged.darjs.dev/`
+
+The demo uses Vit Store's **live** QPay merchant at `https://merchant.qpay.mn` with invoice code
+`AMERIK_VITAMIN_INVOICE`. Each demo QPay checkout creates a real merchant invoice. Never pay an
+invoice created during deployment verification.
+
 ## Required Wrangler configuration
 
 Deployment tasks require an explicit `env.development` or `env.production` entry in
@@ -52,7 +66,7 @@ clean local database when you need repeatable catalog and checkout behavior:
 rm -rf apps/plugged/.wrangler/state
 vp run db:migrate:plugged:local
 vp run catalog:seed:plugged:local
-PLUGGED_LOCAL_MEDIA_BASE_URL=https://plugged-dev.storekitcdn.darjs.dev/ \
+PLUGGED_LOCAL_MEDIA_BASE_URL=https://storekitcdn.plugged.darjs.dev/ \
   vp run plugged:browser:start
 vp run plugged:browser:health
 ```
@@ -82,10 +96,14 @@ PLUGGED_MEDIA_BUCKET=plugged-development-media vp run catalog:media:plugged:deve
 vp run db:migrate:plugged:development
 PLUGGED_MEDIA_BUCKET=plugged-development-media vp run catalog:seed:plugged:development
 vp run plugged:secret-names:development
-PLUGGED_MEDIA_BUCKET=plugged-development-media vp run plugged:deploy:dry-run:development
-PLUGGED_MEDIA_BUCKET=plugged-development-media vp run plugged:deploy:development
-PLUGGED_SMOKE_URL=https://<development-worker-host>/ \
-  PLUGGED_MEDIA_BASE_URL=https://plugged-dev.storekitcdn.darjs.dev/ \
+PLUGGED_MEDIA_BUCKET=plugged-development-media \
+  PLUGGED_SECRETS_FILE=/absolute/path/to/owner-only-demo-secrets.env \
+  vp run plugged:deploy:dry-run:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media \
+  PLUGGED_SECRETS_FILE=/absolute/path/to/owner-only-demo-secrets.env \
+  vp run plugged:deploy:development
+PLUGGED_SMOKE_URL=https://storekit.plugged.darjs.dev/ \
+  PLUGGED_MEDIA_BASE_URL=https://storekitcdn.plugged.darjs.dev/ \
   vp run plugged:smoke:development
 ```
 
@@ -99,6 +117,15 @@ writes secret values. Required names are:
 - `TELEGRAM_CHAT_ID`
 - `TELEGRAM_WEBHOOK_SECRET`
 - `TELEGRAM_ADMIN_USER_ID`
+
+For a new Worker, Wrangler cannot run `secret put` until the Worker exists. The guarded development
+deploy therefore accepts Cloudflare's first-deploy `--secrets-file` equivalent through
+`PLUGGED_SECRETS_FILE`. The file must be absolute, mode `600`, contain all three QPay secrets, and
+contain either all four Telegram secrets or none. Never put the file in the repository.
+
+Astro selects the named Cloudflare environment at build time with
+`CLOUDFLARE_ENV=development`. The guarded command validates `env.development`, builds it, and gives
+Wrangler Astro's generated flattened config from `dist/server/wrangler.json`.
 
 The smoke task checks the system and catalog routes, direct R2 image access, responsive Cloudflare
 transformation output, object cache headers, and the absence of the removed Worker media route.
