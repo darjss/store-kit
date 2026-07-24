@@ -16,30 +16,64 @@ if (publicPage) {
 } else {
   Astro.response.headers.set("Cache-Control", "private, no-store");
 }
+
+const categories = [
+  { slug: "in-ear-monitors", label: "IEM" },
+  { slug: "portable-audio", label: "DAC" },
+  { slug: "eartips", label: "ACCESSORIES" },
+];
+const activeCategory = Astro.url.searchParams.get("category");
 ---
 
 <!doctype html>
-<html lang={STORE_LOCALE} class="scroll-smooth overflow-x-clip bg-ink font-body text-ink motion-reduce:scroll-auto">
+<html lang={STORE_LOCALE} class="scroll-smooth overflow-x-clip bg-ink font-body motion-reduce:scroll-auto">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#f05c13" />
+    <meta name="theme-color" content="#0e1519" />
     <title>{title}</title>
   </head>
-  <body class="min-w-0 overflow-x-clip bg-paper pb-20 font-body text-base leading-6 text-ink max-md:pb-[calc(6rem+env(safe-area-inset-bottom))] [&_:where(a,button,input,select,textarea):focus-visible]:outline-4 [&_:where(a,button,input,select,textarea):focus-visible]:outline-offset-3 [&_:where(a,button,input,select,textarea):focus-visible]:outline-acid [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
-    <a class="fixed top-2 left-2 z-60 -translate-y-[150%] border-3 border-ink bg-acid px-4 py-3 font-black text-ink focus:translate-y-0" href="#main-content">Үндсэн хэсэг рүү очих</a>
-    <header class="relative z-20 grid min-h-[66px] grid-cols-[minmax(3.1rem,auto)_minmax(0,1fr)_auto] items-center gap-[clamp(1rem,4vw,4rem)] border-b-4 border-ink bg-paper-clean py-2 pr-[max(14rem,2.25rem)] pl-[clamp(0.75rem,2.4vw,2.25rem)] max-md:grid-cols-[minmax(0,1fr)_auto] max-md:px-3">
-      <a class="@container flex min-w-[3.1rem] shrink-0 items-center gap-2 font-display text-[2.7rem] leading-[0.8] font-black tracking-[0.02em] no-underline max-md:text-[2.3rem]" href="/" aria-label="Plugged нүүр">
-        <img class="size-[3.1rem] shrink-0 object-cover mix-blend-multiply max-md:size-11" src="/brand/plugged-logo.webp" width="640" height="640" alt="" />
-        <span class="inline-flex min-w-0 items-start overflow-hidden @max-[10rem]:hidden">PLUGGED<sup class="font-body text-[0.6rem] font-extrabold">®</sup></span>
-      </a>
-      <nav class="flex gap-8 font-black max-md:hidden" aria-label="Дэлгүүрийн цэс"><a href="/products?category=in-ear-monitors">IEM</a><a href="/products?category=portable-audio">DAC</a><a href="/products?category=cables">CABLE</a></nav>
-      <a class="bg-ink px-4 py-2 font-black text-paper" href="/products">SHOP →</a>
+  <body class="min-w-0 overflow-x-clip bg-ink pb-20 font-body text-base leading-6 text-ink max-md:pb-nav-clear [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
+    <a class="fixed top-2 left-2 z-60 -translate-y-[150%] border-3 border-cyan bg-paper-clean px-4 py-3 font-black text-ink focus:translate-y-0" href="#main-content">Үндсэн хэсэг рүү очих</a>
+    <header class="relative z-20 border-b-4 border-paper-clean bg-ink text-paper">
+      <div class="flex min-h-16 items-stretch gap-[clamp(0.5rem,2vw,2rem)] pl-gutter md:pr-[13.25rem] max-md:pr-2">
+        <a class="flex shrink-0 items-center gap-2 no-underline" href="/" aria-label="Plugged нүүр">
+          <img class="size-11 shrink-0 object-cover mix-blend-screen" src="/brand/plugged-logo.webp" width="640" height="640" alt="" />
+          <span class="font-display text-[2rem] leading-[0.8] font-black tracking-[0.02em] text-paper max-[380px]:hidden">PLUGGED<sup class="font-body text-[0.6rem] font-extrabold">®</sup></span>
+        </a>
+        <nav class="flex items-stretch max-lg:hidden" aria-label="Дэлгүүрийн цэс">
+          {categories.map(category => (
+            <a
+              class:list={["pressable flex items-center border-l border-paper/25 px-5 font-extrabold whitespace-nowrap no-underline transition-colors hover:text-cyan", category.slug === activeCategory && "text-cyan shadow-[inset_0_-3px_0_var(--color-cyan)]"]}
+              href={`/products?category=${category.slug}`}
+              aria-current={category.slug === activeCategory ? "page" : undefined}
+            >{category.label}</a>
+          ))}
+        </nav>
+        <a class="pressable m-2 ml-auto flex shrink-0 items-center border-2 border-cyan px-4 font-black whitespace-nowrap text-paper no-underline transition-colors hover:bg-cyan hover:text-ink max-[360px]:px-2 max-[360px]:text-sm" href="/products">БҮХ БАРАА →</a>
+      </div>
+      <nav class="flex overflow-x-auto border-t border-paper/20 [scrollbar-width:none] lg:hidden" aria-label="Дэлгүүрийн цэс">
+        {categories.map(category => (
+          <a
+            class:list={["pressable shrink-0 px-4 py-2.5 text-sm font-extrabold no-underline", category.slug === activeCategory ? "text-cyan shadow-[inset_0_-2px_0_var(--color-cyan)]" : "border-l border-paper/20 first:border-l-0"]}
+            href={`/products?category=${category.slug}`}
+            aria-current={category.slug === activeCategory ? "page" : undefined}
+          >{category.label}</a>
+        ))}
+      </nav>
     </header>
     <slot />
-    <footer class="flex justify-between gap-8 bg-ink px-[max(1rem,4vw)] pt-16 pb-24 text-paper max-md:block max-md:pb-28"><strong class="font-display text-[5rem] leading-[0.75] max-md:text-[3.8rem]">PLUGGED / ULAANBAATAR</strong><p>QPay · Дансаар шилжүүлэх · Хот дотор хүргэлт</p></footer>
+    <footer class="border-t-4 border-paper-clean bg-ink text-paper">
+      <div class="flex justify-between gap-8 px-gutter py-14 max-md:block">
+        <strong class="font-display text-[clamp(3rem,8vw,5rem)] leading-[0.8] font-black">PLUGGED / ULAANBAATAR</strong>
+        <div class="max-md:mt-6">
+          <p class="m-0 font-extrabold text-cyan">УТАСТАЙ СОНСГОЛ. ЦЭВЭР ГАРАЛТ.</p>
+          <p>QPay · Дансаар шилжүүлэх · Хот дотор хүргэлт</p>
+        </div>
+      </div>
+    </footer>
     <StoreChrome client:load />
   </body>
 </html>

@@ -2,6 +2,26 @@
 
 Design-only UI references for the existing cart, checkout, payment, and order-status behavior. These files do not add provider capabilities or define new application data.
 
+## Checkout raster rejection and the ORDER DOSSIER replacement
+
+`checkout-desktop.png` and `checkout-mobile-error.png` are REJECTED as layout references. They must not determine checkout layout. Only their recorded behavioral states remain requirements, and those states are specified below as text.
+
+Checkout is a mobile-first ORDER DOSSIER:
+
+- Numbered clipped sections (contact, delivery, payment) read as clipped
+  paper files inside one dossier. Numbers are earned: checkout is a real
+  sequence.
+- Layered paper files stack with slight physical offsets on the night field.
+  No generic cards, no glass, no rounded panels.
+- Progress and status are stamped onto the paper. No pill badges.
+- Errors are clear and field-specific. A failed submit keeps every submitted
+  value, marks only the invalid fields, and focuses the first invalid control.
+- A persistent submit action stays visible on mobile and clears the bottom
+  navigation and safe-area inset.
+- Validation timing, focus order, value preservation, and the disabled busy
+  submit (`Баталгаажуулж байна…`) stay exactly as the current implementation
+  behaves.
+
 ## Visual anchor
 
 - `docs/design/plugged-selected-v5/home-desktop.png`
@@ -24,7 +44,9 @@ Orange is intentionally absent from these references. Do not reinterpret the scr
 - The KEYX thumbnail is a compact right-angle USB-C DAC, not another IEM.
 - No invented “last updated” timestamp, delivery fee, provider status, or cart badge is present.
 
-### `checkout-desktop.png` — 1440 × 1025
+### `checkout-desktop.png` — 1440 × 1025 — REJECTED LAYOUT
+
+Do not use this raster for layout. Keep only these behavioral facts:
 
 - Valid checkout details with a submit currently pending.
 - Preserved repository test values: `Бат`, `9911 2233`, `Баянзүрх`, `1`, and `Энхтайвны өргөн чөлөө 1`.
@@ -33,7 +55,9 @@ Orange is intentionally absent from these references. Do not reinterpret the scr
 - The only submit control is the disabled, busy state with spinner and `Баталгаажуулж байна…`.
 - This pre-submit state does not show a QR code, bank account, or provider app list.
 
-### `checkout-mobile-error.png` — 390 × 825
+### `checkout-mobile-error.png` — 390 × 825 — REJECTED LAYOUT
+
+Do not use this raster for layout. Keep only these behavioral facts:
 
 - Failed-submit validation state with values preserved.
 - Top notice: `Мэдээллээ шалгана уу.` and `Тодруулсан талбаруудыг засаад дахин оролдоно уу.`
@@ -70,3 +94,5 @@ Orange is intentionally absent from these references. Do not reinterpret the scr
 ## Generation and review
 
 The four finals were generated with the built-in Codex image-generation path in `ui-mockup` mode, using both approved selected-v5 rasters as image references. Corrections were regenerated for the KEYX product type, unsupported timestamps and totals, the `Хороо` control type, submit-button placement, and clipped/overlapping controls. Final files were visually inspected after correction and resized to the requested viewport widths.
+
+The two checkout finals were later reviewed against the ORDER DOSSIER direction and rejected as layout references. They stay in this directory only as behavioral-state records.

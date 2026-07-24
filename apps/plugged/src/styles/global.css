@@ -15,18 +15,86 @@
 }
 
 @theme {
-  --color-paper: oklch(0.94 0.015 82);
-  --color-paper-clean: oklch(0.985 0.004 82);
-  --color-ink: oklch(0.15 0.012 40);
-  --color-orange: oklch(0.68 0.22 38);
-  --color-acid: oklch(0.88 0.22 122);
-  --color-cobalt: oklch(0.43 0.22 264);
-  --color-warning: oklch(0.5 0.2 27);
-  --color-success: oklch(0.47 0.15 145);
+  /* Warehouse-night field: ink black and deep petrol, never pure black. */
+  --color-ink: oklch(0.17 0.014 222);
+  --color-petrol: oklch(0.3 0.045 214);
+
+  /* Reading layer: dirty silver cut paper and clean off-white strips. */
+  --color-paper: oklch(0.88 0.014 95);
+  --color-paper-clean: oklch(0.96 0.008 95);
+
+  /* Electric cyan registration accent, plus a text-safe cyan for paper. */
+  --color-cyan: oklch(0.8 0.12 205);
+  --color-cyan-deep: oklch(0.55 0.095 212);
+
+  /* Legacy route aliases keep existing screens inside the approved palette. */
+  --color-orange: var(--color-cyan-deep);
+  --color-acid: var(--color-cyan);
+  --color-cobalt: var(--color-petrol);
+
+  /* Commerce state colors. */
+  --color-warning: oklch(0.58 0.17 29);
+  --color-success: oklch(0.68 0.14 155);
+
+  /* Condensed display is for Latin and product naming only. Mongolian
+     Cyrillic always uses the normal-width body face. */
   --font-display: 'Outward', Impact, sans-serif;
   --font-outline: 'Outward Borders', Impact, sans-serif;
   --font-body: 'Golos Text Variable', Arial, sans-serif;
+
+  /* Physical paper motion: strong ease-out for entry, drawer curve for
+     sheets that the user can interrupt. */
   --ease-slam: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-paper: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Responsive structural spacing. */
+  --spacing-gutter: clamp(0.75rem, 2.4vw, 2.25rem);
+  --spacing-nav-clear: calc(6rem + env(safe-area-inset-bottom));
+}
+
+/* Cut-paper reading surface: merged photocopy grain over dirty silver. */
+@utility texture-paper {
+  background:
+    url('/textures/paper-grain.avif') repeat,
+    var(--color-paper);
+  background-blend-mode: multiply;
+}
+
+/* Hard paper-cut edge for strips. Sharp, never rounded. */
+@utility clip-cut {
+  clip-path: polygon(2% 0, 100% 5%, 97% 100%, 0 92%);
+}
+
+@utility rule-rail {
+  border-block: 4px solid var(--color-ink);
+}
+
+@utility paper-stack {
+  background:
+    url('/textures/paper-grain.avif') repeat,
+    var(--color-paper-clean);
+  background-blend-mode: multiply;
+  box-shadow: 0.35rem 0.4rem 0 var(--color-ink);
+}
+
+@utility pressable {
+  transition: transform 140ms var(--ease-slam);
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+@layer base {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid var(--color-cyan-deep);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: var(--color-cyan);
+    color: var(--color-ink);
+  }
 }
 
 @keyframes ticker {
@@ -44,6 +112,36 @@
 @keyframes sheet-up {
   from {
     transform: translateY(100%);
+  }
+}
+
+/* A paper sheet settles onto the stack. Transform and opacity only. */
+@keyframes sheet-settle {
+  from {
+    opacity: 0;
+    transform: translateY(24px) rotate(1.5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+/* A stamp presses onto paper. Transform and opacity only. */
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: scale(1.12) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pressable:hover {
+    transform: translateY(-1px);
   }
 }
 

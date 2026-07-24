@@ -33,33 +33,33 @@ export function StoreSearch(props: { initialOpen: boolean }) {
               <small>Хайх</small>
             </DialogTrigger>
             <DialogContent
-              class="bg-orange! text-ink! fixed! inset-0! z-50! h-dvh! w-full! max-w-none! translate-none! transform-none! gap-0! overflow-y-auto! rounded-none! p-0! ring-0! outline-none! motion-reduce:animate-none!"
+              class="bg-ink! text-paper! fixed! inset-0! z-50! h-dvh! w-full! max-w-none! translate-none! transform-none! gap-0! overflow-y-auto! rounded-none! p-0! ring-0! outline-none! motion-reduce:animate-none!"
               showCloseButton={false}
               onOpenAutoFocus={event => {
                 event.preventDefault()
                 search.focusInput()
               }}
             >
-              <header class="border-ink flex min-h-30 items-start justify-between gap-4 border-b-[5px] p-[clamp(1rem,3vw,2.5rem)]">
+              <header class="border-paper-clean flex min-h-30 items-start justify-between gap-4 border-b-4 p-[clamp(1rem,3vw,2.5rem)]">
                 <div>
-                  <DialogTitle class="font-display text-[clamp(3.8rem,10vw,6rem)] leading-[0.72] tracking-[-0.02em]">
+                  <DialogTitle class="font-body text-[clamp(2.2rem,7vw,4rem)] leading-[0.95] font-black tracking-[-0.02em]">
                     ЮУ СОНСОХ ВЭ?
                   </DialogTitle>
-                  <DialogDescription class="text-ink! mt-2 mb-0 font-extrabold">
-                    IEM, DAC эсвэл cable нэрээр хайна уу.
+                  <DialogDescription class="text-paper! mt-2 mb-0 font-extrabold">
+                    IEM, DAC эсвэл брэндийн нэрээр хайна уу.
                   </DialogDescription>
                 </div>
                 <DialogClose
                   as={Button}
                   variant="outline"
-                  class="border-ink bg-paper-clean text-ink min-h-12 min-w-20 rounded-none border-3 font-black"
+                  class="border-paper-clean bg-paper-clean text-ink min-h-12 min-w-20 rounded-none border-3 font-black"
                   aria-label="Хайлт хаах"
                 >
                   ХААХ ×
                 </DialogClose>
               </header>
               <label
-                class="border-ink bg-paper-clean grid min-h-22 grid-cols-[auto_1fr] items-center gap-4 border-b-[5px] px-[clamp(1rem,3vw,2.5rem)] py-3"
+                class="border-cyan bg-paper-clean text-ink grid min-h-22 grid-cols-[auto_1fr] items-center gap-4 border-b-4 px-[clamp(1rem,3vw,2.5rem)] py-3"
                 for="store-search"
               >
                 <span class="sr-only">Бараа хайх</span>
@@ -72,7 +72,7 @@ export function StoreSearch(props: { initialOpen: boolean }) {
                       id="store-search"
                       value={input.value()}
                       onInput={input.onInput}
-                      placeholder="IEM, DAC, cable…"
+                      placeholder="IEM, DAC, брэнд…"
                       autocomplete="off"
                     />
                   )}
@@ -106,7 +106,7 @@ export function StoreSearch(props: { initialOpen: boolean }) {
                     const variant = product.variants[0]
                     return (
                       <a
-                        class="border-ink bg-paper-clean hover:bg-acid focus-visible:bg-acid grid min-h-30 grid-cols-[7.5rem_minmax(0,1fr)_auto] items-center gap-[clamp(0.75rem,2vw,1.5rem)] border-4 border-b-0 p-3 no-underline last:border-b-4 max-md:grid-cols-[5.5rem_minmax(0,1fr)]"
+                        class="bg-paper-clean text-ink border-paper-clean hover:bg-paper focus-visible:bg-paper grid min-h-30 grid-cols-[7.5rem_minmax(0,1fr)_auto] items-center gap-[clamp(0.75rem,2vw,1.5rem)] border-4 border-b-0 p-3 no-underline transition-colors last:border-b-4 max-md:grid-cols-[5.5rem_minmax(0,1fr)]"
                         href={`/products/${product.slug}`}
                       >
                         <Show when={image}>
@@ -126,7 +126,7 @@ export function StoreSearch(props: { initialOpen: boolean }) {
                             {product.shortDescription}
                           </small>
                         </span>
-                        <b class="border-ink bg-acid border-3 p-2 tabular-nums max-md:col-2 max-md:justify-self-start">
+                        <b class="border-ink bg-cyan text-ink border-3 p-2 tabular-nums max-md:col-2 max-md:justify-self-start">
                           {variant ? formatMnt(variant.priceMnt) : '—'}
                         </b>
                       </a>

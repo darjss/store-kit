@@ -26,7 +26,7 @@ function InteractiveChrome(props: { initialPanel: 'search' | 'cart' }) {
               <Show when={cartItemCount() > 0}>
                 <b
                   class={cn(
-                    'border-ink bg-acid text-ink absolute top-1 right-[calc(50%-1.4rem)] grid h-5.25 min-w-5.25 place-items-center rounded-full border-2 text-[0.72rem]',
+                    'border-ink bg-cyan text-ink absolute top-1 right-[calc(50%-1.4rem)] grid h-5.25 min-w-5.25 place-items-center rounded-full border-2 text-[0.72rem]',
                     cartItemCount() > 9 && 'px-1',
                   )}
                 >
