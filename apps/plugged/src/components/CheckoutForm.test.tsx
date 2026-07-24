@@ -9,15 +9,15 @@ import { CheckoutForm } from './CheckoutForm'
 const cartItem: PersistedCartItem = {
   variantId: 'var_01arz3ndektsv4rrffq69g5fav',
   quantity: 2,
-  productSlug: 'aster-kit',
-  productName: 'Aster Kit',
-  variantName: 'Graphite',
-  options: { color: 'Graphite' },
+  productSlug: 'tangzu-waner-2-red-lion',
+  productName: "TANGZU Wan'er 2 Red Lion",
+  variantName: '3.5 mm / No microphone',
+  options: { connector: '3.5 mm', microphone: 'No' },
   image: {
-    url: 'https://media.example.com/products/aster-kit/graphite.webp',
-    width: 1200,
-    height: 900,
-    alt: 'Aster Kit Graphite',
+    url: 'https://media.example.com/products/tangzu-waner-2-red-lion/red.webp',
+    width: 1365,
+    height: 1278,
+    alt: "TANGZU Wan'er 2 Red Lion",
   },
   unitPriceMnt: 120_000,
 }
@@ -88,5 +88,5 @@ test('checkout controls edit values shaped like the checkout details schema', as
   expect(address.name).toBe('delivery.address')
   expect((bankTransfer as HTMLInputElement).name).toBe('paymentMethod')
   expect((bankTransfer as HTMLInputElement).checked).toBe(true)
-  expect(view.getByText('Aster Kit × 2')).toBeTruthy()
+  expect(view.getByText("TANGZU Wan'er 2 Red Lion × 2")).toBeTruthy()
 })

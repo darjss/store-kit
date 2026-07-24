@@ -30,6 +30,22 @@ The old `~/dev/plugged` application is not launched. Move its useful product dat
 
 Product import is not part of bootstrap. A later catalog plan must define the final product schema before it imports the old data.
 
+The current Plugged MVP selling scope is IEMs and portable DAC amplifiers. DAC
+remains a primary storefront category. Standalone cables are outside the
+current catalog and must not receive a sellable product, category-navigation
+slot, or featured merchandising position. A cable may still appear as an
+included IEM accessory, verified product detail, or attached signal path in
+product photography.
+
+Use one broad future Accessories destination rather than promoting Eartips as
+a homepage category. Accessories may eventually include source-backed eartips,
+replacement cables, cases or pouches, plug adapters, ear hooks or clips,
+filters or nozzles, and cleaning tools. Do not imply that any of those product
+types are stocked before a defensible product identity and purchasable price
+are sourced. The old Plugged source currently records only free bundled tips,
+so the controlled `eartips` seed category remains empty and is not a promise of
+inventory or a homepage navigation requirement.
+
 ## Repository and deployment model
 
 Keep all stores in one repository.

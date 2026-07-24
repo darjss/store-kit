@@ -6,10 +6,10 @@ import type { ProductImageLayout } from './product-image'
 import { ProductImage } from './ProductImage'
 
 const remoteImage = {
-  url: 'https://plugged.storekitcdn.darjs.dev/catalog/products/aster/graphite.webp',
+  url: 'https://plugged.storekitcdn.darjs.dev/products/product_kz-prx/2e55e0a123564da1a9a11e246dc983e0.jpg',
   width: 1200,
   height: 900,
-  alt: 'Aster Graphite',
+  alt: 'KZ PRX',
 }
 
 const renderImage = (layout: ProductImageLayout, priority = false, image = remoteImage) => {
@@ -56,6 +56,6 @@ describe('product image delivery', () => {
 
     expect(output).toContain('width="1200"')
     expect(output).toContain('height="900"')
-    expect(output).toContain('alt="Aster Graphite"')
+    expect(output).toContain('alt="KZ PRX"')
   })
 })
