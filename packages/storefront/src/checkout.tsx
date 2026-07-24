@@ -8,6 +8,7 @@ import type {
 import { checkoutDetailsSchema } from '@store-kit/contracts/checkout'
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import { Result } from 'better-result'
+import { match } from 'dismatch'
 import { createContext, createMemo, createSignal, splitProps, useContext } from 'solid-js'
 import type { Accessor, ComponentProps, JSX } from 'solid-js'
 
@@ -49,6 +50,41 @@ const jsonPointerToFieldName = (pointer: string) =>
 
 const checkoutDetailsValidator = toStandardSchema(checkoutDetailsSchema)
 
+const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').replace(/^976/, '')
+
+export const normalizeCheckoutDetails = (details: CheckoutDetails): CheckoutDetails => {
+  const notes = details.delivery.notes?.trim()
+  return {
+    customer: {
+      name: details.customer.name.trim(),
+      phone: normalizePhone(details.customer.phone),
+    },
+    delivery: {
+      district: details.delivery.district,
+      khoroo: details.delivery.khoroo.trim(),
+      address: details.delivery.address.trim(),
+      ...(notes ? { notes } : {}),
+    },
+    paymentMethod: details.paymentMethod,
+  }
+}
+
+const openCartActions = (): CheckoutCorrectionAction[] => ['open-cart']
+
+export const checkoutDomainActions = (error: CheckoutDomainError) =>
+  match(
+    error,
+    '_tag',
+  )<CheckoutCorrectionAction[]>({
+    CartEmpty: () => [],
+    CartChanged: openCartActions,
+    InvalidCart: openCartActions,
+    InvalidCheckoutDetails: () => [],
+    DeliveryUnavailable: () => [],
+    PaymentSetupFailed: failure =>
+      failure.canUseBankTransfer ? ['retry', 'use-bank-transfer'] : ['retry'],
+  })
+
 function createCheckoutState(props: CheckoutRootProps) {
   const mutation = useMutationResult(() => checkoutMutation.create())
   const cartValidation = useQueryResult(() => ({
@@ -73,17 +109,13 @@ function createCheckoutState(props: CheckoutRootProps) {
   const errors = createFormErrorController<CheckoutDomainError, CheckoutCorrectionAction>({
     domainError,
     transportError,
-    domainActions: error => {
-      if (error._tag === 'CartChanged' || error._tag === 'InvalidCart') return ['open-cart']
-      if (error._tag === 'PaymentSetupFailed')
-        return error.canUseBankTransfer ? ['retry', 'use-bank-transfer'] : ['retry']
-      return []
-    },
+    domainActions: checkoutDomainActions,
     transportActions: ['retry'],
   })
 
   const submit = async (details: CheckoutDetails) => {
     setResult()
+    const normalizedDetails = normalizeCheckoutDetails(details)
     const items = cartLineInputs()
     const cartResponse = await cartValidation.refetch()
     if (cartResponse.error || !cartResponse.data) return
@@ -103,7 +135,7 @@ function createCheckoutState(props: CheckoutRootProps) {
           return
         }
 
-        const input: CheckoutInput = { ...details, items }
+        const input: CheckoutInput = { ...normalizedDetails, items }
         const checkoutResult = await mutation.mutateAsync(input)
         checkoutResult.match({
           err: error => {

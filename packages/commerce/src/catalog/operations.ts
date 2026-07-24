@@ -1,9 +1,6 @@
-import type { ProductNotFound } from '@store-kit/contracts/catalog'
+import type { ProductListFilters, ProductNotFound } from '@store-kit/contracts/catalog'
 import { database } from '@store-kit/db'
-import { productListFiltersSchema } from '@store-kit/db/schemas'
-import type { ProductListFilters } from '@store-kit/db/schemas'
 import { Result } from 'better-result'
-import { Value } from 'typebox/value'
 
 import { createProductNotFound } from '~/errors/catalog'
 
@@ -12,12 +9,12 @@ export type ProductDetail = NonNullable<
 >
 
 export const listCatalogProducts = async (filters: ProductListFilters = {}) => {
-  const normalizedFilters = Value.Parse(productListFiltersSchema, {
+  const normalizedFilters = {
     ...filters,
     query: filters.query?.trim() || undefined,
     limit: filters.limit ?? 24,
     offset: filters.offset ?? 0,
-  })
+  } satisfies ProductListFilters
   if (
     normalizedFilters.minPrice !== undefined &&
     normalizedFilters.maxPrice !== undefined &&

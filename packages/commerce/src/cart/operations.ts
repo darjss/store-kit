@@ -5,11 +5,9 @@ import type {
   StockStatus,
   ValidatedCartLine,
 } from '@store-kit/contracts/cart'
-import { cartValidationInputsSchema } from '@store-kit/contracts/cart'
 import { database } from '@store-kit/db'
 import { Result } from 'better-result'
 import { match } from 'dismatch'
-import { Value } from 'typebox/value'
 
 import {
   cartEmpty,
@@ -17,7 +15,6 @@ import {
   duplicateCartVariant,
   inactiveVariant,
   insufficientStock,
-  invalidCart,
   missingVariant,
 } from '~/errors/cart'
 
@@ -48,17 +45,6 @@ type ServerValidatedCart = {
 
 const validate = async (input: CartValidationInput[]) => {
   if (input.length === 0) return Result.err<ServerValidatedCart, CartValidationError>(cartEmpty())
-  if (!Value.Check(cartValidationInputsSchema, input)) {
-    return Result.err<ServerValidatedCart, CartValidationError>(
-      invalidCart(
-        [...Value.Errors(cartValidationInputsSchema, input)].map(error => ({
-          path: error.instancePath || '/',
-          code: 'invalid' as const,
-        })),
-      ),
-    )
-  }
-
   const duplicateVariant = input.find(
     (item, index) => input.findIndex(candidate => candidate.variantId === item.variantId) !== index,
   )

@@ -1,3 +1,4 @@
+import { match } from 'dismatch'
 import { createMemo, createSignal } from 'solid-js'
 import type { Accessor, JSX } from 'solid-js'
 
@@ -98,17 +99,26 @@ export function createFormErrorController<DomainError, Action>(
 
   const state = createMemo<FormFailureState<DomainError, Action>>(() => {
     const domainError = options.domainError()
-    if (domainError !== undefined)
-      return {
-        type: 'domain',
-        error: domainError,
-        actions: options.domainActions(domainError),
-      }
-
     const transportError = options.transportError()
-    return transportError
-      ? { type: 'transport', error: transportError, actions: options.transportActions }
-      : { type: 'none' }
+    const outcome: FormFailureState<DomainError, Action> =
+      domainError !== undefined
+        ? {
+            type: 'domain',
+            error: domainError,
+            actions: options.domainActions(domainError),
+          }
+        : transportError
+          ? { type: 'transport', error: transportError, actions: options.transportActions }
+          : { type: 'none' }
+
+    return match(
+      outcome,
+      'type',
+    )<FormFailureState<DomainError, Action>>({
+      domain: ({ error, actions }) => ({ type: 'domain', error, actions }),
+      transport: ({ error, actions }) => ({ type: 'transport', error, actions }),
+      none: () => ({ type: 'none' }),
+    })
   })
 
   const focusFirstInvalid = (name?: string) => {

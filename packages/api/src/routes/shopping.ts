@@ -1,5 +1,4 @@
 import { commerce } from '@store-kit/commerce'
-import { normalizeCheckoutInput } from '@store-kit/commerce/checkout'
 import { checkoutInputSchema } from '@store-kit/contracts/checkout'
 import { orderIdPattern } from '@store-kit/contracts/orders'
 import type { PublicOrder } from '@store-kit/contracts/orders'
@@ -23,7 +22,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
     '/checkout',
     async ({ body }) => Result.serialize(await commerce.checkout.createOrder(body)),
     {
-      body: contractBody(checkoutInputSchema, normalizeCheckoutInput),
+      body: contractBody(checkoutInputSchema),
     },
   )
   .get(

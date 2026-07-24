@@ -14,6 +14,7 @@ import {
   startCartPersistence,
 } from './store'
 import type { PersistedCartItem } from './store'
+import { CartItemValidation, CartValidationRoot, CartValidationState } from './validation'
 
 const cartCommands = {
   itemCount: cartItemCount,
@@ -65,4 +66,13 @@ function Empty(props: ParentProps) {
   return <Show when={cartItems().length === 0}>{props.children}</Show>
 }
 
-export const Cart = { Root, Trigger, Content, Items, Empty }
+export const Cart = {
+  Root,
+  Trigger,
+  Content,
+  Items,
+  Empty,
+  ValidationRoot: CartValidationRoot,
+  ValidationState: CartValidationState,
+  ItemValidation: CartItemValidation,
+}

@@ -1,5 +1,6 @@
 import type { PublicImage } from '@store-kit/contracts'
-import { createMemo, createSignal } from 'solid-js'
+import { For, createContext, createMemo, createSignal, useContext } from 'solid-js'
+import type { Accessor, JSX, ParentProps } from 'solid-js'
 
 import { addCartItem, openCart } from './cart/store'
 
@@ -12,7 +13,7 @@ export const clampPurchaseQuantity = (quantity: number, stockQuantity: number) =
 
 type PurchaseImage = PublicImage & { id: string }
 
-type PurchaseVariant = {
+export type PurchaseVariant = {
   id: string
   name: string
   options: Record<string, string>
@@ -32,7 +33,7 @@ export type PurchaseAnnouncement =
   | { type: 'quantity-clamped'; maximum: number }
   | { type: 'added'; productName: string }
 
-export function createProductPurchaseController(product: PurchasableProduct) {
+function createProductPurchaseState(product: PurchasableProduct) {
   const initialVariant =
     product.variants.find(variant => variant.stockQuantity > 0) ?? product.variants[0]
   const [selectedVariantId, setSelectedVariantId] = createSignal(initialVariant?.id ?? '')
@@ -52,7 +53,7 @@ export function createProductPurchaseController(product: PurchasableProduct) {
     return product.images.find(image => image.id === linkedImage?.imageId) ?? product.images[0]
   })
 
-  const updateQuantity = (nextQuantity: number) => {
+  const setQuantity = (nextQuantity: number) => {
     const maximum = maximumQuantity()
     const clamped = clampPurchaseQuantity(nextQuantity, selectedVariant()?.stockQuantity ?? 0)
     setQuantityState(clamped)
@@ -102,6 +103,7 @@ export function createProductPurchaseController(product: PurchasableProduct) {
   }
 
   return {
+    product,
     selectedVariantId,
     selectedVariant,
     selectedImage,
@@ -109,10 +111,83 @@ export function createProductPurchaseController(product: PurchasableProduct) {
     maximumQuantity,
     announcement,
     selectVariant,
-    setQuantity: updateQuantity,
-    decrementQuantity: () => updateQuantity(quantity() - 1),
-    incrementQuantity: () => updateQuantity(quantity() + 1),
+    setQuantity,
+    decrementQuantity: () => setQuantity(quantity() - 1),
+    incrementQuantity: () => setQuantity(quantity() + 1),
     addToCart,
     clearAnnouncement: () => setAnnouncement(),
   }
 }
+
+type ProductPurchaseContextValue = ReturnType<typeof createProductPurchaseState>
+const ProductPurchaseContext = createContext<ProductPurchaseContextValue>()
+
+export function useProductPurchase() {
+  const purchase = useContext(ProductPurchaseContext)
+  if (!purchase) throw new Error('ProductPurchase components must be inside ProductPurchase.Root.')
+  return purchase
+}
+
+function Root(props: ParentProps<{ product: PurchasableProduct }>) {
+  const purchase = createProductPurchaseState(props.product)
+  return (
+    <ProductPurchaseContext.Provider value={purchase}>
+      {props.children}
+    </ProductPurchaseContext.Provider>
+  )
+}
+
+export type ProductPurchaseSelection = {
+  selectedVariantId: string
+  selectedVariant: PurchaseVariant | undefined
+  selectedImage: PurchaseImage | undefined
+  quantity: number
+  maximumQuantity: number
+  selectVariant: (variantId: string) => boolean
+  setQuantity: (quantity: number) => void
+  decrementQuantity: () => void
+  incrementQuantity: () => void
+  addToCart: () => boolean
+}
+
+type SelectionProps = {
+  children: (selection: Accessor<ProductPurchaseSelection>) => JSX.Element
+}
+
+function Selection(props: SelectionProps) {
+  const purchase = useProductPurchase()
+  const selection = createMemo(() => ({
+    selectedVariantId: purchase.selectedVariantId(),
+    selectedVariant: purchase.selectedVariant(),
+    selectedImage: purchase.selectedImage(),
+    quantity: purchase.quantity(),
+    maximumQuantity: purchase.maximumQuantity(),
+    selectVariant: purchase.selectVariant,
+    setQuantity: purchase.setQuantity,
+    decrementQuantity: purchase.decrementQuantity,
+    incrementQuantity: purchase.incrementQuantity,
+    addToCart: purchase.addToCart,
+  }))
+
+  return props.children(selection)
+}
+
+type VariantsProps = {
+  children: (variant: PurchaseVariant) => JSX.Element
+}
+
+function Variants(props: VariantsProps) {
+  const purchase = useProductPurchase()
+  return <For each={purchase.product.variants}>{props.children}</For>
+}
+
+type AnnouncementProps = {
+  children: (announcement: Accessor<PurchaseAnnouncement | undefined>) => JSX.Element
+}
+
+function Announcement(props: AnnouncementProps) {
+  const purchase = useProductPurchase()
+  return props.children(purchase.announcement)
+}
+
+export const ProductPurchase = { Root, Selection, Variants, Announcement }

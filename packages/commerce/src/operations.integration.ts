@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
 import { createCheckoutOrder } from '~/checkout/operations'
+import { commerce } from '~/index'
 import { confirmOrderPayment } from '~/payments/operations'
 
 const entityId = (prefix: string, value: number) =>
@@ -99,13 +100,13 @@ const checkoutInput = (variantId: string) => ({
 })
 
 describe('commerce operations with local D1', () => {
-  it('normalizes a valid checkout before shared validation and persistence', async () => {
+  it('applies typed checkout storage normalization before persistence', async () => {
     const { variantId } = await insertProduct(201)
     await insertCheckoutSettings()
 
     const result = await createCheckoutOrder({
       ...checkoutInput(variantId),
-      customer: { name: '  Test Customer  ', phone: '+976 9911-2233' },
+      customer: { name: '  Test Customer  ', phone: ' 99112233 ' },
       delivery: {
         district: 'Сүхбаатар',
         khoroo: '  1-р хороо  ',
@@ -133,30 +134,38 @@ describe('commerce operations with local D1', () => {
     })
   })
 
-  it.each([
-    ['invalid phone', { customer: { name: 'Customer', phone: '55112233' } }, '/customer/phone'],
-    ['whitespace-only name', { customer: { name: '   ', phone: '99112233' } }, '/customer/name'],
-    [
-      'whitespace-only address',
-      {
-        delivery: {
-          district: 'Сүхбаатар',
-          khoroo: '1-р хороо',
-          address: '   ',
-        },
-      },
-      '/delivery/address',
-    ],
-  ] as const)('returns schema-derived Result paths for %s', async (_label, override, path) => {
-    const input = { ...checkoutInput(entityId('var', 202)), ...override }
-    const result = await createCheckoutOrder(input)
+  it('preserves the empty-cart domain check for typed commerce calls', async () => {
+    const result = await createCheckoutOrder({
+      ...checkoutInput(entityId('var', 202)),
+      items: [],
+    })
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({ status: 'error', error: { _tag: 'CartEmpty' } })
+  })
+
+  it('keeps typed catalog and cart normalization separate from domain checks', async () => {
+    const { variantId } = await insertProduct(207)
+
+    const catalog = await commerce.catalog.listProducts({
+      query: '  Operation Product  ',
+      limit: 10,
+    })
+    const emptyCart = await commerce.cart.validate([])
+    const duplicateCart = await commerce.cart.validate([
+      { variantId, quantity: 1, previousUnitPriceMnt: 10_000 },
+      { variantId, quantity: 1, previousUnitPriceMnt: 10_000 },
+    ])
+
+    expect(catalog).toMatchObject({
+      status: 'ok',
+      value: { limit: 10, offset: 0 },
+    })
+    if (catalog.status === 'ok')
+      expect(catalog.value.items.map(product => product.slug)).toContain('operation-product-207')
+    expect(emptyCart).toMatchObject({ status: 'error', error: { _tag: 'CartEmpty' } })
+    expect(duplicateCart).toMatchObject({
       status: 'error',
-      error: {
-        _tag: 'InvalidCheckoutDetails',
-        fields: [{ path, code: 'invalid' }],
-      },
+      error: { _tag: 'InvalidCart', fields: [{ path: '/items', code: 'duplicate' }] },
     })
   })
 

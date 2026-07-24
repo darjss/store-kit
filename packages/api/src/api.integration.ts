@@ -83,9 +83,17 @@ describe('checked shared request contracts', () => {
     const cartResponse = await postJson('/api/cart/validate', [
       { variantId: entityId('var', 91), quantity: '1' },
     ])
+    const catalogResponse = await app.handle(
+      new Request('https://plugged.test/api/products?limit=not-a-number'),
+    )
+    const catalogBooleanResponse = await app.handle(
+      new Request('https://plugged.test/api/products?featured=invalid'),
+    )
 
     expect(checkoutResponse.status).toBe(422)
     expect(cartResponse.status).toBe(422)
+    expect(catalogResponse.status).toBe(422)
+    expect(catalogBooleanResponse.status).toBe(422)
   })
 
   it('returns stable field codes for checkout domain validation', async () => {
@@ -148,7 +156,7 @@ describe('checked shared request contracts', () => {
     expect(JSON.stringify(publicResult)).not.toContain('r2Key')
   })
 
-  it('rejects invalid shared details and persists exactly the normalized valid strings', async () => {
+  it('rejects noncanonical direct checkout requests and persists typed storage normalization', async () => {
     const { variantId } = await seedCheckout(92)
     const whitespaceResponse = await postJson('/api/checkout', {
       ...checkoutBody(variantId),
@@ -162,9 +170,15 @@ describe('checked shared request contracts', () => {
     })
     expect(whitespaceResponse.status).toBe(422)
 
+    const formattedPhoneResponse = await postJson('/api/checkout', {
+      ...checkoutBody(variantId),
+      customer: { name: 'Test Customer', phone: '+976 9911-2233' },
+    })
+    expect(formattedPhoneResponse.status).toBe(422)
+
     const validResponse = await postJson('/api/checkout', {
       ...checkoutBody(variantId),
-      customer: { name: '  Test Customer  ', phone: '+976 9911-2233' },
+      customer: { name: '  Test Customer  ', phone: '99112233' },
       delivery: {
         district: 'Сүхбаатар',
         khoroo: '  1-р хороо  ',

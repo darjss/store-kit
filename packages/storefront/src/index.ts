@@ -13,10 +13,15 @@ export {
   removeCartItem,
   setCartItemQuantity,
 } from './cart'
-export { createCartValidationController } from './cart/validation'
-export type { CartValidationFocusTarget, CartValidationState } from './cart/validation'
+export { cartCheckoutGateOutcome, cartValidationState, useCartValidation } from './cart/validation'
+export type {
+  CartCheckoutGateOutcome,
+  CartItemValidationState,
+  CartValidationFocusTarget,
+  CartValidationState,
+} from './cart/validation'
 export type { CartItemsProps, CartLineInput, PersistedCartItem } from './cart'
-export { Checkout, useCheckout } from './checkout'
+export { Checkout, checkoutDomainActions, normalizeCheckoutDetails, useCheckout } from './checkout'
 export type { CheckoutCorrectionAction, CheckoutDomainError } from './checkout'
 export {
   PendingSubmitButton,
@@ -43,11 +48,17 @@ export type {
   QPayRefreshOutcome,
 } from './orders/order-status'
 export {
+  ProductPurchase,
   clampPurchaseQuantity,
-  createProductPurchaseController,
   maximumPurchaseQuantity,
+  useProductPurchase,
 } from './purchase'
-export type { PurchasableProduct, PurchaseAnnouncement } from './purchase'
+export type {
+  PurchasableProduct,
+  PurchaseAnnouncement,
+  ProductPurchaseSelection,
+  PurchaseVariant,
+} from './purchase'
 export { createStorefrontQueryClient } from './query-client'
 export { cartQuery } from './query-options/cart'
 export { catalogQuery } from './query-options/catalog'
@@ -57,7 +68,7 @@ export { orderQuery } from './query-options/orders'
 export { paymentMutation } from './query-options/payments'
 export { useMutationResult, useQueryResult } from './query-options/result'
 export { systemStatusOptions } from './query-options/system-status'
-export { createCatalogSearchController } from './search'
-export type { CatalogSearchState } from './search'
+export { CatalogSearch, useCatalogSearch } from './search'
+export type { CatalogSearchProduct, CatalogSearchState } from './search'
 export { orderStatusLabel, paymentStatusLabel, shouldPollOrderStatus } from './status'
 export { cartStorageKey, privateOrderStorageKey } from './storage'

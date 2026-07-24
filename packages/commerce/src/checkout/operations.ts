@@ -7,13 +7,10 @@ import type {
   PaymentInstructions,
   QPayPaymentInstructions,
 } from '@store-kit/contracts/checkout'
-import { checkoutInputSchema } from '@store-kit/contracts/checkout'
-import type { ValidationIssue } from '@store-kit/contracts/common'
 import type { PaymentMethod } from '@store-kit/contracts/payments'
 import { database } from '@store-kit/db'
 import { createId } from '@store-kit/db/ids'
 import { Result } from 'better-result'
-import { Value } from 'typebox/value'
 
 import { createQPayInvoice } from '~/adapters/qpay'
 import { inactiveVariant, insufficientStock, missingVariant } from '~/errors/cart'
@@ -26,48 +23,22 @@ import {
 } from '~/errors/checkout'
 import { hashStatusToken } from '~/orders/status-token'
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const trimString = (value: unknown) => (typeof value === 'string' ? value.trim() : value)
-const normalizePhone = (value: unknown) =>
-  typeof value === 'string' ? value.replace(/[^0-9]/g, '').replace(/^976/, '') : value
-
-export const normalizeCheckoutInput = (input: unknown): unknown => {
-  if (!isRecord(input)) return input
-
-  const customer = isRecord(input.customer)
-    ? {
-        ...input.customer,
-        name: trimString(input.customer.name),
-        phone: normalizePhone(input.customer.phone),
-      }
-    : input.customer
-  const delivery = isRecord(input.delivery)
-    ? {
-        ...input.delivery,
-        khoroo: trimString(input.delivery.khoroo),
-        address: trimString(input.delivery.address),
-        notes: trimString(input.delivery.notes),
-      }
-    : input.delivery
-
-  if (isRecord(delivery) && (delivery.notes === '' || delivery.notes === undefined)) {
-    delete delivery.notes
+export const normalizeCheckoutInput = (input: CheckoutInput): CheckoutInput => {
+  const notes = input.delivery.notes?.trim()
+  return {
+    customer: {
+      name: input.customer.name.trim(),
+      phone: input.customer.phone.trim(),
+    },
+    delivery: {
+      district: input.delivery.district,
+      khoroo: input.delivery.khoroo.trim(),
+      address: input.delivery.address.trim(),
+      ...(notes ? { notes } : {}),
+    },
+    paymentMethod: input.paymentMethod,
+    items: input.items,
   }
-
-  return { ...input, customer, delivery }
-}
-
-const checkoutValidationIssues = (input: unknown): ValidationIssue[] => {
-  const paths = new Set<string>()
-
-  return [...Value.Errors(checkoutInputSchema, input)].flatMap(error => {
-    const path = error.instancePath || '/'
-    if (paths.has(path)) return []
-    paths.add(path)
-    return [{ path, code: 'invalid' as const }]
-  })
 }
 
 type AuthoritativeVariant = Awaited<
@@ -125,19 +96,10 @@ const preparePayment = async (
     .mapError<CheckoutError>(error => paymentSetupFailed(error.message))
 }
 
-export const createCheckoutOrder = async (rawInput: CheckoutInput) => {
-  const normalizedInput = normalizeCheckoutInput(rawInput)
-  const validationIssues = checkoutValidationIssues(normalizedInput)
-  if (
-    isRecord(normalizedInput) &&
-    Array.isArray(normalizedInput.items) &&
-    normalizedInput.items.length === 0
-  )
+export const createCheckoutOrder = async (checkoutInput: CheckoutInput) => {
+  const input = normalizeCheckoutInput(checkoutInput)
+  if (input.items.length === 0)
     return Result.err<CheckoutCreated, CheckoutError>(emptyCheckoutCart())
-  if (validationIssues.length > 0) {
-    return Result.err<CheckoutCreated, CheckoutError>(invalidCheckoutDetails(validationIssues))
-  }
-  const input = normalizedInput as CheckoutInput
 
   const variantIds = new Set(input.items.map(item => item.variantId))
   if (variantIds.size !== input.items.length)

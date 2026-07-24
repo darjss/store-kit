@@ -1,38 +1,12 @@
 import { commerce } from '@store-kit/commerce'
+import { productListFiltersSchema } from '@store-kit/contracts/catalog'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
 import { publicImage } from '~/media'
+import { contractQuery } from '~/typebox-contract'
 
 const slugPattern = '^[a-z0-9]+(?:-[a-z0-9]+)*$'
-
-const productListQuery = t.Object({
-  category: t.Optional(t.String({ pattern: slugPattern })),
-  brand: t.Optional(t.String({ pattern: slugPattern })),
-  useCase: t.Optional(
-    t.Union([
-      t.Literal('first-iem'),
-      t.Literal('bass'),
-      t.Literal('vocals'),
-      t.Literal('gaming'),
-      t.Literal('daily-carry'),
-    ]),
-  ),
-  featured: t.Optional(t.BooleanString()),
-  query: t.Optional(t.String()),
-  minPrice: t.Optional(t.Integer({ minimum: 0 })),
-  maxPrice: t.Optional(t.Integer({ minimum: 0 })),
-  sort: t.Optional(
-    t.Union([
-      t.Literal('featured'),
-      t.Literal('recent'),
-      t.Literal('price-asc'),
-      t.Literal('price-desc'),
-    ]),
-  ),
-  limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
-  offset: t.Optional(t.Integer({ minimum: 0 })),
-})
 
 export const catalogRoutes = new Elysia({ aot: false, prefix: '/api' })
   .onAfterHandle(({ set }) => {
@@ -53,7 +27,7 @@ export const catalogRoutes = new Elysia({ aot: false, prefix: '/api' })
         })),
       ),
     {
-      query: productListQuery,
+      query: contractQuery(productListFiltersSchema),
     },
   )
   .get(

@@ -1,3 +1,5 @@
+import { productListFiltersSchema, productUseCaseSchema } from '@store-kit/contracts/catalog'
+import type { ProductListFilters, ProductUseCase } from '@store-kit/contracts/catalog'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-orm/typebox'
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
@@ -22,13 +24,9 @@ export const slugSchema = Type.String({ pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' })
 const urlSchema = Type.String({ format: 'uri' })
 export const nonNegativeIntegerSchema = Type.Integer({ minimum: 0 })
 
-export const productUseCaseSchema = Type.Union([
-  Type.Literal('first-iem'),
-  Type.Literal('bass'),
-  Type.Literal('vocals'),
-  Type.Literal('gaming'),
-  Type.Literal('daily-carry'),
-])
+export { productListFiltersSchema, productUseCaseSchema }
+export type { ProductListFilters, ProductUseCase }
+
 export const productUseCasesSchema = Type.Array(productUseCaseSchema, { uniqueItems: true })
 export const productStatusSchema = Type.Union([
   Type.Literal('draft'),
@@ -127,29 +125,7 @@ export const updateProductVariantImageSchema = createUpdateSchema(
   productVariantImageRefinements,
 )
 
-export const productListFiltersSchema = Type.Object({
-  category: Type.Optional(slugSchema),
-  brand: Type.Optional(slugSchema),
-  useCase: Type.Optional(productUseCaseSchema),
-  featured: Type.Optional(Type.Boolean()),
-  query: Type.Optional(Type.String()),
-  minPrice: Type.Optional(nonNegativeIntegerSchema),
-  maxPrice: Type.Optional(nonNegativeIntegerSchema),
-  sort: Type.Optional(
-    Type.Union([
-      Type.Literal('featured'),
-      Type.Literal('recent'),
-      Type.Literal('price-asc'),
-      Type.Literal('price-desc'),
-    ]),
-  ),
-  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
-  offset: Type.Optional(nonNegativeIntegerSchema),
-})
-
-export type ProductUseCase = Static<typeof productUseCaseSchema>
 export type ProductStatus = Static<typeof productStatusSchema>
-export type ProductListFilters = Static<typeof productListFiltersSchema>
 
 export type Brand = Static<typeof selectBrandSchema>
 export type NewBrand = typeof brand.$inferInsert
