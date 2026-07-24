@@ -2,14 +2,12 @@
 import { cleanup, fireEvent, render, waitFor } from '@solidjs/testing-library'
 import { QueryClientProvider } from '@tanstack/solid-query'
 import { createSignal } from 'solid-js'
-import { Type } from 'typebox'
 import { afterEach, expect, test } from 'vite-plus/test'
 
 import { Checkout } from '~/checkout'
 import { createStorefrontQueryClient } from '~/query-client'
 
 import { PendingSubmitButton } from './submit-button'
-import { jsonPointerToFieldName, typeboxValidator } from './typebox-validator'
 
 afterEach(cleanup)
 
@@ -41,22 +39,6 @@ function CheckoutFixture() {
     </QueryClientProvider>
   )
 }
-
-test('the TypeBox adapter maps all JSON Pointer issues to field names', () => {
-  const schema = Type.Object({
-    customer: Type.Object({ name: Type.String({ minLength: 1, pattern: '\\S' }) }),
-    items: Type.Array(Type.Object({ sku: Type.String({ minLength: 1 }) })),
-  })
-  const validate = typeboxValidator(schema)
-
-  expect(validate({ value: { customer: { name: '' }, items: [{ sku: '' }] } })).toEqual({
-    fields: {
-      'customer.name': 'must not have fewer than 1 characters must match pattern "\\S"',
-      'items[0].sku': 'must not have fewer than 1 characters',
-    },
-  })
-  expect(jsonPointerToFieldName('/settings/a~1b/~0name/0')).toBe('settings.a/b.~name[0]')
-})
 
 test('checkout fields validate on input and focus the first invalid control on submit', async () => {
   const view = render(() => <CheckoutFixture />)

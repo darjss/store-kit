@@ -1010,6 +1010,59 @@ Every effect must have a reduced-motion alternative. Content must remain visible
 
 Do not add a broad security framework, custom encryption layer, or rate-limit service in this plan.
 
+## Local development URLs and environment
+
+Use [Portless](https://github.com/vercel-labs/portless) for stable, named local store URLs. Each store
+app must have one explicit, unique name:
+
+- Plugged: `https://plugged.localhost`
+- future stores: `https://<store-id>.localhost`
+
+Add Portless as a workspace development dependency with the package manager. Do not require a global
+installation. Keep the store name explicit in the app development task so a directory rename cannot
+silently change its URL.
+
+Keep Astro's required background-server workflow. A Portless wrapper does not keep its route after
+Astro moves into the background. Start Astro with `astro dev --background --host 127.0.0.1`, read
+its assigned port from `astro dev status`, and register that port with
+`portless alias plugged <port>`. Do not replace Astro's background lifecycle with an unmanaged
+foreground process.
+
+Start the Portless proxy once per machine and trust its local certificate:
+
+```sh
+vp exec portless proxy start
+vp exec portless trust
+vp exec portless doctor
+```
+
+Use `vp exec portless list` to inspect routes and `vp exec portless prune` after an interrupted
+session. Do not hard-code Portless-assigned internal ports in source files, environment files, OAuth
+callbacks, or tests.
+
+Set the local public application URL to `https://plugged.localhost`. Keep the local media fallback on
+the same origin unless a separate media service is under test. Production URLs continue to come from
+deployment environment values and the R2 custom domain.
+
+Validate string configuration and secrets with T3 Env. Keep Wrangler-generated binding types
+responsible for D1, R2, and KV. Expose TypeBox schemas to T3 Env and TanStack Form through one tested
+TypeBox-to-Standard-Schema adapter in the browser-safe contracts package. Do not add separate
+form-specific and environment-specific schema adapters.
+
+The local preview process is:
+
+1. create the ignored `apps/plugged/.dev.vars` from `.dev.vars.example`
+2. run `vp run db:migrate:plugged:local`
+3. run `vp run catalog:seed:plugged`
+4. run `vp run plugged:dev`
+5. run `vp run plugged:route`
+6. verify `https://plugged.localhost`
+7. run `vp run plugged:dev:stop` and `vp exec portless alias --remove plugged` when finished
+
+Basic catalog, cart, checkout validation, and local bank-transfer behavior must work without live
+provider credentials. Live QPay and Telegram behavior requires real sandbox or production
+credentials.
+
 ## Real verification
 
 Use real implementations and local Cloudflare resources. Do not use provider mocks.
@@ -1115,6 +1168,20 @@ Also run the new migration, seed, operation integration, and browser verificatio
 11. Build checkout and both payment-method views.
 12. Build the private order-status page.
 13. Run full browser, runtime, accessibility, bundle, lint, type, test, and build verification.
+
+### PR 4: Standard environment and stable local previews
+
+1. Add one tested TypeBox-to-Standard-Schema adapter to the browser-safe contracts package.
+2. Use that adapter for TanStack Form validation and remove the form-specific TypeBox adapter.
+3. Add T3 Env for public string configuration and server secrets.
+4. Keep D1, R2, and KV bindings in Wrangler-generated environment types.
+5. Add Portless as a workspace development dependency.
+6. Give Plugged the explicit `plugged.localhost` development route.
+7. Document `.dev.vars`, provider credential requirements, local migration, seed, server, route, and
+   cleanup commands.
+8. Prove the clean local preview through `https://plugged.localhost`.
+9. Run adapter behavior tests, environment validation tests, repository checks, builds, and the
+   browser smoke path.
 
 ## Out of scope
 

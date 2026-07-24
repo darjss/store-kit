@@ -10,9 +10,11 @@
     "./common": "./src/common.ts",
     "./errors": "./src/errors.ts",
     "./orders": "./src/orders.ts",
-    "./payments": "./src/payments.ts"
+    "./payments": "./src/payments.ts",
+    "./standard-schema": "./src/standard-schema.ts"
   },
   "dependencies": {
+    "@standard-schema/spec": "^1.1.0",
     "typebox": "catalog:"
   }
 }
