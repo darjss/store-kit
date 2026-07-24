@@ -1,9 +1,10 @@
+import type { ProductListFilters } from '@store-kit/contracts/catalog'
+
 import { api } from '~/client'
 
 import { resultQueryOptions } from './result'
 
-type ProductListRequest = NonNullable<Parameters<typeof api.api.products.get>[0]>
-export type ProductListFilters = NonNullable<ProductListRequest['query']>
+export type { ProductListFilters } from '@store-kit/contracts/catalog'
 
 const normalizeProductListFilters = (filters: ProductListFilters) => {
   const query = filters.query?.trim()

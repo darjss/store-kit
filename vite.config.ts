@@ -36,13 +36,106 @@ export default defineConfig({
         cwd: 'apps/plugged',
         cache: false,
       },
-      'db:migrate:plugged:remote-only': {
-        command: 'vp exec wrangler d1 migrations apply DB --remote',
+      'catalog:seed:plugged:local': {
+        command: 'node --experimental-strip-types catalog-seed.ts --environment local --only data',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'db:migrate:plugged:development': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment development --operation migrate',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'db:migrate:plugged:production': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment production --operation migrate',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'catalog:media:plugged:development': {
+        command:
+          'node --experimental-strip-types catalog-seed.ts --environment development --only media',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'catalog:seed:plugged:development': {
+        command:
+          'node --experimental-strip-types catalog-seed.ts --environment development --only data',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'catalog:media:plugged:production': {
+        command:
+          'node --experimental-strip-types catalog-seed.ts --environment production --only media',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'catalog:seed:plugged:production': {
+        command:
+          'node --experimental-strip-types catalog-seed.ts --environment production --only data',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:generate-types': {
+        command: 'vp exec wrangler types',
         cwd: 'apps/plugged',
         cache: false,
       },
-      'catalog:seed:plugged': {
-        command: 'node --experimental-strip-types catalog-seed.ts',
+      'plugged:deploy:dry-run:development': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment development --operation dry-run',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:deploy:development': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment development --operation deploy',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:deploy:production': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment production --operation deploy',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:rollback:development': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment development --operation rollback',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:rollback:production': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment production --operation rollback',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:secret-names:development': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment development --operation secret-names',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:secret-names:production': {
+        command:
+          'node --experimental-strip-types cloudflare-command.ts --environment production --operation secret-names',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:smoke:development': {
+        command: 'node --experimental-strip-types deployment-smoke.ts --environment development',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:smoke:production': {
+        command: 'node --experimental-strip-types deployment-smoke.ts --environment production',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:scan-build-media': {
+        command: 'node --experimental-strip-types media-build-scan.ts',
         cwd: 'packages/tooling',
         cache: false,
       },

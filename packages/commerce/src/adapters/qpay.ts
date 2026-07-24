@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers'
 import ky from 'ky'
 import type { KyInstance } from 'ky'
 
-import { qpayError } from '~/errors'
+import { qpayError } from '~/errors/qpay'
 
 import { createQPayCallbackUrl, qpayPaymentCheckBody } from './qpay-callback'
 import {
@@ -14,7 +14,6 @@ import {
 import { createQPayTokenCache } from './qpay-token-cache'
 
 export { createQPayCallbackUrl, qpayPaymentCheckBody } from './qpay-callback'
-export type { QPayError } from '~/errors'
 
 export type QPayInvoice = {
   invoiceId: string

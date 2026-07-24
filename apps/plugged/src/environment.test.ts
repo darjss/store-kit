@@ -4,8 +4,9 @@ import { validatePluggedEnvironment } from './environment'
 import type { PluggedRuntimeEnvironment } from './environment'
 
 const localEnvironment = {
+  DEPLOYMENT_ENV: 'development',
   PUBLIC_APP_URL: 'https://plugged.localhost',
-  PUBLIC_MEDIA_BASE_URL: 'https://plugged.localhost/media/',
+  PUBLIC_MEDIA_BASE_URL: 'https://plugged-development-media.example.com/',
   QPAY_BASE_URL: 'https://merchant-sandbox.qpay.mn',
   QPAY_USERNAME: '',
   QPAY_PASSWORD: '',
@@ -17,7 +18,7 @@ const localEnvironment = {
 } satisfies PluggedRuntimeEnvironment
 
 test('accepts local development without provider credentials', () => {
-  const environment = validatePluggedEnvironment(localEnvironment)
+  const environment = validatePluggedEnvironment(localEnvironment, { localDevelopment: true })
 
   expect(environment.PUBLIC_APP_URL).toBe('https://plugged.localhost')
   expect(environment.QPAY_USERNAME).toBeUndefined()
@@ -40,6 +41,38 @@ test('accepts complete provider credential groups', () => {
 
   expect(environment.QPAY_INVOICE_CODE).toBe('invoice-code')
   expect(environment.TELEGRAM_CHAT_ID).toBe('-100123456')
+})
+
+test('accepts only the required production media origin in production', () => {
+  const environment = validatePluggedEnvironment({
+    ...localEnvironment,
+    DEPLOYMENT_ENV: 'production',
+    PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
+  })
+
+  expect(environment.DEPLOYMENT_ENV).toBe('production')
+})
+
+test('rejects production media fallback in development', () => {
+  expect(() =>
+    validatePluggedEnvironment({
+      ...localEnvironment,
+      PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
+    }),
+  ).toThrow('Development media must not fall back')
+})
+
+test('rejects the production environment during local development', () => {
+  expect(() =>
+    validatePluggedEnvironment(
+      {
+        ...localEnvironment,
+        DEPLOYMENT_ENV: 'production',
+        PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
+      },
+      { localDevelopment: true },
+    ),
+  ).toThrow('Local development requires DEPLOYMENT_ENV=development.')
 })
 
 test.each([

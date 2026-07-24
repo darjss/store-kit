@@ -8,11 +8,12 @@ import type {
 import { checkoutDetailsSchema } from '@store-kit/contracts/checkout'
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import { Result } from 'better-result'
+import { match } from 'dismatch'
 import { createContext, createMemo, createSignal, splitProps, useContext } from 'solid-js'
 import type { Accessor, ComponentProps, JSX } from 'solid-js'
 
-import { cartItems, cartLineInputs, clearCart } from './cart/store'
-import { useAppForm } from './form'
+import { cartItems, cartLineInputs, clearCart, openCart } from './cart/store'
+import { createFormErrorController, useAppForm } from './form'
 import { cartQuery } from './query-options/cart'
 import { checkoutMutation } from './query-options/checkout'
 import { useMutationResult, useQueryResult } from './query-options/result'
@@ -26,6 +27,8 @@ export type CheckoutDomainError =
   | Exclude<CheckoutError, { _tag: 'CartChanged' }>
   | CartValidationError
   | LocalCartChanged
+
+export type CheckoutCorrectionAction = 'open-cart' | 'retry' | 'use-bank-transfer'
 
 type CheckoutRootProps = {
   children: JSX.Element
@@ -47,16 +50,40 @@ const jsonPointerToFieldName = (pointer: string) =>
 
 const checkoutDetailsValidator = toStandardSchema(checkoutDetailsSchema)
 
-const focusControl = (form: HTMLFormElement | undefined, name?: string) => {
-  queueMicrotask(() => {
-    const control = name
-      ? [...(form?.querySelectorAll<HTMLElement>('[name]') ?? [])].find(
-          candidate => candidate.getAttribute('name') === name,
-        )
-      : form?.querySelector<HTMLElement>('[aria-invalid="true"]')
-    control?.focus()
-  })
+const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').replace(/^976/, '')
+
+export const normalizeCheckoutDetails = (details: CheckoutDetails): CheckoutDetails => {
+  const notes = details.delivery.notes?.trim()
+  return {
+    customer: {
+      name: details.customer.name.trim(),
+      phone: normalizePhone(details.customer.phone),
+    },
+    delivery: {
+      district: details.delivery.district,
+      khoroo: details.delivery.khoroo.trim(),
+      address: details.delivery.address.trim(),
+      ...(notes ? { notes } : {}),
+    },
+    paymentMethod: details.paymentMethod,
+  }
 }
+
+const openCartActions = (): CheckoutCorrectionAction[] => ['open-cart']
+
+export const checkoutDomainActions = (error: CheckoutDomainError) =>
+  match(
+    error,
+    '_tag',
+  )<CheckoutCorrectionAction[]>({
+    CartEmpty: () => [],
+    CartChanged: openCartActions,
+    InvalidCart: openCartActions,
+    InvalidCheckoutDetails: () => [],
+    DeliveryUnavailable: () => [],
+    PaymentSetupFailed: failure =>
+      failure.canUseBankTransfer ? ['retry', 'use-bank-transfer'] : ['retry'],
+  })
 
 function createCheckoutState(props: CheckoutRootProps) {
   const mutation = useMutationResult(() => checkoutMutation.create())
@@ -65,10 +92,30 @@ function createCheckoutState(props: CheckoutRootProps) {
     enabled: false,
   }))
   const [result, setResult] = createSignal<Result<CheckoutCreated, CheckoutDomainError>>()
-  let formElement: HTMLFormElement | undefined
+  const created = createMemo(() =>
+    result()?.match({
+      err: () => undefined,
+      ok: value => value,
+    }),
+  )
+  const domainError = createMemo(() =>
+    result()?.match({
+      err: error => error,
+      ok: () => undefined,
+    }),
+  )
+  const pending = () => mutation.isPending || cartValidation.isFetching
+  const transportError = () => mutation.error ?? cartValidation.error
+  const errors = createFormErrorController<CheckoutDomainError, CheckoutCorrectionAction>({
+    domainError,
+    transportError,
+    domainActions: checkoutDomainActions,
+    transportActions: ['retry'],
+  })
 
   const submit = async (details: CheckoutDetails) => {
     setResult()
+    const normalizedDetails = normalizeCheckoutDetails(details)
     const items = cartLineInputs()
     const cartResponse = await cartValidation.refetch()
     if (cartResponse.error || !cartResponse.data) return
@@ -88,14 +135,13 @@ function createCheckoutState(props: CheckoutRootProps) {
           return
         }
 
-        const input: CheckoutInput = { ...details, items }
+        const input: CheckoutInput = { ...normalizedDetails, items }
         const checkoutResult = await mutation.mutateAsync(input)
         checkoutResult.match({
           err: error => {
             setResult(Result.err<CheckoutCreated, CheckoutDomainError>(error))
             if (error._tag === 'InvalidCheckoutDetails') {
-              focusControl(
-                formElement,
+              errors.focusFirstInvalid(
                 error.fields[0] ? jsonPointerToFieldName(error.fields[0].path) : undefined,
               )
             }
@@ -118,23 +164,20 @@ function createCheckoutState(props: CheckoutRootProps) {
       onSubmit: checkoutDetailsValidator,
     },
     onSubmit: ({ value }) => submit(value),
-    onSubmitInvalid: () => focusControl(formElement),
+    onSubmitInvalid: () => errors.focusFirstInvalid(),
   }))
 
-  const created = createMemo(() =>
-    result()?.match({
-      err: () => undefined,
-      ok: value => value,
-    }),
-  )
-  const domainError = createMemo(() =>
-    result()?.match({
-      err: error => error,
-      ok: () => undefined,
-    }),
-  )
-  const pending = () => mutation.isPending || cartValidation.isFetching
-  const transportError = () => mutation.error ?? cartValidation.error
+  errors.setActionHandler(action => {
+    if (action === 'open-cart') {
+      openCart()
+      return
+    }
+    if (action === 'use-bank-transfer') {
+      form.setFieldValue('paymentMethod', 'bank_transfer')
+      return
+    }
+    void form.handleSubmit().catch(() => undefined)
+  })
 
   return {
     form,
@@ -143,9 +186,7 @@ function createCheckoutState(props: CheckoutRootProps) {
     domainError,
     pending,
     transportError,
-    setFormElement: (element: HTMLFormElement) => {
-      formElement = element
-    },
+    errors,
   }
 }
 
@@ -170,19 +211,21 @@ function CheckoutForm(props: CheckoutFormProps) {
   const [local, formProps] = splitProps(props, ['children'])
 
   return (
-    <form
-      {...formProps}
-      ref={checkout.setFormElement}
-      noValidate
-      aria-busy={checkout.pending()}
-      onSubmit={event => {
-        event.preventDefault()
-        event.stopPropagation()
-        void checkout.form.handleSubmit().catch(() => undefined)
-      }}
-    >
-      {local.children}
-    </form>
+    <checkout.form.AppForm>
+      <form
+        {...formProps}
+        ref={checkout.errors.setFormElement}
+        noValidate
+        aria-busy={checkout.pending()}
+        onSubmit={event => {
+          event.preventDefault()
+          event.stopPropagation()
+          void checkout.form.handleSubmit().catch(() => undefined)
+        }}
+      >
+        {local.children}
+      </form>
+    </checkout.form.AppForm>
   )
 }
 

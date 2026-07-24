@@ -28,21 +28,43 @@ afterEach(() => {
   clearCart()
 })
 
-test('checkout validates nested details and focuses the first invalid field', async () => {
+test('checkout reveals only touched errors until submit, then summarizes and focuses all errors', async () => {
   const view = render(() => <CheckoutForm />)
   const name = await view.findByLabelText('Нэр *')
+  const phone = view.getByLabelText('Утас *')
   const submit = view.getByRole('button', { name: 'Захиалга үүсгэх →' })
   const form = submit.closest('form')
 
   expect(form).not.toBeNull()
   if (!form) return
 
+  expect(view.queryByText('Нэрээ оруулна уу.')).toBeNull()
+  expect(view.queryByText('Утасны дугаараа шалгана уу.')).toBeNull()
+  expect(view.queryByText('Хороогоо оруулна уу.')).toBeNull()
+  expect(name.getAttribute('aria-invalid')).not.toBe('true')
+  expect(phone.getAttribute('aria-invalid')).not.toBe('true')
+
+  fireEvent.input(name, { target: { value: 'Бат' } })
+  await waitFor(() => expect((name as HTMLInputElement).value).toBe('Бат'))
+  expect(view.queryByText('Утасны дугаараа шалгана уу.')).toBeNull()
+  expect(phone.getAttribute('aria-invalid')).not.toBe('true')
+
+  fireEvent.input(name, { target: { value: ' ' } })
+  await waitFor(() => expect(view.getByText('Нэрээ оруулна уу.')).toBeTruthy())
+  expect(view.queryByText('Утасны дугаараа шалгана уу.')).toBeNull()
+
   fireEvent.submit(form)
 
   await waitFor(() => expect(document.activeElement).toBe(name))
   expect(name.getAttribute('name')).toBe('customer.name')
   expect(name.getAttribute('aria-invalid')).toBe('true')
-  expect(view.getByText('Нэрээ оруулна уу.')).toBeTruthy()
+  expect(phone.getAttribute('aria-invalid')).toBe('true')
+  expect(view.getByText('Утасны дугаараа шалгана уу.')).toBeTruthy()
+  expect(view.getByText('Хороогоо оруулна уу.')).toBeTruthy()
+  expect(view.getByText('Дэлгэрэнгүй хаягаа оруулна уу.')).toBeTruthy()
+  expect(view.getByText('Тодруулсан талбаруудыг засаад дахин оролдоно уу.')).toBeTruthy()
+  expect(view.getByText('Нэр', { selector: 'li' })).toBeTruthy()
+  expect(view.getByText('Утас', { selector: 'li' })).toBeTruthy()
   expect(form.elements.namedItem('items')).toBeNull()
 })
 

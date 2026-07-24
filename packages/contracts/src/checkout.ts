@@ -1,12 +1,14 @@
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
 
-import { cartLineInputSchema } from './cart'
-import { orderIdSchema } from './common'
+import { cartCorrectionSchema, cartLineInputSchema } from './cart'
+import { orderIdSchema, validationIssueSchema } from './common'
 import { paymentMethodSchema } from './payments'
 
 const requiredTextSchema = (maxLength: number) =>
   Type.String({ minLength: 1, maxLength, pattern: '\\S' })
+
+export const normalizedMongolianPhonePattern = '^[6789]\\d{7}$'
 
 export const ulaanbaatarDistrictSchema = Type.Union([
   Type.Literal('Багануур'),
@@ -23,7 +25,7 @@ export const ulaanbaatarDistrictSchema = Type.Union([
 export const checkoutCustomerSchema = Type.Object(
   {
     name: requiredTextSchema(100),
-    phone: Type.String({ minLength: 8, maxLength: 20 }),
+    phone: Type.String({ pattern: normalizedMongolianPhonePattern }),
   },
   { additionalProperties: false },
 )
@@ -98,6 +100,46 @@ export const checkoutCreatedSchema = Type.Object(
   { additionalProperties: false },
 )
 
+export const checkoutErrorSchema = Type.Union([
+  Type.Object(
+    {
+      _tag: Type.Literal('CartEmpty'),
+      message: Type.String({ minLength: 1 }),
+    },
+    { additionalProperties: false },
+  ),
+  Type.Object(
+    {
+      _tag: Type.Literal('CartChanged'),
+      message: Type.String({ minLength: 1 }),
+      corrections: Type.Array(cartCorrectionSchema),
+    },
+    { additionalProperties: false },
+  ),
+  Type.Object(
+    {
+      _tag: Type.Literal('InvalidCheckoutDetails'),
+      fields: Type.Array(validationIssueSchema),
+    },
+    { additionalProperties: false },
+  ),
+  Type.Object(
+    {
+      _tag: Type.Literal('DeliveryUnavailable'),
+      message: Type.String({ minLength: 1 }),
+    },
+    { additionalProperties: false },
+  ),
+  Type.Object(
+    {
+      _tag: Type.Literal('PaymentSetupFailed'),
+      message: Type.String({ minLength: 1 }),
+      canUseBankTransfer: Type.Boolean(),
+    },
+    { additionalProperties: false },
+  ),
+])
+
 export type UlaanbaatarDistrict = Static<typeof ulaanbaatarDistrictSchema>
 export type CheckoutCustomer = Static<typeof checkoutCustomerSchema>
 export type CheckoutDelivery = Static<typeof checkoutDeliverySchema>
@@ -107,5 +149,4 @@ export type QPayPaymentInstructions = Static<typeof qpayPaymentInstructionsSchem
 export type BankTransferPaymentInstructions = Static<typeof bankTransferPaymentInstructionsSchema>
 export type PaymentInstructions = Static<typeof paymentInstructionsSchema>
 export type CheckoutCreated = Static<typeof checkoutCreatedSchema>
-export type { CheckoutError } from './errors'
-export { checkoutErrorSchema } from './errors'
+export type CheckoutError = Static<typeof checkoutErrorSchema>

@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
 import { createCheckoutOrder } from '~/checkout/operations'
+import { commerce } from '~/index'
 import { confirmOrderPayment } from '~/payments/operations'
 
 const entityId = (prefix: string, value: number) =>
@@ -77,26 +78,126 @@ const insertPaymentOrder = async (suffix: number, stock: number, quantity: numbe
   return { orderId, variantId, amountMnt, telegramMessageId }
 }
 
+const insertCheckoutSettings = async () => {
+  await env.DB.prepare(
+    `insert or replace into checkout_settings
+      (id, delivery_fee_mnt, bank_name, bank_account_name, bank_account_number, updated_at)
+     values ('cfg_00000000000000000000000001', 5000, 'Test Bank', 'Store', '1234', ?)`,
+  )
+    .bind(Date.now())
+    .run()
+}
+
+const checkoutInput = (variantId: string) => ({
+  items: [{ variantId, quantity: 1 }],
+  customer: { name: 'Customer', phone: '99112233' },
+  delivery: {
+    district: 'Сүхбаатар' as const,
+    khoroo: '1-р хороо',
+    address: 'Test address',
+  },
+  paymentMethod: 'bank_transfer' as const,
+})
+
 describe('commerce operations with local D1', () => {
-  it('returns every current cart correction before creating an order', async () => {
-    const { variantId } = await insertProduct(201, { active: false, stock: 0 })
-    await env.DB.prepare(
-      `insert or replace into checkout_settings
-        (id, delivery_fee_mnt, bank_name, bank_account_name, bank_account_number, updated_at)
-       values ('cfg_00000000000000000000000001', 5000, 'Test Bank', 'Store', '1234', ?)`,
-    )
-      .bind(Date.now())
-      .run()
+  it('applies typed checkout storage normalization before persistence', async () => {
+    const { variantId } = await insertProduct(201)
+    await insertCheckoutSettings()
 
     const result = await createCheckoutOrder({
-      items: [{ variantId, quantity: 1 }],
-      customer: { name: 'Customer', phone: '99112233' },
+      ...checkoutInput(variantId),
+      customer: { name: '  Test Customer  ', phone: ' 99112233 ' },
       delivery: {
         district: 'Сүхбаатар',
-        khoroo: '1-р хороо',
-        address: 'Test address',
+        khoroo: '  1-р хороо  ',
+        address: '  Test address  ',
+        notes: '   ',
       },
-      paymentMethod: 'bank_transfer',
+    })
+
+    expect(result).toMatchObject({ status: 'ok' })
+    if (result.status === 'error') return
+
+    const persisted = await env.DB.prepare(
+      `select customer_name, customer_phone, khoroo, address, delivery_notes
+       from customer_order where id = ?`,
+    )
+      .bind(result.value.orderId)
+      .first()
+
+    expect(persisted).toEqual({
+      customer_name: 'Test Customer',
+      customer_phone: '99112233',
+      khoroo: '1-р хороо',
+      address: 'Test address',
+      delivery_notes: null,
+    })
+  })
+
+  it('preserves the empty-cart domain check for typed commerce calls', async () => {
+    const result = await createCheckoutOrder({
+      ...checkoutInput(entityId('var', 202)),
+      items: [],
+    })
+
+    expect(result).toMatchObject({ status: 'error', error: { _tag: 'CartEmpty' } })
+  })
+
+  it('keeps typed catalog and cart normalization separate from domain checks', async () => {
+    const { variantId } = await insertProduct(207)
+
+    const catalog = await commerce.catalog.listProducts({
+      query: '  Operation Product  ',
+      limit: 10,
+    })
+    const emptyCart = await commerce.cart.validate([])
+    const duplicateCart = await commerce.cart.validate([
+      { variantId, quantity: 1, previousUnitPriceMnt: 10_000 },
+      { variantId, quantity: 1, previousUnitPriceMnt: 10_000 },
+    ])
+
+    expect(catalog).toMatchObject({
+      status: 'ok',
+      value: { limit: 10, offset: 0 },
+    })
+    if (catalog.status === 'ok')
+      expect(catalog.value.items.map(product => product.slug)).toContain('operation-product-207')
+    expect(emptyCart).toMatchObject({ status: 'error', error: { _tag: 'CartEmpty' } })
+    expect(duplicateCart).toMatchObject({
+      status: 'error',
+      error: { _tag: 'InvalidCart', fields: [{ path: '/items', code: 'duplicate' }] },
+    })
+  })
+
+  it('keeps duplicate variants as one explicit semantic Result issue', async () => {
+    const item = checkoutInput(entityId('var', 203))
+    const result = await createCheckoutOrder({ ...item, items: [...item.items, ...item.items] })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        _tag: 'InvalidCheckoutDetails',
+        fields: [{ path: '/items', code: 'duplicate' }],
+      },
+    })
+  })
+
+  it('returns missing, inactive, and insufficient-stock authoritative corrections', async () => {
+    const inactive = await insertProduct(204, { active: false, stock: 2 })
+    const insufficient = await insertProduct(205, { stock: 0 })
+    const missingVariantId = entityId('var', 206)
+    await insertCheckoutSettings()
+    const before = await env.DB.prepare('select count(*) as count from customer_order').first<{
+      count: number
+    }>()
+
+    const result = await createCheckoutOrder({
+      ...checkoutInput(missingVariantId),
+      items: [
+        { variantId: missingVariantId, quantity: 1 },
+        { variantId: inactive.variantId, quantity: 1 },
+        { variantId: insufficient.variantId, quantity: 1 },
+      ],
     })
 
     expect(result).toMatchObject({
@@ -104,15 +205,20 @@ describe('commerce operations with local D1', () => {
       error: {
         _tag: 'CartChanged',
         corrections: [
-          { _tag: 'InactiveVariant', variantId },
-          { _tag: 'InsufficientStock', variantId, availableQuantity: 0 },
+          { _tag: 'MissingVariant', variantId: missingVariantId },
+          { _tag: 'InactiveVariant', variantId: inactive.variantId },
+          {
+            _tag: 'InsufficientStock',
+            variantId: insufficient.variantId,
+            availableQuantity: 0,
+          },
         ],
       },
     })
     const persisted = await env.DB.prepare('select count(*) as count from customer_order').first<{
       count: number
     }>()
-    expect(persisted?.count).toBe(0)
+    expect(persisted?.count).toBe(before?.count)
   })
 
   it('maps atomic confirmation outcomes without repeated or negative stock changes', async () => {

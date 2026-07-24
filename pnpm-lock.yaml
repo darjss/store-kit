@@ -282,12 +282,25 @@ importers:
 
   packages/tooling:
     dependencies:
+      '@store-kit/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@store-kit/db':
         specifier: workspace:*
         version: link:../db
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       typebox:
         specifier: 'catalog:'
         version: 1.0.76
+    devDependencies:
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
+      vite-plus:
+        specifier: 'catalog:'
+        version: 0.2.5(@types/node@26.1.1)(@voidzero-dev/vite-plus-core@0.2.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1))(esbuild@0.28.1)(jiti@2.7.0)(jsdom@29.1.1)(tsx@4.23.1)
 
   packages/ui:
     dependencies:

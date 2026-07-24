@@ -1,7 +1,3 @@
-import type { PublicImage } from '@store-kit/contracts'
-
-export type ProductImageMetadata = PublicImage
-
 export const productImageLayouts = {
   hero: {
     breakpoints: [480, 768, 960, 1200],

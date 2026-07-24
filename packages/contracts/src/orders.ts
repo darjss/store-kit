@@ -62,6 +62,4 @@ export type OrderStatus = Static<typeof orderStatusSchema>
 export type PublicOrderLine = Static<typeof publicOrderLineSchema>
 export type PublicOrderPayment = Static<typeof publicOrderPaymentSchema>
 export type PublicOrder = Static<typeof publicOrderSchema>
-export type { PrivateOrderError } from './errors'
-export { privateOrderErrorSchema } from './errors'
 export { orderIdPattern, orderStatusSchema } from './common'
