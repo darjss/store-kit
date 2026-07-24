@@ -64,7 +64,7 @@ const formatFact = (key: string, value: string | number | boolean | string[]) =>
       </div>
     </header>
 
-    <ProductPurchase product={purchaseProduct} client:load />
+    <ProductPurchase product={purchaseProduct} client:only="solid-js" />
 
     <section class="texture-paper relative z-2 mx-gutter mt-[clamp(2rem,7vw,6rem)] grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] text-ink shadow-[0.65rem_0.7rem_0_var(--color-ink)] max-lg:grid-cols-1" aria-labelledby="about-title">
       <div class="border-r-4 border-ink p-[clamp(1.25rem,4vw,4rem)] max-lg:border-r-0 max-lg:border-b-4">
