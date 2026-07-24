@@ -1,7 +1,8 @@
 ---
 import { commerce } from "@store-kit/commerce";
+import { formatMnt } from "@store-kit/storefront/format";
+import ProductImage from "~/components/ProductImage.astro";
 import Layout from "~/layouts/Layout.astro";
-import { mediaUrl } from "~/media-url";
 
 const result = await commerce.catalog.listProducts({ limit: 8 });
 if (result.status === "error") throw new Error("Catalog could not be loaded.");
@@ -9,9 +10,14 @@ const products = result.value.items;
 const lead = products[0];
 const interrupt = products[1];
 const small = products[2] ?? products[0];
-const money = new Intl.NumberFormat("mn-MN");
 const useCases = [
   ["first-iem", "АНХНЫ IEM"], ["bass", "BASS"], ["vocals", "VOCALS"], ["gaming", "GAMING"], ["daily-carry", "DAILY CARRY"],
+];
+const dropItemTreatments = [
+  "col-[1/8]",
+  "col-[8/13] mt-32 -translate-x-6",
+  "col-[2/6] -mt-8",
+  "col-[7/12] mt-12",
 ];
 const imageOf = (product: (typeof products)[number] | undefined) => product?.images[0];
 const priceOf = (product: (typeof products)[number] | undefined) => product?.variants[0]?.priceMnt ?? 0;
@@ -19,48 +25,66 @@ const priceOf = (product: (typeof products)[number] | undefined) => product?.var
 
 <Layout title="Plugged · Portable audio, Ulaanbaatar" publicPage>
   <main id="main-content">
-    <section class="product-wall page-rail poster-surface" aria-labelledby="wall-title">
-      <div class="wall-type" aria-hidden="true">PLUGGED</div>
-      <div class="wall-decoration tape-one" aria-hidden="true"></div>
-      <div class="wall-decoration registration" aria-hidden="true"></div>
-      <div class="wall-decoration wall-stamp" aria-hidden="true"></div>
-      <div class="wall-block wall-block-orange"></div><div class="wall-block wall-block-cobalt"></div>
+    <section class="relative grid min-h-[min(860px,90svh)] grid-cols-[minmax(clamp(0.75rem,2.4vw,2.25rem),1fr)_repeat(12,minmax(0,6rem))_minmax(clamp(0.75rem,2.4vw,2.25rem),1fr)] grid-rows-[repeat(3,minmax(0,1fr))_auto] overflow-clip border-b-[5px] border-ink [background:url('/textures/paper-grain.avif')_repeat,var(--color-paper)] [background-blend-mode:multiply] max-md:min-h-[810px] max-md:grid-cols-[0.75rem_repeat(4,minmax(0,1fr))_0.75rem] max-md:grid-rows-[470px_220px_auto]" aria-labelledby="wall-title">
+      <div class="pointer-events-none col-[1/-1] row-[1/4] -translate-x-[2%] self-center overflow-hidden whitespace-nowrap font-outline text-[18vw] leading-[0.7] text-ink opacity-16 max-md:row-[1/3] max-md:translate-y-[35%] max-md:rotate-90 max-md:text-[42vw]" aria-hidden="true">PLUGGED</div>
+      <div class="pointer-events-none absolute top-[2%] left-[42%] z-6 h-12 w-56 -rotate-7 bg-[url('/textures/tape-orange.webp')] bg-contain bg-no-repeat max-md:top-4 max-md:right-[-2rem] max-md:left-auto" aria-hidden="true"></div>
+      <div class="pointer-events-none absolute right-4 bottom-20 z-6 size-20 bg-[url('/textures/registration-marks.webp')] bg-contain bg-no-repeat max-md:right-2 max-md:bottom-18 max-md:size-12" aria-hidden="true"></div>
+      <div class="pointer-events-none absolute bottom-18 left-[2%] z-6 h-20 w-48 rotate-4 bg-[url('/textures/stamp-plugged.webp')] bg-contain bg-no-repeat max-md:hidden" aria-hidden="true"></div>
+      <div data-wall-block class="pointer-events-none absolute inset-[5%_44%_26%_-2%] -rotate-2 bg-orange max-md:inset-[2%_-10%_38%_-3%]"></div>
+      <div data-wall-block class="pointer-events-none absolute inset-[12%_-3%_13%_63%] rotate-3 bg-cobalt max-md:inset-[47%_-5%_8%_20%]"></div>
       <h1 id="wall-title" class="sr-only">Plugged portable audio шинэ бараа</h1>
-      {lead && <article class="wall-product wall-lead">
-        <a href={`/products/${lead.slug}`} class="wall-image-link">
-          {imageOf(lead) && <img class="product-cutout product-cutout--lead" src={mediaUrl(imageOf(lead)!.r2Key)} alt={imageOf(lead)!.alt} width="900" height="700" fetchpriority="high" />}
+      {lead && <article data-wall-lead class="relative z-2 col-[2/10] row-[1/4] grid grid-cols-[minmax(0,1fr)_minmax(15rem,0.65fr)] items-center max-md:col-[2/6] max-md:row-1 max-md:block">
+        <a href={`/products/${lead.slug}`} class="col-[1/3] row-1 max-md:block">
+          {imageOf(lead) && <ProductImage class="h-auto w-[clamp(18rem,48vw,52rem)] max-w-none -rotate-5 translate-x-[4%] translate-y-[3%] object-contain [filter:drop-shadow(0_5px_0_rgb(0_0_0/0.2))] max-md:w-[116%] max-md:-translate-x-[2%] max-md:translate-y-[2%]" image={imageOf(lead)!} layout="hero" priority />}
         </a>
-        <div class="wall-copy"><p class="fit-label">АНХНЫ IEM / BASS</p><h2><a href={`/products/${lead.slug}`}>{lead.name}</a></h2><p>{lead.shortDescription}</p><strong class="price">{money.format(priceOf(lead))} ₮</strong><span class="stock-stamp">БЭЛЭН</span></div>
+        <div data-wall-copy class="z-2 col-2 row-1 rotate-1 border-4 border-ink bg-paper-clean p-4 max-md:absolute max-md:bottom-[-3.5rem] max-md:left-0 max-md:w-[74%] max-md:p-3 max-md:[&>p:not([data-fit-label])]:hidden"><p data-fit-label class="mb-1 font-black uppercase">АНХНЫ IEM / BASS</p><h2 class="my-1 mb-3 font-display text-[clamp(2.7rem,5.4vw,5.7rem)] leading-[0.74] font-black tracking-[-0.02em] text-balance uppercase max-md:text-[3.2rem] max-[340px]:text-[2.7rem]"><a class="no-underline" href={`/products/${lead.slug}`}>{lead.name}</a></h2><p>{lead.shortDescription}</p><strong class="font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums">{formatMnt(priceOf(lead))}</strong><span data-stock-stamp class="ml-2 inline-block -rotate-3 border-3 border-ink bg-acid px-2 py-1 font-black">БЭЛЭН</span></div>
       </article>}
-      {interrupt && <article class="wall-product wall-interrupt">
-        <a href={`/products/${interrupt.slug}`}>{imageOf(interrupt) && <img class="product-cutout" src={mediaUrl(imageOf(interrupt)!.r2Key)} alt={imageOf(interrupt)!.alt} width="640" height="480" loading="eager" decoding="async" />}</a>
-        <div class="wall-copy"><p class="fit-label">DAILY CARRY</p><h2><a href={`/products/${interrupt.slug}`}>{interrupt.name}</a></h2><strong class="price">{money.format(priceOf(interrupt))} ₮</strong></div>
+      {interrupt && <article class="relative z-2 col-[8/14] row-[1/3] self-center text-paper max-md:col-[3/6] max-md:row-2 max-md:self-end">
+        <a href={`/products/${interrupt.slug}`}>{imageOf(interrupt) && <ProductImage class="h-auto w-[clamp(18rem,36vw,40rem)] max-w-none rotate-8 translate-x-[12%] -translate-y-[5%] object-contain [filter:drop-shadow(0_5px_0_rgb(0_0_0/0.2))] max-md:w-[115%] max-md:translate-x-[5%] max-md:translate-y-[12%]" image={imageOf(interrupt)!} layout="wall" />}</a>
+        <div data-wall-copy class="absolute right-0 bottom-[2%] max-w-88 bg-ink p-3 max-md:right-auto max-md:bottom-[-1rem] max-md:left-[-25%] max-md:max-w-[75%]"><p data-fit-label class="mb-1 font-black uppercase">DAILY CARRY</p><h2 class="my-1 mb-3 font-display text-[clamp(2.3rem,4vw,4.5rem)] leading-[0.74] font-black tracking-[-0.02em] text-balance uppercase max-md:text-[2.5rem]"><a class="no-underline" href={`/products/${interrupt.slug}`}>{interrupt.name}</a></h2><strong class="font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums">{formatMnt(priceOf(interrupt))}</strong></div>
       </article>}
-      {small && <a class="wall-small" href={`/products/${small.slug}`}><span>HOT DROP</span><strong>{small.name}</strong><b>{money.format(priceOf(small))} ₮</b></a>}
-      <nav class="use-case-rail" aria-label="Хэрэглээгээр сонгох">{useCases.map(([slug, label]) => <a href={`/products?useCase=${slug}`}>{label}</a>)}</nav>
+      {small && <a class="z-4 col-[10/14] row-3 grid -rotate-2 self-end border-4 border-ink bg-acid p-3 no-underline max-md:hidden" href={`/products/${small.slug}`}><span class="font-black">HOT DROP</span><strong class="text-xl">{small.name}</strong><b class="text-2xl">{formatMnt(priceOf(small))}</b></a>}
+      <nav class="z-5 col-[1/-1] row-4 flex gap-3 overflow-x-auto bg-ink px-[max(0.75rem,calc((100vw-72rem)/2))] py-3 text-paper [scrollbar-width:none] max-md:col-[1/7] max-md:row-3 max-md:self-end max-md:p-3" aria-label="Хэрэглээгээр сонгох">{useCases.map(([slug, label]) => <a class="shrink-0 bg-paper px-3 py-2 font-black text-ink no-underline [clip-path:polygon(2%_0,100%_5%,97%_100%,0_92%)]" href={`/products?useCase=${slug}`}>{label}</a>)}</nav>
     </section>
 
-    <div class="signal-ticker" aria-label="Дэлгүүрийн үйлчилгээ"><div class="ticker-track"><span class="ticker-copy">УЛААНБААТАР ХҮРГЭЛТ ◆ QPAY ◆ БАНКНЫ ШИЛЖҮҮЛЭГ ◆ ШИНЭ DROP ◆ </span><span class="ticker-copy" aria-hidden="true">УЛААНБААТАР ХҮРГЭЛТ ◆ QPAY ◆ БАНКНЫ ШИЛЖҮҮЛЭГ ◆ ШИНЭ DROP ◆ </span></div></div>
+    <div class="overflow-hidden border-y-4 border-ink bg-acid py-2 text-xl font-black max-md:text-base" aria-label="Дэлгүүрийн үйлчилгээ"><div data-ticker class="flex w-max animate-[ticker_22s_linear_infinite] hover:[animation-play-state:paused] focus-within:[animation-play-state:paused] motion-reduce:animate-none"><span class="pr-4 whitespace-nowrap">УЛААНБААТАР ХҮРГЭЛТ ◆ QPAY ◆ БАНКНЫ ШИЛЖҮҮЛЭГ ◆ ШИНЭ DROP ◆ </span><span class="pr-4 whitespace-nowrap motion-reduce:hidden" aria-hidden="true">УЛААНБААТАР ХҮРГЭЛТ ◆ QPAY ◆ БАНКНЫ ШИЛЖҮҮЛЭГ ◆ ШИНЭ DROP ◆ </span></div></div>
 
-    <section class="drop-stream page-rail">
-      <div class="drop-heading"><p>ЧИХЭНД ОЙР.<br />ХОТЫН ДУУНААС <em>ЦЭВЭР.</em></p><a href="/products">БҮХ БАРАА →</a></div>
-      <div class="drop-products">
-        {products.slice(0, 4).map((product, index) => <article class={`drop-item drop-item-${index + 1}`}>
-          <a href={`/products/${product.slug}`} class="drop-image">{imageOf(product) && <img src={mediaUrl(imageOf(product)!.r2Key)} alt={imageOf(product)!.alt} width="620" height="480" loading="lazy" decoding="async" />}</a>
-          <div><p>{product.useCases.slice(0, 2).join(" / ")}</p><h2><a href={`/products/${product.slug}`}>{product.name}</a></h2><strong>{money.format(priceOf(product))} ₮</strong></div>
+    <section class="grid grid-cols-[minmax(clamp(0.75rem,2.4vw,2.25rem),1fr)_repeat(12,minmax(0,6rem))_minmax(clamp(0.75rem,2.4vw,2.25rem),1fr)] overflow-clip py-[clamp(3rem,7vw,7rem)]">
+      <div class="col-[2/-2] grid grid-cols-[1fr_auto] items-end border-b-[5px] border-ink pb-4 max-md:block"><p class="m-0 font-display text-[clamp(4rem,10vw,6rem)] leading-[0.72] font-black tracking-[-0.02em]">ЧИХЭНД ОЙР.<br />ХОТЫН ДУУНААС <em class="font-normal text-orange not-italic">ЦЭВЭР.</em></p><a class="font-black max-md:mt-4 max-md:inline-block" href="/products">БҮХ БАРАА →</a></div>
+      <div class="col-[2/-2] grid grid-cols-12 pt-8 max-md:block">
+        {products.slice(0, 4).map((product, index) => <article class:list={["relative max-md:!m-0 max-md:grid max-md:!translate-x-0 max-md:grid-cols-[1.1fr_1fr] max-md:items-center max-md:border-b-3 max-md:border-ink max-md:even:[&>a]:order-2", dropItemTreatments[index]]}>
+          <a href={`/products/${product.slug}`} class="block border-4 border-ink bg-paper-clean">{imageOf(product) && <ProductImage class="aspect-[4/3] w-full object-contain max-md:aspect-square" image={imageOf(product)!} layout="card" />}</a>
+          <div class="p-3"><p>{product.useCases.slice(0, 2).join(" / ")}</p><h2 class="my-1 text-[clamp(1.25rem,2.5vw,2rem)] leading-none max-md:text-[1.65rem]"><a class="no-underline" href={`/products/${product.slug}`}>{product.name}</a></h2><strong>{formatMnt(priceOf(product))}</strong></div>
         </article>)}
       </div>
     </section>
 
-    <section class="type-routes"><a href="/products?category=in-ear-monitors"><span>IEM</span><strong>Чихэвч / эхний сонголт</strong></a><a href="/products?category=portable-audio"><span>DAC</span><strong>Утаснаас цэвэр гаралт</strong></a><a href="/products?category=cables"><span>CABLE</span><strong>Солих / холбох</strong></a></section>
+    <section class="grid grid-cols-[1.3fr_0.9fr_1.1fr] border-y-[5px] border-ink max-md:grid-cols-1"><a class="flex min-h-55 flex-col justify-between border-r-4 border-ink bg-orange p-4 no-underline max-md:min-h-38 max-md:border-r-0 max-md:border-b-4" href="/products?category=in-ear-monitors"><span class="font-display text-8xl leading-[0.7] max-md:text-[5rem]">IEM</span><strong>Чихэвч / эхний сонголт</strong></a><a class="flex min-h-55 flex-col justify-between border-r-4 border-ink bg-cobalt p-4 text-paper no-underline max-md:min-h-38 max-md:border-r-0 max-md:border-b-4" href="/products?category=portable-audio"><span class="font-display text-8xl leading-[0.7] max-md:text-[5rem]">DAC</span><strong>Утаснаас цэвэр гаралт</strong></a><a class="flex min-h-55 flex-col justify-between bg-acid p-4 no-underline max-md:min-h-38" href="/products?category=cables"><span class="font-display text-8xl leading-[0.7] max-md:text-[5rem]">CABLE</span><strong>Солих / холбох</strong></a></section>
   </main>
   <script>
-    import { animate, stagger } from "motion";
-
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      animate(".wall-block", { clipPath: ["inset(0 100% 0 0)", "inset(0 0 0 0)"] }, { duration: .24, ease: [0.16, 1, 0.3, 1] });
-      animate(".wall-lead .product-cutout", { transform: ["translateY(32px) rotate(-9deg)", "translateY(0) rotate(-5deg)"] }, { duration: .32, delay: .18, ease: [0.16, 1, 0.3, 1] });
-      animate(".wall-copy .price, .stock-stamp", { scale: [1.12, 1] }, { duration: .16, delay: stagger(.055, { start: .42 }) });
+      const easing = "cubic-bezier(0.16, 1, 0.3, 1)";
+      document.querySelectorAll("[data-wall-block]").forEach(element =>
+        element.animate(
+          [{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }],
+          { duration: 240, easing },
+        ),
+      );
+      document.querySelector("[data-wall-lead] img")?.animate(
+        [
+          { translate: "0 32px", rotate: "-9deg" },
+          { translate: "0 0", rotate: "-5deg" },
+        ],
+        { duration: 320, delay: 180, easing, fill: "backwards" },
+      );
+      document.querySelectorAll("[data-wall-copy] strong, [data-stock-stamp]").forEach((element, index) =>
+        element.animate([{ scale: 1.12 }, { scale: 1 }], {
+          duration: 160,
+          delay: 420 + index * 55,
+          easing,
+          fill: "backwards",
+        }),
+      );
     }
   </script>
 </Layout>

@@ -68,7 +68,9 @@ const imageSeedSchema = strictObject({
   source: nonEmptyStringSchema,
   r2Key: nonEmptyStringSchema,
   contentType: imageContentTypeSchema,
-  alt: nullableStringSchema,
+  width: Type.Integer({ minimum: 1 }),
+  height: Type.Integer({ minimum: 1 }),
+  alt: nonEmptyStringSchema,
   sortOrder: nonNegativeIntegerSchema,
 })
 
@@ -477,16 +479,18 @@ const buildSql = (seed: CatalogSeed) => {
       statements.push(
         upsert(
           'product_image',
-          ['id', 'product_id', 'r2_key', 'alt', 'sort_order', 'created_at'],
+          ['id', 'product_id', 'r2_key', 'width', 'height', 'alt', 'sort_order', 'created_at'],
           [
             sqlText(image.id),
             sqlText(product.id),
             sqlText(image.r2Key),
-            sqlNullableText(image.alt),
+            String(image.width),
+            String(image.height),
+            sqlText(image.alt),
             String(image.sortOrder),
             'unixepoch()',
           ],
-          ['product_id', 'r2_key', 'alt', 'sort_order'],
+          ['product_id', 'r2_key', 'width', 'height', 'alt', 'sort_order'],
         ),
       )
     }

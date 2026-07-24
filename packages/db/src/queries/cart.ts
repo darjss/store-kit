@@ -1,5 +1,6 @@
 import type { CartLineInput } from '@store-kit/contracts/cart'
 import { eq, inArray, sql } from 'drizzle-orm'
+import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 
 import { db } from '../client'
 import { product, productImage, productVariant, productVariantImage } from '../schema/catalog'
@@ -17,7 +18,26 @@ export type CartVariant = {
   stockQuantity: number
   active: boolean
   imageR2Key: string | null
+  imageWidth: number | null
+  imageHeight: number | null
+  imageAlt: string | null
 }
+
+const imageValue = <Value>(column: AnySQLiteColumn) => sql<Value | null>`coalesce(
+  (
+    select ${column} from ${productVariantImage}
+    inner join ${productImage} on ${productImage.id} = ${productVariantImage.imageId}
+    where ${productVariantImage.variantId} = ${productVariant.id}
+    order by ${productImage.sortOrder}
+    limit 1
+  ),
+  (
+    select ${column} from ${productImage}
+    where ${productImage.productId} = ${product.id}
+    order by ${productImage.sortOrder}
+    limit 1
+  )
+)`
 
 export const selectVariants = (items: CartLineInput[]) => {
   const variantIds = [...new Set(items.map(item => item.variantId))]
@@ -35,21 +55,10 @@ export const selectVariants = (items: CartLineInput[]) => {
       unitPriceMnt: productVariant.priceMnt,
       stockQuantity: productVariant.stockQuantity,
       active: productVariant.active,
-      imageR2Key: sql<string | null>`coalesce(
-        (
-          select ${productImage.r2Key} from ${productVariantImage}
-          inner join ${productImage} on ${productImage.id} = ${productVariantImage.imageId}
-          where ${productVariantImage.variantId} = ${productVariant.id}
-          order by ${productImage.sortOrder}
-          limit 1
-        ),
-        (
-          select ${productImage.r2Key} from ${productImage}
-          where ${productImage.productId} = ${product.id}
-          order by ${productImage.sortOrder}
-          limit 1
-        )
-      )`.as('image_r2_key'),
+      imageR2Key: imageValue<string>(productImage.r2Key).as('image_r2_key'),
+      imageWidth: imageValue<number>(productImage.width).as('image_width'),
+      imageHeight: imageValue<number>(productImage.height).as('image_height'),
+      imageAlt: imageValue<string>(productImage.alt).as('image_alt'),
     })
     .from(productVariant)
     .innerJoin(product, eq(productVariant.productId, product.id))

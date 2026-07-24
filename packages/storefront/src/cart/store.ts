@@ -1,59 +1,107 @@
 import { makePersisted } from '@solid-primitives/storage'
 import { variantIdPattern } from '@store-kit/contracts/cart'
 import type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
+import { cartStorageKey } from '@store-kit/storefront/storage'
 import { createSignal } from 'solid-js'
+import { createStore } from 'solid-js/store'
 import { isServer } from 'solid-js/web'
 
 export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
 
-const storageKey = 'store-kit:plugged:cart:v1'
-const [cartItems, setNativeCartItems] = createSignal<PersistedCartItem[]>([])
+const storageKey = cartStorageKey('plugged')
+type CartState = { items: PersistedCartItem[] }
+const nativeCartStore = createStore<CartState>({ items: [] })
+const [cartState, setNativeCartState] = nativeCartStore
 const variantIdExpression = new RegExp(variantIdPattern)
-let setCartItems = setNativeCartItems
+type CartItemsUpdater = (items: PersistedCartItem[]) => PersistedCartItem[]
+let setCartItems = (update: CartItemsUpdater) => setNativeCartState('items', update)
 const [isCartOpen, setIsCartOpen] = createSignal(false)
 let persistenceStarted = false
 
-function isPersistedCartItem(value: unknown): value is PersistedCartItem {
-  if (typeof value !== 'object' || value === null) return false
+function parsePersistedCartItem(value: unknown): PersistedCartItem | undefined {
+  if (typeof value !== 'object' || value === null) return
 
   const item = value as Partial<PersistedCartItem>
-  return (
-    variantIdExpression.test(item.variantId ?? '') &&
-    Number.isInteger(item.quantity) &&
-    (item.quantity ?? 0) > 0 &&
-    (item.quantity ?? 11) <= 10 &&
-    typeof item.productSlug === 'string' &&
-    typeof item.productName === 'string' &&
-    typeof item.variantName === 'string' &&
-    typeof item.options === 'object' &&
-    item.options !== null &&
-    Object.values(item.options).every(option => typeof option === 'string') &&
-    (typeof item.imageR2Key === 'string' || item.imageR2Key === null) &&
-    Number.isInteger(item.unitPriceMnt) &&
-    (item.unitPriceMnt ?? -1) >= 0
+  const quantity = item.quantity
+  const imageWidth = item.imageWidth ?? null
+  const imageHeight = item.imageHeight ?? null
+  const imageAlt = item.imageAlt ?? null
+  const unitPriceMnt = item.unitPriceMnt
+  if (
+    !(
+      typeof item.variantId === 'string' &&
+      variantIdExpression.test(item.variantId) &&
+      typeof quantity === 'number' &&
+      Number.isInteger(quantity) &&
+      quantity > 0 &&
+      quantity <= 10 &&
+      typeof item.productSlug === 'string' &&
+      typeof item.productName === 'string' &&
+      typeof item.variantName === 'string' &&
+      typeof item.options === 'object' &&
+      item.options !== null &&
+      !Array.isArray(item.options) &&
+      Object.values(item.options).every(option => typeof option === 'string') &&
+      (typeof item.imageR2Key === 'string' || item.imageR2Key === null) &&
+      (Number.isInteger(imageWidth) || imageWidth === null) &&
+      (imageWidth ?? 1) > 0 &&
+      (Number.isInteger(imageHeight) || imageHeight === null) &&
+      (imageHeight ?? 1) > 0 &&
+      (typeof imageAlt === 'string' || imageAlt === null) &&
+      (imageAlt === null || imageAlt.length > 0) &&
+      typeof unitPriceMnt === 'number' &&
+      Number.isInteger(unitPriceMnt) &&
+      unitPriceMnt >= 0
+    )
   )
+    return
+
+  return {
+    variantId: item.variantId,
+    quantity,
+    productSlug: item.productSlug,
+    productName: item.productName,
+    variantName: item.variantName,
+    options: item.options,
+    imageR2Key: item.imageR2Key,
+    imageWidth,
+    imageHeight,
+    imageAlt,
+    unitPriceMnt,
+  }
 }
 
-function deserializeCart(value: string) {
+export function deserializeCart(value: string): PersistedCartItem[] {
   try {
     const items: unknown = JSON.parse(value)
-    return Array.isArray(items) && items.every(isPersistedCartItem) ? items : []
+    if (!Array.isArray(items)) return []
+
+    const parsed = items.map(parsePersistedCartItem)
+    return parsed.every((item): item is PersistedCartItem => item !== undefined) ? parsed : []
   } catch {
     return []
   }
+}
+
+function isPersistedCartItem(value: unknown): value is PersistedCartItem {
+  return parsePersistedCartItem(value) !== undefined
 }
 
 export function startCartPersistence() {
   if (isServer || persistenceStarted) return
 
   persistenceStarted = true
-  const [, setPersistedCartItems] = makePersisted([cartItems, setNativeCartItems], {
-    name: storageKey,
-    storage: localStorage,
-    deserialize: deserializeCart,
-  })
-  setCartItems = setPersistedCartItems
-  window.addEventListener('storefront:cart-cleared', () => setCartItems([]))
+  const [, setPersistedCartState] = makePersisted<CartState, typeof nativeCartStore>(
+    nativeCartStore,
+    {
+      name: storageKey,
+      storage: localStorage,
+      serialize: state => JSON.stringify(state.items),
+      deserialize: value => ({ items: deserializeCart(value) }),
+    },
+  )
+  setCartItems = update => setPersistedCartState('items', update)
+  window.addEventListener('storefront:cart-cleared', () => setCartItems(() => []))
 }
 
 export function addCartItem(item: PersistedCartItem) {
@@ -92,6 +140,9 @@ export function refreshCartItemSnapshots(
     | 'variantName'
     | 'options'
     | 'imageR2Key'
+    | 'imageWidth'
+    | 'imageHeight'
+    | 'imageAlt'
     | 'unitPriceMnt'
   >[],
 ) {
@@ -105,21 +156,24 @@ export function refreshCartItemSnapshots(
 }
 
 export function clearCart() {
-  setCartItems([])
+  setCartItems(() => [])
   if (!isServer) window.dispatchEvent(new CustomEvent('storefront:cart-cleared'))
 }
 
 export function openCart() {
   setIsCartOpen(true)
+  if (!isServer) window.dispatchEvent(new CustomEvent('storefront:cart-opened'))
 }
 
 export function closeCart() {
   setIsCartOpen(false)
 }
 
-export const cartItemCount = () => cartItems().reduce((count, item) => count + item.quantity, 0)
+export const cartItems = () => cartState.items
+
+export const cartItemCount = () => cartState.items.reduce((count, item) => count + item.quantity, 0)
 
 export const cartLineInputs = (): CartLineInput[] =>
-  cartItems().map(({ variantId, quantity }) => ({ variantId, quantity }))
+  cartState.items.map(({ variantId, quantity }) => ({ variantId, quantity }))
 
-export { cartItems, isCartOpen }
+export { isCartOpen }

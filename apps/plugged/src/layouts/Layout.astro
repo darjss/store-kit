@@ -19,7 +19,7 @@ if (publicPage) {
 ---
 
 <!doctype html>
-<html lang={STORE_LOCALE}>
+<html lang={STORE_LOCALE} class="scroll-smooth overflow-x-clip bg-ink font-body text-ink motion-reduce:scroll-auto">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -28,18 +28,18 @@ if (publicPage) {
     <meta name="theme-color" content="#f05c13" />
     <title>{title}</title>
   </head>
-  <body>
-    <a class="skip-link" href="#main-content">Үндсэн хэсэг рүү очих</a>
-    <header class="site-header">
-      <a class="wordmark" href="/" aria-label="Plugged нүүр">
-        <img src="/brand/plugged-logo.webp" width="640" height="640" alt="" />
-        <span>PLUGGED<sup>®</sup></span>
+  <body class="min-w-0 overflow-x-clip bg-paper pb-20 font-body text-base leading-6 text-ink max-md:pb-[calc(6rem+env(safe-area-inset-bottom))] [&_:where(a,button,input,select,textarea):focus-visible]:outline-4 [&_:where(a,button,input,select,textarea):focus-visible]:outline-offset-3 [&_:where(a,button,input,select,textarea):focus-visible]:outline-acid [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
+    <a class="fixed top-2 left-2 z-60 -translate-y-[150%] border-3 border-ink bg-acid px-4 py-3 font-black text-ink focus:translate-y-0" href="#main-content">Үндсэн хэсэг рүү очих</a>
+    <header class="relative z-20 grid min-h-[66px] grid-cols-[minmax(3.1rem,auto)_minmax(0,1fr)_auto] items-center gap-[clamp(1rem,4vw,4rem)] border-b-4 border-ink bg-paper-clean py-2 pr-[max(14rem,2.25rem)] pl-[clamp(0.75rem,2.4vw,2.25rem)] max-md:grid-cols-[minmax(0,1fr)_auto] max-md:px-3">
+      <a class="@container flex min-w-[3.1rem] shrink-0 items-center gap-2 font-display text-[2.7rem] leading-[0.8] font-black tracking-[0.02em] no-underline max-md:text-[2.3rem]" href="/" aria-label="Plugged нүүр">
+        <img class="size-[3.1rem] shrink-0 object-cover mix-blend-multiply max-md:size-11" src="/brand/plugged-logo.webp" width="640" height="640" alt="" />
+        <span class="inline-flex min-w-0 items-start overflow-hidden @max-[10rem]:hidden">PLUGGED<sup class="font-body text-[0.6rem] font-extrabold">®</sup></span>
       </a>
-      <nav aria-label="Дэлгүүрийн цэс"><a href="/products?category=in-ear-monitors">IEM</a><a href="/products?category=portable-audio">DAC</a><a href="/products?category=cables">CABLE</a></nav>
-      <a class="header-shop" href="/products">SHOP →</a>
+      <nav class="flex gap-8 font-black max-md:hidden" aria-label="Дэлгүүрийн цэс"><a href="/products?category=in-ear-monitors">IEM</a><a href="/products?category=portable-audio">DAC</a><a href="/products?category=cables">CABLE</a></nav>
+      <a class="bg-ink px-4 py-2 font-black text-paper" href="/products">SHOP →</a>
     </header>
     <slot />
-    <footer class="site-footer"><strong>PLUGGED / ULAANBAATAR</strong><p>QPay · Дансаар шилжүүлэх · Хот дотор хүргэлт</p></footer>
+    <footer class="flex justify-between gap-8 bg-ink px-[max(1rem,4vw)] pt-16 pb-24 text-paper max-md:block max-md:pb-28"><strong class="font-display text-[5rem] leading-[0.75] max-md:text-[3.8rem]">PLUGGED / ULAANBAATAR</strong><p>QPay · Дансаар шилжүүлэх · Хот дотор хүргэлт</p></footer>
     <StoreChrome client:load />
   </body>
 </html>

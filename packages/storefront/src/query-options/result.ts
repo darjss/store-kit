@@ -1,4 +1,4 @@
-import { mutationOptions, queryOptions } from '@tanstack/solid-query'
+import { mutationOptions, queryOptions, useQuery } from '@tanstack/solid-query'
 import { Result, ResultDeserializationError } from 'better-result'
 import type { SerializedResult } from 'better-result'
 
@@ -10,6 +10,8 @@ type ResultQueryOptions<QueryKey extends readonly unknown[], Value, Failure> = {
   queryKey: QueryKey
   request: () => Promise<ResultResponse<Value, Failure>>
 }
+
+export const useQueryResult: typeof useQuery = useQuery
 
 export const resultMutationOptions = <Variables, Value, Failure>(
   request: (variables: Variables) => Promise<ResultResponse<Value, Failure>>,

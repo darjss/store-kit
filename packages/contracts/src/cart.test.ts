@@ -16,6 +16,9 @@ const persistedItem = {
   variantName: 'Black',
   options: { color: 'Black' },
   imageR2Key: 'products/first-iem/black.webp',
+  imageWidth: 1200,
+  imageHeight: 900,
+  imageAlt: 'Black First IEM',
   unitPriceMnt: 120_000,
 } as const
 
@@ -64,6 +67,9 @@ test('cart corrections and validation results are tagged, serializable contracts
         sku: 'IEM-BLACK',
         options: persistedItem.options,
         imageR2Key: persistedItem.imageR2Key,
+        imageWidth: persistedItem.imageWidth,
+        imageHeight: persistedItem.imageHeight,
+        imageAlt: persistedItem.imageAlt,
         unitPriceMnt: 125_000,
         requestedQuantity: 2,
         availableQuantity: 4,

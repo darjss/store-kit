@@ -57,11 +57,16 @@ CREATE TABLE `product_image` (
 	`id` text NOT NULL,
 	`product_id` text NOT NULL,
 	`r2_key` text NOT NULL,
-	`alt` text,
+	`width` integer NOT NULL,
+	`height` integer NOT NULL,
+	`alt` text NOT NULL,
 	`sort_order` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL,
 	CONSTRAINT `product_image_pk` PRIMARY KEY(`id`),
 	CONSTRAINT `fk_product_image_product_id_product_id_fk` FOREIGN KEY (`product_id`) REFERENCES `product`(`id`) ON DELETE CASCADE,
+	CONSTRAINT "product_image_width_check" CHECK("width" > 0),
+	CONSTRAINT "product_image_height_check" CHECK("height" > 0),
+	CONSTRAINT "product_image_alt_check" CHECK(length(trim("alt")) > 0),
 	CONSTRAINT "product_image_id_typeid_check" CHECK(length("id") = 30
     and substr("id", 1, 4) = 'img_'
     and substr("id", 5, 1) glob '[0-7]'
@@ -151,6 +156,9 @@ CREATE TABLE `order_line` (
 	`sku` text NOT NULL,
 	`options` text NOT NULL,
 	`image_r2_key` text,
+	`image_width` integer,
+	`image_height` integer,
+	`image_alt` text,
 	`unit_price_mnt` integer NOT NULL,
 	`quantity` integer NOT NULL,
 	`line_total_mnt` integer NOT NULL,

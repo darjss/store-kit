@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "fc03aad5-f9ec-4038-ac6c-31b9d5cdf01a",
+  "id": "f1b63d9c-1b2d-4f80-b8f0-8b53389370ef",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -357,8 +357,28 @@
       "table": "product_image"
     },
     {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "width",
+      "entityType": "columns",
+      "table": "product_image"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "height",
+      "entityType": "columns",
+      "table": "product_image"
+    },
+    {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -853,6 +873,36 @@
       "default": null,
       "generated": null,
       "name": "image_r2_key",
+      "entityType": "columns",
+      "table": "order_line"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "image_width",
+      "entityType": "columns",
+      "table": "order_line"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "image_height",
+      "entityType": "columns",
+      "table": "order_line"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "image_alt",
       "entityType": "columns",
       "table": "order_line"
     },
@@ -1658,6 +1708,24 @@
       "name": "product_id_typeid_check",
       "entityType": "checks",
       "table": "product"
+    },
+    {
+      "value": "\"width\" > 0",
+      "name": "product_image_width_check",
+      "entityType": "checks",
+      "table": "product_image"
+    },
+    {
+      "value": "\"height\" > 0",
+      "name": "product_image_height_check",
+      "entityType": "checks",
+      "table": "product_image"
+    },
+    {
+      "value": "length(trim(\"alt\")) > 0",
+      "name": "product_image_alt_check",
+      "entityType": "checks",
+      "table": "product_image"
     },
     {
       "value": "length(\"id\") = 30\n    and substr(\"id\", 1, 4) = 'img_'\n    and substr(\"id\", 5, 1) glob '[0-7]'\n    and substr(\"id\", 6) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
