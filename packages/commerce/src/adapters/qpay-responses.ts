@@ -43,8 +43,17 @@ const parse = <Schema extends TSchema>(
 export const parseQPayTokenResponse = (input: unknown): TokenResponse | undefined =>
   parse(tokenResponseSchema, input)
 
-export const parseQPayInvoiceResponse = (input: unknown): InvoiceResponse | undefined =>
-  parse(invoiceResponseSchema, input)
+export const parseQPayInvoiceResponse = (input: unknown): InvoiceResponse | undefined => {
+  const invoice = parse(invoiceResponseSchema, input)
+  if (!invoice) return undefined
+
+  return {
+    ...invoice,
+    qr_image: invoice.qr_image.startsWith('data:')
+      ? invoice.qr_image
+      : `data:image/png;base64,${invoice.qr_image}`,
+  }
+}
 
 export const parseQPayPaymentCheckResponse = (input: unknown): PaymentCheckResponse | undefined =>
   parse(paymentCheckResponseSchema, input)

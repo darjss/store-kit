@@ -15,15 +15,28 @@ test('parses documented QPay token and invoice response fields', () => {
     }),
   ).toEqual({ access_token: 'access-token', expires_in: 300, token_type: 'Bearer' })
 
+  const invoice = parseQPayInvoiceResponse({
+    invoice_id: 'invoice-1',
+    qr_text: 'qr-text',
+    qr_image: 'AA==',
+    urls: [{ name: 'Bank app', description: 'Open app', link: 'https://example.com/pay' }],
+  })
+
+  expect(invoice).toMatchObject({
+    invoice_id: 'invoice-1',
+    qr_image: 'data:image/png;base64,AA==',
+    urls: [{ name: 'Bank app', link: 'https://example.com/pay' }],
+  })
   expect(
     parseQPayInvoiceResponse({
-      invoice_id: 'invoice-1',
+      invoice_id: 'invoice-2',
       qr_text: 'qr-text',
       qr_image: 'data:image/png;base64,AA==',
       urls: [{ name: 'Bank app', description: 'Open app', link: 'https://example.com/pay' }],
     }),
   ).toMatchObject({
-    invoice_id: 'invoice-1',
+    invoice_id: 'invoice-2',
+    qr_image: 'data:image/png;base64,AA==',
     urls: [{ name: 'Bank app', link: 'https://example.com/pay' }],
   })
 })

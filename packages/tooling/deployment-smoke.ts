@@ -1,5 +1,7 @@
 import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
 
+import { pluggedDevelopmentMediaBaseUrl } from './catalog-seed-target.ts'
+
 const argumentValue = (args: string[], name: string) => {
   const index = args.indexOf(name)
   return index === -1 ? undefined : args[index + 1]
@@ -27,11 +29,8 @@ if (
 ) {
   throw new Error('Production smoke must use the Plugged production media origin.')
 }
-if (
-  selectedEnvironment === 'development' &&
-  mediaBaseUrl === 'https://plugged.storekitcdn.darjs.dev/'
-) {
-  throw new Error('Development smoke must not use the production media origin.')
+if (selectedEnvironment === 'development' && mediaBaseUrl !== pluggedDevelopmentMediaBaseUrl) {
+  throw new Error(`Development smoke must use ${pluggedDevelopmentMediaBaseUrl}`)
 }
 
 const get = async (path: string) => {
