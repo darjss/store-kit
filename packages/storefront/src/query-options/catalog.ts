@@ -1,4 +1,5 @@
-import { api } from '../client'
+import { api } from '~/client'
+
 import { resultQueryOptions } from './result'
 
 type ProductListRequest = NonNullable<Parameters<typeof api.api.products.get>[0]>
@@ -21,19 +22,11 @@ const normalizeProductListFilters = (filters: ProductListFilters) => {
   }
 }
 
-const mapProductImages = <
+const mapPublicProduct = <
   Product extends { images: { url: string; width: number; height: number; alt: string }[] },
 >(
   product: Product,
-) => ({
-  ...product,
-  images: product.images.map(image => ({
-    r2Key: image.url,
-    width: image.width,
-    height: image.height,
-    alt: image.alt,
-  })),
-})
+) => ({ ...product, images: product.images.map(image => image) })
 
 const findAllProducts = (filters: ProductListFilters = {}) => {
   const normalizedFilters = normalizeProductListFilters(filters)
@@ -43,7 +36,7 @@ const findAllProducts = (filters: ProductListFilters = {}) => {
     request: () => api.api.products.get({ query: normalizedFilters }),
     mapValue: catalog => ({
       ...catalog,
-      items: catalog.items.map(mapProductImages),
+      items: catalog.items.map(mapPublicProduct),
     }),
   })
 }
@@ -52,7 +45,7 @@ const findProductBySlug = (slug: string) =>
   resultQueryOptions({
     queryKey: ['catalog', 'products', 'detail', slug] as const,
     request: () => api.api.products({ slug }).get(),
-    mapValue: mapProductImages,
+    mapValue: mapPublicProduct,
   })
 
 const findAllCategories = () =>

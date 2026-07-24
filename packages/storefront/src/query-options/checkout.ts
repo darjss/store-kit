@@ -1,6 +1,7 @@
 import type { CheckoutCreated, CheckoutError, CheckoutInput } from '@store-kit/contracts/checkout'
 
-import { api } from '../client'
+import { api } from '~/client'
+
 import { resultMutationOptions } from './result'
 
 export const checkoutMutation = {

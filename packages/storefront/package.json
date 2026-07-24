@@ -7,8 +7,11 @@
     ".": "./src/index.ts",
     "./cart/components": "./src/cart/components.tsx",
     "./cart/store": "./src/cart/store.ts",
+    "./checkout": "./src/checkout.tsx",
+    "./form": "./src/form/index.ts",
     "./format": "./src/format.ts",
     "./media": "./src/media.ts",
+    "./orders/order-status": "./src/orders/order-status.tsx",
     "./purchase": "./src/purchase.ts",
     "./query-client": "./src/query-client.ts",
     "./query-options/cart": "./src/query-options/cart.ts",
@@ -26,8 +29,15 @@
     "@store-kit/api": "workspace:*",
     "@store-kit/contracts": "workspace:*",
     "@store-kit/ui": "workspace:*",
+    "@tanstack/solid-form": "^1.33.2",
     "@tanstack/solid-query": "catalog:",
     "better-result": "catalog:",
-    "solid-js": "catalog:"
+    "dismatch": "^2.6.0",
+    "solid-js": "catalog:",
+    "typebox": "catalog:"
+  },
+  "devDependencies": {
+    "@solidjs/testing-library": "^0.8.10",
+    "jsdom": "^29.1.1"
   }
 }

@@ -9,7 +9,7 @@ export default config(tailwindConfig({ entryPoint: 'packages/ui/src/styles.css' 
     {
       files: [
         'apps/*/src/**/*.{astro,ts,tsx}',
-        'packages/{api,commerce,ui}/src/**/*.{astro,ts,tsx}',
+        'packages/{api,commerce,storefront,ui}/src/**/*.{astro,ts,tsx}',
       ],
       rules: { 'import/no-relative-parent-imports': 'error' },
     },

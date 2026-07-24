@@ -1,19 +1,26 @@
-import type { PersistedCartItem, ValidatedCart } from '@store-kit/contracts/cart'
+import type {
+  CartValidationError,
+  PersistedCartItem,
+  ValidatedCart,
+} from '@store-kit/contracts/cart'
 
-import { api } from '../client'
+import { api } from '~/client'
+
 import { resultQueryOptions } from './result'
 
-const validate = (items: PersistedCartItem[]) =>
-  resultQueryOptions({
-    queryKey: [
-      'cart',
-      'validation',
-      items.map(({ variantId, quantity, unitPriceMnt }) => ({
-        variantId,
-        quantity,
-        previousUnitPriceMnt: unitPriceMnt,
-      })),
-    ] as const,
+const validate = (items: PersistedCartItem[]) => {
+  const queryKey = [
+    'cart',
+    'validation',
+    items.map(({ variantId, quantity, unitPriceMnt }) => ({
+      variantId,
+      quantity,
+      previousUnitPriceMnt: unitPriceMnt,
+    })),
+  ] as const
+
+  return resultQueryOptions<typeof queryKey, ValidatedCart, ValidatedCart, CartValidationError>({
+    queryKey,
     request: () =>
       api.api.cart.validate.post(
         items.map(({ variantId, quantity, unitPriceMnt }) => ({
@@ -22,19 +29,8 @@ const validate = (items: PersistedCartItem[]) =>
           previousUnitPriceMnt: unitPriceMnt,
         })),
       ),
-    mapValue: (value: ValidatedCart) => ({
-      ...value,
-      lines: value.lines.map(line => {
-        const { image, ...cartLine } = line
-        return {
-          ...cartLine,
-          imageR2Key: image?.url ?? null,
-          imageWidth: image?.width ?? null,
-          imageHeight: image?.height ?? null,
-          imageAlt: image?.alt ?? null,
-        }
-      }),
-    }),
+    mapValue: value => value,
   })
+}
 
 export const cartQuery = { validate }

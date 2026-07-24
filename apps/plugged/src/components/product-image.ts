@@ -1,9 +1,6 @@
-export type ProductImageMetadata = {
-  r2Key: string
-  width: number
-  height: number
-  alt: string
-}
+import type { PublicImage } from '@store-kit/contracts'
+
+export type ProductImageMetadata = PublicImage
 
 export const productImageLayouts = {
   hero: {

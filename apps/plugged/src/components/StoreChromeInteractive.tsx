@@ -217,10 +217,10 @@ function Chrome(props: { initialPanel: 'search' | 'cart' }) {
         productName: line.productName,
         variantName: line.variantName,
         options: line.options,
-        imageR2Key: line.imageR2Key,
-        imageWidth: line.imageWidth,
-        imageHeight: line.imageHeight,
-        imageAlt: line.imageAlt,
+        imageR2Key: line.image?.url ?? null,
+        imageWidth: line.image?.width ?? null,
+        imageHeight: line.image?.height ?? null,
+        imageAlt: line.image?.alt ?? null,
         unitPriceMnt: line.unitPriceMnt,
       })),
     )
@@ -318,7 +318,7 @@ function Chrome(props: { initialPanel: 'search' | 'cart' }) {
                     when={
                       item.imageR2Key && item.imageWidth && item.imageHeight && item.imageAlt
                         ? {
-                            r2Key: item.imageR2Key,
+                            url: item.imageR2Key,
                             width: item.imageWidth,
                             height: item.imageHeight,
                             alt: item.imageAlt,

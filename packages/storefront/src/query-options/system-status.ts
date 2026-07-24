@@ -1,4 +1,5 @@
-import { api } from '../client'
+import { api } from '~/client'
+
 import { resultQueryOptions } from './result'
 
 export const systemStatusOptions = () =>
