@@ -19,8 +19,6 @@ export type { CheckoutDomainError } from './checkout'
 export {
   PendingSubmitButton,
   SubmitButton,
-  jsonPointerToFieldName,
-  typeboxValidator,
   useAppForm,
   useFieldContext,
   useFormContext,

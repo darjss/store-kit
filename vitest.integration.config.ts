@@ -17,6 +17,8 @@ export default defineConfig({
           TEST_MIGRATIONS: await readD1Migrations(
             path.join(root, 'packages/db/migrations/20260723180551_old_karnak'),
           ),
+          PUBLIC_APP_URL: 'https://plugged.mn',
+          PUBLIC_MEDIA_BASE_URL: 'https://media.plugged.mn/',
           QPAY_USERNAME: 'integration-test',
           QPAY_PASSWORD: 'integration-test',
           QPAY_INVOICE_CODE: 'integration-test',

@@ -18,4 +18,3 @@ export const { useAppForm, withForm, withFieldGroup } = createFormHook({
 
 export { useFieldContext, useFormContext }
 export { PendingSubmitButton, SubmitButton } from './submit-button'
-export { jsonPointerToFieldName, typeboxValidator } from './typebox-validator'

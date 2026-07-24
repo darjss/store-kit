@@ -46,6 +46,26 @@ export default defineConfig({
         cwd: 'packages/tooling',
         cache: false,
       },
+      'plugged:dev': {
+        command: 'vp exec astro dev --background --host 127.0.0.1',
+        cwd: 'apps/plugged',
+        cache: false,
+      },
+      'plugged:dev:status': {
+        command: 'vp exec astro dev status',
+        cwd: 'apps/plugged',
+        cache: false,
+      },
+      'plugged:dev:stop': {
+        command: 'vp exec astro dev stop',
+        cwd: 'apps/plugged',
+        cache: false,
+      },
+      'plugged:route': {
+        command: 'node --experimental-strip-types ../../scripts/portless-alias.ts plugged',
+        cwd: 'apps/plugged',
+        cache: false,
+      },
       'test:commerce:integration': {
         command: 'vp test --config vitest.integration.config.ts',
         cache: false,

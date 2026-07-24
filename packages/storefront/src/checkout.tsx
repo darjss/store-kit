@@ -6,13 +6,13 @@ import type {
   CheckoutInput,
 } from '@store-kit/contracts/checkout'
 import { checkoutDetailsSchema } from '@store-kit/contracts/checkout'
+import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import { Result } from 'better-result'
 import { createContext, createMemo, createSignal, splitProps, useContext } from 'solid-js'
 import type { Accessor, ComponentProps, JSX } from 'solid-js'
 
 import { cartItems, cartLineInputs, clearCart } from './cart/store'
 import { useAppForm } from './form'
-import { jsonPointerToFieldName, typeboxValidator } from './form/typebox-validator'
 import { cartQuery } from './query-options/cart'
 import { checkoutMutation } from './query-options/checkout'
 import { useMutationResult, useQueryResult } from './query-options/result'
@@ -31,6 +31,21 @@ type CheckoutRootProps = {
   children: JSX.Element
   defaultValues: CheckoutDetails
 }
+
+const decodePointerToken = (token: string) => token.replaceAll('~1', '/').replaceAll('~0', '~')
+
+const jsonPointerToFieldName = (pointer: string) =>
+  pointer
+    .split('/')
+    .slice(1)
+    .map(decodePointerToken)
+    .reduce(
+      (name, token) =>
+        /^\d+$/.test(token) ? `${name}[${token}]` : name ? `${name}.${token}` : token,
+      '',
+    )
+
+const checkoutDetailsValidator = toStandardSchema(checkoutDetailsSchema)
 
 const focusControl = (form: HTMLFormElement | undefined, name?: string) => {
   queueMicrotask(() => {
@@ -98,9 +113,9 @@ function createCheckoutState(props: CheckoutRootProps) {
     defaultValues: props.defaultValues,
     canSubmitWhenInvalid: true,
     validators: {
-      onChange: typeboxValidator(checkoutDetailsSchema),
-      onBlur: typeboxValidator(checkoutDetailsSchema),
-      onSubmit: typeboxValidator(checkoutDetailsSchema),
+      onChange: checkoutDetailsValidator,
+      onBlur: checkoutDetailsValidator,
+      onSubmit: checkoutDetailsValidator,
     },
     onSubmit: ({ value }) => submit(value),
     onSubmitInvalid: () => focusControl(formElement),
