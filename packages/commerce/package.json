@@ -18,6 +18,7 @@
     "@store-kit/contracts": "workspace:*",
     "@store-kit/db": "workspace:*",
     "better-result": "catalog:",
+    "dismatch": "^2.6.0",
     "ky": "^2.0.2",
     "typebox": "catalog:"
   },

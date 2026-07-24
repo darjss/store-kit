@@ -21,6 +21,7 @@ const insertOrderAggregate = async (
   const productId = createProductId()
   const variantIds = stockQuantities.map(() => createProductVariantId())
   const orderId = createOrderId()
+  const telegramMessageId = `message-${label}`
   const now = Date.now()
 
   await db.batch([
@@ -82,14 +83,16 @@ const insertOrderAggregate = async (
       id: createPaymentId(),
       orderId,
       method: 'bank_transfer',
-      status: 'pending',
+      status: 'claimed',
       amountMnt: orderedQuantities.reduce((sum, quantity) => sum + quantity * 10_000, 0) + 5_000,
+      claimedAt: now,
+      telegramMessageId,
       createdAt: now,
       updatedAt: now,
     }),
   ])
 
-  return { orderId, variantIds }
+  return { orderId, variantIds, telegramMessageId }
 }
 
 const readAggregateState = async (orderId: string, variantIds: string[]) => {
@@ -120,10 +123,11 @@ test('payment confirmation decrements stock once and keeps the order aggregate a
     providerPaymentId: 'telegram:successful',
     amountMnt: 55_000,
     method: 'bank_transfer',
+    telegramMessageId: successful.telegramMessageId,
     paidAt,
   })
 
-  expect(confirmation).toEqual({ status: 'confirmed' })
+  expect(confirmation).toEqual({ status: 'confirmed', orderStatus: 'confirmed' })
 
   const confirmedState = await readAggregateState(successful.orderId, successful.variantIds)
   expect(successful.variantIds.map(id => confirmedState.stock.get(id))).toEqual([3, 0])
@@ -138,9 +142,14 @@ test('payment confirmation decrements stock once and keeps the order aggregate a
     providerPaymentId: 'telegram:successful',
     amountMnt: 55_000,
     method: 'bank_transfer',
+    telegramMessageId: successful.telegramMessageId,
     paidAt: paidAt + 1,
   })
-  expect(repeated).toEqual({ status: 'already-paid', stockApplied: true })
+  expect(repeated).toEqual({
+    status: 'already-paid',
+    orderStatus: 'confirmed',
+    stockApplied: true,
+  })
 
   const repeatedState = await readAggregateState(successful.orderId, successful.variantIds)
   expect(successful.variantIds.map(id => repeatedState.stock.get(id))).toEqual([3, 0])
@@ -151,13 +160,21 @@ test('payment confirmation decrements stock once and keeps the order aggregate a
     providerPaymentId: 'telegram:insufficient',
     amountMnt: 45_000,
     method: 'bank_transfer',
+    telegramMessageId: insufficient.telegramMessageId,
     paidAt: paidAt + 2,
   })
 
-  expect(rejected).toEqual({ status: 'insufficient-stock', method: 'bank_transfer' })
+  expect(rejected).toEqual({
+    status: 'insufficient-stock',
+    method: 'bank_transfer',
+    paymentStatus: 'claimed',
+    orderStatus: 'new',
+    newlyPaid: false,
+    variantIds: insufficient.variantIds,
+  })
 
   const rejectedState = await readAggregateState(insufficient.orderId, insufficient.variantIds)
   expect(insufficient.variantIds.map(id => rejectedState.stock.get(id))).toEqual([5, 1])
   expect(rejectedState.order?.status).toBe('new')
-  expect(rejectedState.payment).toEqual({ status: 'pending', providerPaymentId: null })
+  expect(rejectedState.payment).toEqual({ status: 'claimed', providerPaymentId: null })
 })

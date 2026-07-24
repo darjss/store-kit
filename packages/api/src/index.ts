@@ -5,6 +5,7 @@ import { Elysia } from 'elysia'
 import { cartRoutes } from './routes/cart'
 import { catalogRoutes } from './routes/catalog'
 import { shoppingRoutes } from './routes/shopping'
+import { qpayWebhook } from './webhooks/qpay'
 import { telegramWebhook } from './webhooks/telegram'
 
 export const app = new Elysia({ aot: false })
@@ -12,7 +13,8 @@ export const app = new Elysia({ aot: false })
   .use(catalogRoutes)
   .use(cartRoutes)
   .use(shoppingRoutes)
+  .use(qpayWebhook)
   .use(telegramWebhook)
 
-export { cartRoutes, catalogRoutes, shoppingRoutes, telegramWebhook }
+export { cartRoutes, catalogRoutes, qpayWebhook, shoppingRoutes, telegramWebhook }
 export type App = typeof app

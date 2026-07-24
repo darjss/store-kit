@@ -13,4 +13,6 @@ export const provePublicNamespacesCompile = (db: DatabaseModule, storeKit: Comme
   void storeKit.commerce.checkout.createOrder
   void storeKit.commerce.orders.getPrivateStatus
   void storeKit.commerce.payments.claimBankTransfer
+  void storeKit.commerce.payments.refreshQPayPayment
+  void storeKit.commerce.payments.handleQPayCallback
 }

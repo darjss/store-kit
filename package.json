@@ -7,6 +7,7 @@
     "prepare": "vp config"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.18.7",
     "@letstri/oxlint-config": "^1.2.2",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0",
