@@ -60,6 +60,7 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
 
   const add = () => {
     const variant = selected()
+    const selectedImage = image()
     if (!variant || variant.stockQuantity === 0) return
     addCartItem({
       variantId: variant.id,
@@ -68,10 +69,14 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
       productName: props.product.name,
       variantName: variant.name,
       options: variant.options,
-      imageR2Key: image()?.url ?? null,
-      imageWidth: image()?.width ?? null,
-      imageHeight: image()?.height ?? null,
-      imageAlt: image()?.alt ?? null,
+      image: selectedImage
+        ? {
+            url: selectedImage.url,
+            width: selectedImage.width,
+            height: selectedImage.height,
+            alt: selectedImage.alt,
+          }
+        : null,
       unitPriceMnt: variant.priceMnt,
     })
     setAnnouncement(`${props.product.name} сагсанд нэмэгдлээ.`)

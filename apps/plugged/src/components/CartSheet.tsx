@@ -30,21 +30,7 @@ function CartLine(props: { item: PersistedCartItem; corrections: CartCorrection[
 
   return (
     <article class="border-ink grid grid-cols-[110px_minmax(0,1fr)] gap-3 border-b-3 py-4 max-md:grid-cols-[80px_minmax(0,1fr)]">
-      <Show
-        when={
-          props.item.imageR2Key &&
-          props.item.imageWidth &&
-          props.item.imageHeight &&
-          props.item.imageAlt
-            ? {
-                url: props.item.imageR2Key,
-                width: props.item.imageWidth,
-                height: props.item.imageHeight,
-                alt: props.item.imageAlt,
-              }
-            : undefined
-        }
-      >
+      <Show when={props.item.image}>
         {image => (
           <ProductImage
             class="bg-paper-clean size-27.5 object-contain max-md:size-20"
@@ -172,10 +158,7 @@ export function CartSheet(props: { initialOpen: boolean }) {
         productName: line.productName,
         variantName: line.variantName,
         options: line.options,
-        imageR2Key: line.image?.url ?? null,
-        imageWidth: line.image?.width ?? null,
-        imageHeight: line.image?.height ?? null,
-        imageAlt: line.image?.alt ?? null,
+        image: line.image,
         unitPriceMnt: line.unitPriceMnt,
       })),
     )

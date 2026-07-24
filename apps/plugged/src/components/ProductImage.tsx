@@ -1,6 +1,6 @@
-import { Image } from '@unpic/solid/base'
+import { Image } from '@unpic/solid'
 
-import { productImageLayouts, productImageOptions, productImageTransformer } from './product-image'
+import { productImageFallback, productImageLayouts, productImageOptions } from './product-image'
 import type { ProductImageLayout, ProductImageMetadata } from './product-image'
 
 export function ProductImage(props: {
@@ -18,9 +18,10 @@ export function ProductImage(props: {
       layout="constrained"
       sizes={productImageLayouts[props.layout].sizes}
       breakpoints={[...productImageLayouts[props.layout].breakpoints]}
-      transformer={productImageTransformer(props.image.url)}
+      fallback={productImageFallback(props.image.url)}
       options={productImageOptions(props.image.url)}
-      operations={{ quality: 80, format: 'auto', fit: 'scale-down' }}
+      operations={{ cloudflare: { quality: 80, format: 'auto', fit: 'scale-down' } }}
+      loading={props.priority ? 'eager' : 'lazy'}
       priority={props.priority}
       unstyled
       class={props.class}

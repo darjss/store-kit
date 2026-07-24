@@ -13,10 +13,12 @@ const cartItem: PersistedCartItem = {
   productName: 'Aster Kit',
   variantName: 'Graphite',
   options: { color: 'Graphite' },
-  imageR2Key: 'products/aster-kit/graphite.webp',
-  imageWidth: 1200,
-  imageHeight: 900,
-  imageAlt: 'Aster Kit Graphite',
+  image: {
+    url: 'https://media.example.com/products/aster-kit/graphite.webp',
+    width: 1200,
+    height: 900,
+    alt: 'Aster Kit Graphite',
+  },
   unitPriceMnt: 120_000,
 }
 

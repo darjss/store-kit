@@ -1,6 +1,7 @@
 ---
 import { commerce } from "@store-kit/commerce";
 import { formatMnt } from "@store-kit/storefront/format";
+import { cn } from "@store-kit/ui/utils";
 import ProductImage from "~/components/ProductImage.astro";
 import Layout from "~/layouts/Layout.astro";
 import { toPublicImage } from "~/public-image";
@@ -16,12 +17,6 @@ const interrupt = products[1];
 const small = products[2] ?? products[0];
 const useCases = [
   ["first-iem", "АНХНЫ IEM"], ["bass", "BASS"], ["vocals", "VOCALS"], ["gaming", "GAMING"], ["daily-carry", "DAILY CARRY"],
-];
-const dropItemTreatments = [
-  "col-[1/8]",
-  "col-[8/13] mt-32 -translate-x-6",
-  "col-[2/6] -mt-8",
-  "col-[7/12] mt-12",
 ];
 const imageOf = (product: (typeof products)[number] | undefined) => product?.images[0];
 const priceOf = (product: (typeof products)[number] | undefined) => product?.variants[0]?.priceMnt ?? 0;
@@ -56,7 +51,7 @@ const priceOf = (product: (typeof products)[number] | undefined) => product?.var
     <section class="grid grid-cols-[minmax(clamp(0.75rem,2.4vw,2.25rem),1fr)_repeat(12,minmax(0,6rem))_minmax(clamp(0.75rem,2.4vw,2.25rem),1fr)] overflow-clip py-[clamp(3rem,7vw,7rem)]">
       <div class="col-[2/-2] grid grid-cols-[1fr_auto] items-end border-b-[5px] border-ink pb-4 max-md:block"><p class="m-0 font-display text-[clamp(4rem,10vw,6rem)] leading-[0.72] font-black tracking-[-0.02em]">ЧИХЭНД ОЙР.<br />ХОТЫН ДУУНААС <em class="font-normal text-orange not-italic">ЦЭВЭР.</em></p><a class="font-black max-md:mt-4 max-md:inline-block" href="/products">БҮХ БАРАА →</a></div>
       <div class="col-[2/-2] grid grid-cols-12 pt-8 max-md:block">
-        {products.slice(0, 4).map((product, index) => <article class:list={["relative max-md:!m-0 max-md:grid max-md:!translate-x-0 max-md:grid-cols-[1.1fr_1fr] max-md:items-center max-md:border-b-3 max-md:border-ink max-md:even:[&>a]:order-2", dropItemTreatments[index]]}>
+        {products.slice(0, 4).map((product, index) => <article class={cn("relative max-md:!m-0 max-md:grid max-md:!translate-x-0 max-md:grid-cols-[1.1fr_1fr] max-md:items-center max-md:border-b-3 max-md:border-ink max-md:even:[&>a]:order-2", index === 0 && "col-[1/8]", index === 1 && "col-[8/13] mt-32 -translate-x-6", index === 2 && "col-[2/6] -mt-8", index === 3 && "col-[7/12] mt-12")}>
           <a href={`/products/${product.slug}`} class="block border-4 border-ink bg-paper-clean">{imageOf(product) && <ProductImage class="aspect-[4/3] w-full object-contain max-md:aspect-square" image={imageOf(product)!} layout="card" />}</a>
           <div class="p-3"><p>{product.useCases.slice(0, 2).join(" / ")}</p><h2 class="my-1 text-[clamp(1.25rem,2.5vw,2rem)] leading-none max-md:text-[1.65rem]"><a class="no-underline" href={`/products/${product.slug}`}>{product.name}</a></h2><strong>{formatMnt(priceOf(product))}</strong></div>
         </article>)}

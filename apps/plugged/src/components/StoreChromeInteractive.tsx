@@ -15,6 +15,8 @@ function InteractiveChrome(props: { initialPanel: 'search' | 'cart' }) {
   return (
     <Cart.Root>
       <StoreNavigation
+        home={<StoreIcon name="home" size={24} />}
+        shop={<StoreIcon name="shop" size={24} />}
         search={<StoreSearch initialOpen={props.initialPanel === 'search'} />}
         cart={
           <Sheet.Trigger as={Button} variant="ghost" data-store-navigation-item aria-label="Сагс">

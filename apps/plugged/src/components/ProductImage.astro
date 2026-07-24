@@ -1,11 +1,7 @@
 ---
-import { Image } from '@unpic/astro/base'
+import { Image } from 'astro:assets'
 
-import {
-  productImageLayouts,
-  productImageOptions,
-  productImageTransformer,
-} from './product-image'
+import { productImageLayouts } from './product-image'
 import type { ProductImageLayout, ProductImageMetadata } from './product-image'
 
 interface Props {
@@ -19,18 +15,32 @@ const { image, layout, class: className, priority = false } = Astro.props
 const config = productImageLayouts[layout]
 ---
 
-<Image
-  src={image.url}
-  alt={image.alt}
-  width={image.width}
-  height={image.height}
-  layout="constrained"
-  sizes={config.sizes}
-  breakpoints={[...config.breakpoints]}
-  transformer={productImageTransformer(image.url)}
-  options={productImageOptions(image.url)}
-  operations={{ quality: 80, format: 'auto', fit: 'scale-down' }}
-  priority={priority}
-  unstyled
-  class={className}
-/>
+{
+  image.url.startsWith('/media/') ? (
+    <img
+      src={image.url}
+      alt={image.alt}
+      width={image.width}
+      height={image.height}
+      sizes={config.sizes}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding={priority ? 'sync' : 'async'}
+      fetchpriority={priority ? 'high' : 'auto'}
+      class={className}
+    />
+  ) : (
+    <Image
+      src={image.url}
+      alt={image.alt}
+      width={image.width}
+      height={image.height}
+      widths={[...config.breakpoints]}
+      sizes={config.sizes}
+      layout="constrained"
+      fit="scale-down"
+      quality={80}
+      priority={priority}
+      class={className}
+    />
+  )
+}

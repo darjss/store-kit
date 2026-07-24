@@ -13,6 +13,7 @@ export default defineConfig({
       '@kobalte/core',
       '@solar-icons/solid',
       '@store-kit/ui',
+      '@store-kit/ui/utils',
       '@tanstack/solid-form',
       '@unpic/solid',
       'cmdk-solid',
