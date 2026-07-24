@@ -1,8 +1,9 @@
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
 import type { CheckoutCreated } from '@store-kit/contracts/checkout'
-import { cartItems, openCart } from '@store-kit/storefront/cart/store'
+import { cartItems } from '@store-kit/storefront/cart/store'
 import { Checkout, useCheckout } from '@store-kit/storefront/checkout'
-import type { CheckoutDomainError } from '@store-kit/storefront/checkout'
+import type { CheckoutCorrectionAction, CheckoutDomainError } from '@store-kit/storefront/checkout'
+import type { FieldErrorState } from '@store-kit/storefront/form'
 import { PendingSubmitButton } from '@store-kit/storefront/form'
 import { formatMnt } from '@store-kit/storefront/format'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
@@ -22,7 +23,7 @@ import {
 import { QueryClientProvider } from '@tanstack/solid-query'
 import { match } from 'dismatch'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
-import type { ParentProps } from 'solid-js'
+import type { Accessor, ParentProps } from 'solid-js'
 
 const districts = [
   'Багануур',
@@ -36,14 +37,23 @@ const districts = [
   'Чингэлтэй',
 ] as const
 const fieldErrorId = (name: string) => `${name}-error`
+const fieldLabels: Record<string, string> = {
+  'customer.name': 'Нэр',
+  'customer.phone': 'Утас',
+  'delivery.district': 'Дүүрэг',
+  'delivery.khoroo': 'Хороо',
+  'delivery.address': 'Дэлгэрэнгүй хаяг',
+  'delivery.notes': 'Нэмэлт тайлбар',
+  'paymentMethod': 'Төлбөрийн арга',
+}
 
 const qpayAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'qpay' ? order.nextAction : undefined
 const bankAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'bank_transfer' ? order.nextAction : undefined
 
-const fieldMessage = (validationErrors: unknown[], message: string) =>
-  validationErrors.length > 0 ? message : undefined
+const fieldMessage = (state: Accessor<FieldErrorState>, message: string) =>
+  state().visible ? message : undefined
 
 function ErrorNotice(props: ParentProps<{ title: string }>) {
   return (
@@ -57,7 +67,11 @@ function ErrorNotice(props: ParentProps<{ title: string }>) {
   )
 }
 
-function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransfer: () => void }) {
+function DomainErrorNotice(props: {
+  error: CheckoutDomainError
+  actions: CheckoutCorrectionAction[]
+  correct: (action: CheckoutCorrectionAction) => void
+}) {
   return match(
     props.error,
     '_tag',
@@ -65,11 +79,18 @@ function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransf
     CartChanged: error => (
       <ErrorNotice title="Сагсаа засна уу">
         <For each={error.corrections}>{correction => <p>{correction.message}</p>}</For>
-        <AlertAction>
-          <Button class="min-h-11" type="button" variant="outline" onClick={openCart}>
-            Сагс нээж засах →
-          </Button>
-        </AlertAction>
+        <Show when={props.actions.includes('open-cart')}>
+          <AlertAction>
+            <Button
+              class="min-h-11"
+              type="button"
+              variant="outline"
+              onClick={() => props.correct('open-cart')}
+            >
+              Сагс нээж засах →
+            </Button>
+          </AlertAction>
+        </Show>
       </ErrorNotice>
     ),
     CartEmpty: error => (
@@ -81,11 +102,18 @@ function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransf
     InvalidCart: () => (
       <ErrorNotice title="Сагсаа шалгана уу.">
         <p>Сагсны мэдээлэл буруу байна. Бараагаа дахин сонгоно уу.</p>
-        <AlertAction>
-          <Button class="min-h-11" type="button" variant="outline" onClick={openCart}>
-            Сагс нээх →
-          </Button>
-        </AlertAction>
+        <Show when={props.actions.includes('open-cart')}>
+          <AlertAction>
+            <Button
+              class="min-h-11"
+              type="button"
+              variant="outline"
+              onClick={() => props.correct('open-cart')}
+            >
+              Сагс нээх →
+            </Button>
+          </AlertAction>
+        </Show>
       </ErrorNotice>
     ),
     InvalidCheckoutDetails: () => (
@@ -103,15 +131,22 @@ function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransf
         <p>{error.message}</p>
         <AlertAction>
           <div class="flex flex-wrap gap-2">
-            <Button class="min-h-11" type="submit" variant="outline">
-              Дахин оролдох
-            </Button>
-            <Show when={error.canUseBankTransfer}>
+            <Show when={props.actions.includes('retry')}>
+              <Button
+                class="min-h-11"
+                type="button"
+                variant="outline"
+                onClick={() => props.correct('retry')}
+              >
+                Дахин оролдох
+              </Button>
+            </Show>
+            <Show when={props.actions.includes('use-bank-transfer')}>
               <Button
                 class="min-h-11"
                 type="button"
                 variant="secondary"
-                onClick={props.selectBankTransfer}
+                onClick={() => props.correct('use-bank-transfer')}
               >
                 Дансаар төлөх
               </Button>
@@ -126,6 +161,14 @@ function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransf
 function FormOwner() {
   const checkout = useCheckout()
   const created = checkout.created
+  const domainFailure = () => {
+    const failure = checkout.errors.state()
+    return failure.type === 'domain' ? failure : undefined
+  }
+  const transportFailure = () => {
+    const failure = checkout.errors.state()
+    return failure.type === 'transport' ? failure : undefined
+  }
 
   return (
     <Switch>
@@ -192,71 +235,103 @@ function FormOwner() {
               <h1 class="font-display text-[clamp(4rem,9vw,6rem)] leading-[0.75] max-md:text-[4.5rem]">
                 ЗАХИАЛГА
               </h1>
-              <Show when={checkout.domainError()} keyed>
-                {error => (
+              <checkout.form.ErrorSummary>
+                {summary => (
+                  <Show when={summary().visible}>
+                    <ErrorNotice title="Мэдээллээ шалгана уу.">
+                      <div
+                        ref={checkout.errors.setSummaryElement}
+                        tabIndex={-1}
+                        data-form-error-summary
+                      >
+                        <p>Тодруулсан талбаруудыг засаад дахин оролдоно уу.</p>
+                        <ul>
+                          <For each={summary().items}>
+                            {item => <li>{fieldLabels[item.name] ?? item.name}</li>}
+                          </For>
+                        </ul>
+                      </div>
+                    </ErrorNotice>
+                  </Show>
+                )}
+              </checkout.form.ErrorSummary>
+              <Show when={domainFailure()} keyed>
+                {failure => (
                   <DomainErrorNotice
-                    error={error}
-                    selectBankTransfer={() =>
-                      checkout.form.setFieldValue('paymentMethod', 'bank_transfer')
-                    }
+                    error={failure.error}
+                    actions={failure.actions}
+                    correct={checkout.errors.performAction}
                   />
                 )}
               </Show>
-              <Show when={checkout.transportError()}>
+              <Show when={transportFailure()}>
                 <ErrorNotice title="Холболт амжилтгүй.">
                   <p>Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.</p>
-                  <AlertAction>
-                    <Button class="min-h-11" type="submit" variant="outline">
-                      Дахин оролдох
-                    </Button>
-                  </AlertAction>
+                  <Show when={transportFailure()?.actions.includes('retry')}>
+                    <AlertAction>
+                      <Button
+                        class="min-h-11"
+                        type="button"
+                        variant="outline"
+                        onClick={() => checkout.errors.performAction('retry')}
+                      >
+                        Дахин оролдох
+                      </Button>
+                    </AlertAction>
+                  </Show>
                 </ErrorNotice>
               </Show>
               <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
                 <h2>Холбоо барих</h2>
                 <Checkout.Field name="customer.name">
-                  {field => {
-                    const message = () =>
-                      fieldMessage(field().state.meta.errors, 'Нэрээ оруулна уу.')
-                    return (
-                      <Field>
-                        <FieldLabel for={field().name}>
-                          Нэр <span aria-hidden="true">*</span>
-                        </FieldLabel>
-                        <field.Input
-                          id={field().name}
-                          required
-                          aria-invalid={Boolean(message())}
-                          aria-describedby={message() ? fieldErrorId('name') : undefined}
-                          autocomplete="name"
-                        />
-                        <FieldError id={fieldErrorId('name')}>{message()}</FieldError>
-                      </Field>
-                    )
-                  }}
+                  {field => (
+                    <field.ErrorState>
+                      {error => {
+                        const message = () => fieldMessage(error, 'Нэрээ оруулна уу.')
+                        return (
+                          <Field>
+                            <FieldLabel for={field().name}>
+                              Нэр <span aria-hidden="true">*</span>
+                            </FieldLabel>
+                            <field.Input
+                              id={field().name}
+                              required
+                              aria-invalid={Boolean(message())}
+                              aria-describedby={message() ? fieldErrorId('name') : undefined}
+                              autocomplete="name"
+                            />
+                            <FieldError id={fieldErrorId('name')}>{message()}</FieldError>
+                          </Field>
+                        )
+                      }}
+                    </field.ErrorState>
+                  )}
                 </Checkout.Field>
                 <Checkout.Field name="customer.phone">
-                  {field => {
-                    const message = () =>
-                      fieldMessage(field().state.meta.errors, 'Утасны дугаараа шалгана уу.')
-                    return (
-                      <Field>
-                        <FieldLabel for={field().name}>
-                          Утас <span aria-hidden="true">*</span>
-                        </FieldLabel>
-                        <field.Input
-                          id={field().name}
-                          inputmode="tel"
-                          required
-                          aria-invalid={Boolean(message())}
-                          aria-describedby={message() ? fieldErrorId('phone') : undefined}
-                          placeholder="9911 2233"
-                          autocomplete="tel"
-                        />
-                        <FieldError id={fieldErrorId('phone')}>{message()}</FieldError>
-                      </Field>
-                    )
-                  }}
+                  {field => (
+                    <field.ErrorState>
+                      {error => {
+                        const message = () => fieldMessage(error, 'Утасны дугаараа шалгана уу.')
+                        return (
+                          <Field>
+                            <FieldLabel for={field().name}>
+                              Утас <span aria-hidden="true">*</span>
+                            </FieldLabel>
+                            <field.Input
+                              id={field().name}
+                              inputmode="tel"
+                              required
+                              aria-invalid={Boolean(message())}
+                              aria-describedby={message() ? fieldErrorId('phone') : undefined}
+                              placeholder="9911 2233"
+                              autocomplete="tel"
+                            />
+                            <FieldError id={fieldErrorId('phone')}>{message()}</FieldError>
+                          </Field>
+                        )
+                      }}
+                    </field.ErrorState>
+                  )}
                 </Checkout.Field>
               </section>
               <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
@@ -278,96 +353,108 @@ function FormOwner() {
                   )}
                 </Checkout.Field>
                 <Checkout.Field name="delivery.khoroo">
-                  {field => {
-                    const message = () =>
-                      fieldMessage(field().state.meta.errors, 'Хороогоо оруулна уу.')
-                    return (
-                      <Field>
-                        <FieldLabel for={field().name}>
-                          Хороо <span aria-hidden="true">*</span>
-                        </FieldLabel>
-                        <field.Input
-                          id={field().name}
-                          required
-                          aria-invalid={Boolean(message())}
-                          aria-describedby={message() ? fieldErrorId('khoroo') : undefined}
-                        />
-                        <FieldError id={fieldErrorId('khoroo')}>{message()}</FieldError>
-                      </Field>
-                    )
-                  }}
+                  {field => (
+                    <field.ErrorState>
+                      {error => {
+                        const message = () => fieldMessage(error, 'Хороогоо оруулна уу.')
+                        return (
+                          <Field>
+                            <FieldLabel for={field().name}>
+                              Хороо <span aria-hidden="true">*</span>
+                            </FieldLabel>
+                            <field.Input
+                              id={field().name}
+                              required
+                              aria-invalid={Boolean(message())}
+                              aria-describedby={message() ? fieldErrorId('khoroo') : undefined}
+                            />
+                            <FieldError id={fieldErrorId('khoroo')}>{message()}</FieldError>
+                          </Field>
+                        )
+                      }}
+                    </field.ErrorState>
+                  )}
                 </Checkout.Field>
                 <Checkout.Field name="delivery.address">
-                  {field => {
-                    const message = () =>
-                      fieldMessage(field().state.meta.errors, 'Дэлгэрэнгүй хаягаа оруулна уу.')
-                    return (
-                      <Field>
-                        <FieldLabel for={field().name}>
-                          Дэлгэрэнгүй хаяг <span aria-hidden="true">*</span>
-                        </FieldLabel>
-                        <field.Textarea
-                          id={field().name}
-                          required
-                          aria-invalid={Boolean(message())}
-                          aria-describedby={message() ? fieldErrorId('address') : undefined}
-                        />
-                        <FieldError id={fieldErrorId('address')}>{message()}</FieldError>
-                      </Field>
-                    )
-                  }}
+                  {field => (
+                    <field.ErrorState>
+                      {error => {
+                        const message = () => fieldMessage(error, 'Дэлгэрэнгүй хаягаа оруулна уу.')
+                        return (
+                          <Field>
+                            <FieldLabel for={field().name}>
+                              Дэлгэрэнгүй хаяг <span aria-hidden="true">*</span>
+                            </FieldLabel>
+                            <field.Textarea
+                              id={field().name}
+                              required
+                              aria-invalid={Boolean(message())}
+                              aria-describedby={message() ? fieldErrorId('address') : undefined}
+                            />
+                            <FieldError id={fieldErrorId('address')}>{message()}</FieldError>
+                          </Field>
+                        )
+                      }}
+                    </field.ErrorState>
+                  )}
                 </Checkout.Field>
                 <Checkout.Field name="delivery.notes">
-                  {field => {
-                    const message = () =>
-                      fieldMessage(
-                        field().state.meta.errors,
-                        'Нэмэлт тайлбар 500 тэмдэгтээс ихгүй байна.',
-                      )
-                    return (
-                      <Field>
-                        <FieldLabel for={field().name}>Нэмэлт тайлбар</FieldLabel>
-                        <FieldDescription>Заавал биш</FieldDescription>
-                        <field.Textarea
-                          id={field().name}
-                          aria-invalid={Boolean(message())}
-                          aria-describedby={message() ? fieldErrorId('notes') : undefined}
-                        />
-                        <FieldError id={fieldErrorId('notes')}>{message()}</FieldError>
-                      </Field>
-                    )
-                  }}
+                  {field => (
+                    <field.ErrorState>
+                      {error => {
+                        const message = () =>
+                          fieldMessage(error, 'Нэмэлт тайлбар 500 тэмдэгтээс ихгүй байна.')
+                        return (
+                          <Field>
+                            <FieldLabel for={field().name}>Нэмэлт тайлбар</FieldLabel>
+                            <FieldDescription>Заавал биш</FieldDescription>
+                            <field.Textarea
+                              id={field().name}
+                              aria-invalid={Boolean(message())}
+                              aria-describedby={message() ? fieldErrorId('notes') : undefined}
+                            />
+                            <FieldError id={fieldErrorId('notes')}>{message()}</FieldError>
+                          </Field>
+                        )
+                      }}
+                    </field.ErrorState>
+                  )}
                 </Checkout.Field>
               </section>
               <section class="border-ink bg-paper-clean [&>h2]:font-display [&_[role=radiogroup]>label]:border-ink mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
                 <h2>Төлбөр</h2>
                 <Checkout.Field name="paymentMethod">
-                  {field => {
-                    const message = () =>
-                      fieldMessage(field().state.meta.errors, 'Төлбөрийн аргаа сонгоно уу.')
-                    return (
-                      <Field>
-                        <field.RadioGroup
-                          aria-invalid={Boolean(message())}
-                          aria-describedby={message() ? fieldErrorId('paymentMethod') : undefined}
-                        >
-                          <FieldLabel for="payment-qpay">
-                            <RadioGroupItem id="payment-qpay" value="qpay" />
-                            <span>
-                              QPay <small>QR болон банкны апп</small>
-                            </span>
-                          </FieldLabel>
-                          <FieldLabel for="payment-bank-transfer">
-                            <RadioGroupItem id="payment-bank-transfer" value="bank_transfer" />
-                            <span>
-                              Дансаар шилжүүлэх <small>Ажилтан баталгаажуулна</small>
-                            </span>
-                          </FieldLabel>
-                        </field.RadioGroup>
-                        <FieldError id={fieldErrorId('paymentMethod')}>{message()}</FieldError>
-                      </Field>
-                    )
-                  }}
+                  {field => (
+                    <field.ErrorState>
+                      {error => {
+                        const message = () => fieldMessage(error, 'Төлбөрийн аргаа сонгоно уу.')
+                        return (
+                          <Field>
+                            <field.RadioGroup
+                              aria-invalid={Boolean(message())}
+                              aria-describedby={
+                                message() ? fieldErrorId('paymentMethod') : undefined
+                              }
+                            >
+                              <FieldLabel for="payment-qpay">
+                                <RadioGroupItem id="payment-qpay" value="qpay" />
+                                <span>
+                                  QPay <small>QR болон банкны апп</small>
+                                </span>
+                              </FieldLabel>
+                              <FieldLabel for="payment-bank-transfer">
+                                <RadioGroupItem id="payment-bank-transfer" value="bank_transfer" />
+                                <span>
+                                  Дансаар шилжүүлэх <small>Ажилтан баталгаажуулна</small>
+                                </span>
+                              </FieldLabel>
+                            </field.RadioGroup>
+                            <FieldError id={fieldErrorId('paymentMethod')}>{message()}</FieldError>
+                          </Field>
+                        )
+                      }}
+                    </field.ErrorState>
+                  )}
                 </Checkout.Field>
               </section>
             </div>

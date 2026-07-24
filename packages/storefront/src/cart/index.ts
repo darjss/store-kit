@@ -14,3 +14,5 @@ export {
   setCartItemQuantity,
 } from './store'
 export type { CartLineInput, PersistedCartItem } from './store'
+export { createCartValidationController } from './validation'
+export type { CartValidationFocusTarget, CartValidationState } from './validation'

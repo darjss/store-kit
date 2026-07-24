@@ -1,32 +1,19 @@
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
 import { TrashBinTrash } from '@solar-icons/solid/Outline'
-import type { CartCorrection } from '@store-kit/contracts/cart'
 import { Cart } from '@store-kit/storefront/cart/components'
-import {
-  cartItems,
-  isCartOpen,
-  openCart,
-  refreshCartItemSnapshots,
-  removeCartItem,
-  setCartItemQuantity,
-} from '@store-kit/storefront/cart/store'
+import { cartItems, isCartOpen, openCart } from '@store-kit/storefront/cart/store'
 import type { PersistedCartItem } from '@store-kit/storefront/cart/store'
+import { createCartValidationController } from '@store-kit/storefront/cart/validation'
 import { formatMnt } from '@store-kit/storefront/format'
-import { cartQuery } from '@store-kit/storefront/query-options/cart'
-import { useQueryResult } from '@store-kit/storefront/query-options/result'
 import { Alert, Button, ButtonGroup, Sheet } from '@store-kit/ui'
-import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js'
+import { For, Show, onMount } from 'solid-js'
 
 import { ProductImage } from './ProductImage'
 
-function CartLine(props: { item: PersistedCartItem; corrections: CartCorrection[] }) {
-  const blocksQuantityChange = () =>
-    props.corrections.some(
-      correction => correction._tag === 'InactiveVariant' || correction._tag === 'MissingVariant',
-    )
-  const blocksQuantityIncrease = () =>
-    props.item.quantity >= 10 ||
-    props.corrections.some(correction => correction._tag !== 'PriceChanged')
+type CartValidationController = ReturnType<typeof createCartValidationController>
+
+function CartLine(props: { item: PersistedCartItem; validation: CartValidationController }) {
+  const corrections = () => props.validation.correctionsFor(props.item.variantId)
 
   return (
     <article class="border-ink grid grid-cols-[110px_minmax(0,1fr)] gap-3 border-b-3 py-4 max-md:grid-cols-[80px_minmax(0,1fr)]">
@@ -48,7 +35,7 @@ function CartLine(props: { item: PersistedCartItem; corrections: CartCorrection[
         </a>
         <p>{props.item.variantName}</p>
         <strong>{formatMnt(props.item.unitPriceMnt * props.item.quantity)}</strong>
-        <For each={props.corrections}>
+        <For each={corrections()}>
           {correction => (
             <div class="border-ink bg-orange my-2 border-2 p-2">
               <p>{correction.message}</p>
@@ -68,10 +55,7 @@ function CartLine(props: { item: PersistedCartItem; corrections: CartCorrection[
                   type="button"
                   variant="outline"
                   class="border-ink bg-paper mt-2 min-h-11 rounded-none border-2 font-extrabold"
-                  onClick={() =>
-                    correction._tag === 'InsufficientStock' &&
-                    setCartItemQuantity(props.item.variantId, correction.availableQuantity)
-                  }
+                  onClick={() => props.validation.applyCorrection(correction)}
                 >
                   Үлдэгдэлд тааруулах
                 </Button>
@@ -89,10 +73,8 @@ function CartLine(props: { item: PersistedCartItem; corrections: CartCorrection[
               variant="outline"
               size="icon-lg"
               class="border-ink bg-paper-clean min-h-11 min-w-11 rounded-none border-0 shadow-none"
-              disabled={blocksQuantityChange()}
-              onClick={() =>
-                setCartItemQuantity(props.item.variantId, Math.max(1, props.item.quantity - 1))
-              }
+              disabled={props.validation.blocksQuantityChange(props.item.variantId)}
+              onClick={() => props.validation.decrementQuantity(props.item)}
               aria-label={`${props.item.productName} тоог нэгээр хасах`}
             >
               −
@@ -105,8 +87,8 @@ function CartLine(props: { item: PersistedCartItem; corrections: CartCorrection[
               variant="outline"
               size="icon-lg"
               class="border-ink bg-paper-clean min-h-11 min-w-11 rounded-none border-0 border-l-2 shadow-none"
-              disabled={blocksQuantityIncrease()}
-              onClick={() => setCartItemQuantity(props.item.variantId, props.item.quantity + 1)}
+              disabled={props.validation.blocksQuantityIncrease(props.item)}
+              onClick={() => props.validation.incrementQuantity(props.item)}
               aria-label={`${props.item.productName} тоог нэгээр нэмэх`}
             >
               +
@@ -116,7 +98,7 @@ function CartLine(props: { item: PersistedCartItem; corrections: CartCorrection[
             type="button"
             variant="destructive"
             class="text-warning border-ink bg-paper-clean hover:bg-paper ml-auto min-h-11 min-w-24 gap-2 rounded-none border-2 px-3"
-            onClick={() => removeCartItem(props.item.variantId)}
+            onClick={() => props.validation.removeItem(props.item.variantId)}
             aria-label={`${props.item.productName} сагснаас хасах`}
           >
             <TrashBinTrash aria-hidden="true" size={20} />
@@ -129,60 +111,15 @@ function CartLine(props: { item: PersistedCartItem; corrections: CartCorrection[
 }
 
 export function CartSheet(props: { initialOpen: boolean }) {
-  const validation = useQueryResult(() => ({
-    ...cartQuery.validate([...cartItems()]),
-    enabled: cartItems().length > 0 && isCartOpen(),
-    staleTime: 15_000,
-  }))
-  const [transportMessage, setTransportMessage] = createSignal('')
-  let correctionHeading: HTMLHeadingElement | undefined = undefined
+  const validation = createCartValidationController({ enabled: isCartOpen })
 
   onMount(() => {
     if (props.initialOpen) openCart()
-
-    const handler = () => {
-      setTransportMessage('Сүлжээ тасалдлаа. Дахин оролдоно уу.')
-      window.setTimeout(() => setTransportMessage(''), 4000)
-    }
-    window.addEventListener('storefront:transport-error', handler)
-    onCleanup(() => window.removeEventListener('storefront:transport-error', handler))
   })
-
-  createEffect(() => {
-    const result = validation.data
-    if (result?.status !== 'ok') return
-    refreshCartItemSnapshots(
-      result.value.lines.map(line => ({
-        variantId: line.variantId,
-        productSlug: line.productSlug,
-        productName: line.productName,
-        variantName: line.variantName,
-        options: line.options,
-        image: line.image,
-        unitPriceMnt: line.unitPriceMnt,
-      })),
-    )
-  })
-
-  const correctionsFor = (variantId: string) => {
-    const result = validation.data
-    return result?.status === 'ok'
-      ? result.value.corrections.filter(correction => correction.variantId === variantId)
-      : []
-  }
 
   const continueCheckout = async (event: MouseEvent) => {
     event.preventDefault()
-    const result = await validation.refetch()
-    if (result.data?.status === 'ok' && result.data.value.corrections.length === 0) {
-      window.location.assign('/checkout')
-      return
-    }
-    if (!result.data || result.data.status === 'error') {
-      setTransportMessage('Сагсыг шалгаж чадсангүй. Дахин оролдоно уу.')
-      return
-    }
-    correctionHeading?.focus()
+    if (await validation.gateCheckout()) window.location.assign('/checkout')
   }
 
   return (
@@ -203,7 +140,7 @@ export function CartSheet(props: { initialOpen: boolean }) {
             <span aria-hidden="true">×</span>
           </Sheet.Close>
         </div>
-        <div class="p-4" aria-busy={validation.isFetching}>
+        <div class="p-4" aria-busy={validation.isChecking()}>
           <Cart.Empty>
             <div class="grid min-h-[55dvh] place-content-center gap-4 text-center">
               <strong class="font-display text-[4rem] leading-[0.8]">Сагс хоосон.</strong>
@@ -217,43 +154,69 @@ export function CartSheet(props: { initialOpen: boolean }) {
               </Button>
             </div>
           </Cart.Empty>
-          <Show
-            when={validation.data?.status === 'ok' && validation.data.value.corrections.length > 0}
-          >
+          <Show when={(validation.validatedCart()?.corrections.length ?? 0) > 0}>
             <Alert
               class="border-warning bg-paper-clean mb-4 rounded-none border-4 p-4"
               role="status"
               aria-live="polite"
             >
-              <h2 class="m-0" ref={element => (correctionHeading = element)} tabIndex={-1}>
+              <h2
+                class="m-0"
+                ref={element => validation.registerFocusTarget('corrections', element)}
+                tabIndex={-1}
+              >
                 Сагсаа засна уу
               </h2>
               <p>Үргэлжлүүлэхийн өмнө доорх өөрчлөлтийг шалгана уу.</p>
             </Alert>
           </Show>
-          <Show when={validation.isError}>
+          <Show when={validation.transportError()}>
             <Alert class="border-warning bg-paper-clean mb-4 rounded-none border-4 p-4">
-              <p>Сагсыг шалгаж чадсангүй.</p>
+              <h2
+                class="m-0"
+                ref={element => validation.registerFocusTarget('transport', element)}
+                tabIndex={-1}
+              >
+                Сагсыг шалгаж чадсангүй.
+              </h2>
               <Button
                 type="button"
                 variant="outline"
                 class="border-ink bg-acid min-h-11 rounded-none border-3 font-black"
-                onClick={() => void validation.refetch()}
+                onClick={() => void validation.refresh()}
               >
                 Дахин шалгах
               </Button>
             </Alert>
           </Show>
-          <Cart.Items>
-            {item => <CartLine item={item} corrections={correctionsFor(item.variantId)} />}
-          </Cart.Items>
+          <Show when={validation.validationError()}>
+            <Alert class="border-warning bg-paper-clean mb-4 rounded-none border-4 p-4">
+              <h2
+                class="m-0"
+                ref={element => validation.registerFocusTarget('validation', element)}
+                tabIndex={-1}
+              >
+                Сагсны мэдээлэл буруу байна.
+              </h2>
+              <p>Бараагаа дахин сонгоод шалгана уу.</p>
+              <Button
+                type="button"
+                variant="outline"
+                class="border-ink bg-acid min-h-11 rounded-none border-3 font-black"
+                onClick={() => void validation.refresh()}
+              >
+                Дахин шалгах
+              </Button>
+            </Alert>
+          </Show>
+          <Cart.Items>{item => <CartLine item={item} validation={validation} />}</Cart.Items>
           <Show when={cartItems().length > 0}>
             <div class="flex flex-wrap justify-between gap-2 py-4 text-xl">
               <span>Барааны дүн</span>
               <strong>
                 {formatMnt(
-                  validation.data?.status === 'ok'
-                    ? validation.data.value.subtotalMnt
+                  validation.validatedCart()
+                    ? (validation.validatedCart()?.subtotalMnt ?? 0)
                     : cartItems().reduce((sum, item) => sum + item.unitPriceMnt * item.quantity, 0),
                 )}
               </strong>
@@ -269,14 +232,6 @@ export function CartSheet(props: { initialOpen: boolean }) {
           </Show>
         </div>
       </Sheet.Content>
-      <Show when={transportMessage()}>
-        <div
-          class="border-orange bg-ink text-paper fixed bottom-24 left-1/2 z-60 w-[min(90%,420px)] -translate-x-1/2 border-3 px-4 py-3"
-          role="status"
-        >
-          {transportMessage()}
-        </div>
-      </Show>
     </>
   )
 }

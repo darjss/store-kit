@@ -27,11 +27,23 @@ function CheckoutFixture() {
               <>
                 <field.Input aria-label="Нэр" />
                 <span data-testid="name-error-count">{field().state.meta.errors.length}</span>
+                <field.ErrorState>
+                  {error => <span data-testid="name-error-visible">{String(error().visible)}</span>}
+                </field.ErrorState>
               </>
             )}
           </Checkout.Field>
           <Checkout.Field name="customer.phone">
-            {field => <field.Input aria-label="Утас" />}
+            {field => (
+              <>
+                <field.Input aria-label="Утас" />
+                <field.ErrorState>
+                  {error => (
+                    <span data-testid="phone-error-visible">{String(error().visible)}</span>
+                  )}
+                </field.ErrorState>
+              </>
+            )}
           </Checkout.Field>
           <button type="submit">Илгээх</button>
         </Checkout.Form>
@@ -44,8 +56,13 @@ test('checkout fields validate on input and focus the first invalid control on s
   const view = render(() => <CheckoutFixture />)
   const name = view.getByLabelText('Нэр') as HTMLInputElement
 
+  expect(view.getByTestId('name-error-visible').textContent).toBe('false')
+  expect(view.getByTestId('phone-error-visible').textContent).toBe('false')
+
   fireEvent.blur(name)
   await waitFor(() => expect(name.getAttribute('aria-invalid')).toBe('true'))
+  expect(view.getByTestId('name-error-visible').textContent).toBe('true')
+  expect(view.getByTestId('phone-error-visible').textContent).toBe('false')
 
   fireEvent.input(name, { target: { value: 'Бат' } })
   fireEvent.blur(name)
@@ -57,6 +74,7 @@ test('checkout fields validate on input and focus the first invalid control on s
 
   fireEvent.submit(view.getByRole('button', { name: 'Илгээх' }).closest('form')!)
   await waitFor(() => expect(document.activeElement).toBe(name))
+  expect(view.getByTestId('phone-error-visible').textContent).toBe('true')
 })
 
 test('the pending submit button blocks duplicate clicks and preserves its content width', async () => {

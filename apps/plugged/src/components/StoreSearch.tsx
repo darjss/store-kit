@@ -1,7 +1,6 @@
 /* oxlint-disable tailwindcss/no-unknown-classes */
 import { formatMnt } from '@store-kit/storefront/format'
-import { catalogQuery } from '@store-kit/storefront/query-options/catalog'
-import { useQueryResult } from '@store-kit/storefront/query-options/result'
+import { createCatalogSearchController } from '@store-kit/storefront/search'
 import {
   Button,
   Dialog,
@@ -13,51 +12,18 @@ import {
   Input,
 } from '@store-kit/ui'
 import { match } from 'dismatch'
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js'
+import { For, Show } from 'solid-js'
 import type { JSX } from 'solid-js'
 
 import { ProductImage } from './ProductImage'
 import StoreIcon from './StoreIcon'
 
 export function StoreSearch(props: { initialOpen: boolean }) {
-  const [open, setOpen] = createSignal(props.initialOpen)
-  const [queryText, setQueryText] = createSignal('')
-  const [debouncedQuery, setDebouncedQuery] = createSignal('')
-  const [input, setInput] = createSignal<HTMLInputElement>()
-  let trigger: HTMLButtonElement | undefined = undefined
-
-  createEffect(() => {
-    const value = queryText().trim()
-    const timer = window.setTimeout(() => setDebouncedQuery(value), 250)
-    onCleanup(() => window.clearTimeout(timer))
-  })
-
-  const results = useQueryResult(() => ({
-    ...catalogQuery.findAllProducts({ query: debouncedQuery(), limit: 8 }),
-    enabled: debouncedQuery().length > 1,
-  }))
-
-  const setDialogOpen = (value: boolean) => {
-    setOpen(value)
-    if (!value) queueMicrotask(() => trigger?.focus())
-  }
-
-  const searchState = () => {
-    const catalog = results.data?.status === 'ok' ? results.data.value : undefined
-    return queryText().trim().length < 2
-      ? { type: 'prompt' as const }
-      : results.isPending || results.isFetching
-        ? { type: 'pending' as const }
-        : results.isError || results.data?.status === 'error'
-          ? { type: 'error' as const }
-          : catalog
-            ? { type: 'results' as const, catalog }
-            : { type: 'pending' as const }
-  }
+  const search = createCatalogSearchController({ initialOpen: props.initialOpen })
 
   const searchResults = () =>
     match(
-      searchState(),
+      search.state(),
       'type',
     )<JSX.Element>({
       prompt: () => (
@@ -75,15 +41,13 @@ export function StoreSearch(props: { initialOpen: boolean }) {
           Хайлт ажилласангүй. Дахин оролдоно уу.
         </p>
       ),
+      empty: () => (
+        <p class="m-0 grid min-h-48 place-items-center text-center text-xl font-extrabold">
+          Тохирох бараа олдсонгүй.
+        </p>
+      ),
       results: ({ catalog }) => (
-        <Show
-          when={catalog.items.length > 0}
-          fallback={
-            <p class="m-0 grid min-h-48 place-items-center text-center text-xl font-extrabold">
-              Тохирох бараа олдсонгүй.
-            </p>
-          }
-        >
+        <>
           <For each={catalog.items}>
             {product => {
               const image = product.images[0]
@@ -117,17 +81,17 @@ export function StoreSearch(props: { initialOpen: boolean }) {
               )
             }}
           </For>
-        </Show>
+        </>
       ),
     })
 
   return (
-    <Dialog open={open()} onOpenChange={setDialogOpen}>
+    <Dialog open={search.open()} onOpenChange={search.setOpen}>
       <DialogTrigger
         as={Button}
         variant="ghost"
         data-store-navigation-item
-        ref={element => (trigger = element)}
+        ref={search.setTriggerElement}
         aria-label="Хайх"
       >
         <StoreIcon name="search" size={24} />
@@ -138,7 +102,7 @@ export function StoreSearch(props: { initialOpen: boolean }) {
         showCloseButton={false}
         onOpenAutoFocus={event => {
           event.preventDefault()
-          input()?.focus()
+          search.focusInput()
         }}
       >
         <header class="border-ink flex min-h-30 items-start justify-between gap-4 border-b-[5px] p-[clamp(1rem,3vw,2.5rem)]">
@@ -166,11 +130,11 @@ export function StoreSearch(props: { initialOpen: boolean }) {
           <span class="sr-only">Бараа хайх</span>
           <StoreIcon name="search" size={30} />
           <Input
-            ref={setInput}
+            ref={search.setInputElement}
             class="text-ink placeholder:text-ink/75 min-h-11 min-w-0 rounded-none border-0 bg-transparent text-[clamp(1.5rem,5vw,3rem)] font-black shadow-none outline-none"
             id="store-search"
-            value={queryText()}
-            onInput={event => setQueryText(event.currentTarget.value)}
+            value={search.queryText()}
+            onInput={event => search.setQueryText(event.currentTarget.value)}
             placeholder="IEM, DAC, cable…"
             autocomplete="off"
           />
