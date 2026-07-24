@@ -8,26 +8,35 @@ import { toPublicImage } from "~/public-image";
 const result = await commerce.catalog.getProduct(Astro.params.slug ?? "");
 if (result.status === "error") return new Response(null, { status: 404 });
 const product = result.value;
-const purchaseProduct = {
-  ...product,
-  images: product.images.map(toPublicImage),
-};
+const purchaseProduct = { ...product, images: product.images.map(toPublicImage) };
 const firstPrice = product.variants[0]?.priceMnt ?? 0;
-const useCaseLabels: Record<string, string> = { "first-iem": "АНХНЫ IEM-Д ТОХИРНО", bass: "BASS ИЛҮҮ МЭДРЭГДЭНЭ", vocals: "ХООЛОЙ ЦЭВЭР", gaming: "ТОГЛООМЫН БАЙРШИЛ", "daily-carry": "ӨДӨР ТУТМЫН АВЧ ЯВАЛТ" };
-const factLabels: Record<string, string> = { driverConfiguration: "Драйвер", impedanceOhms: "Эсэргүүцэл", detachableCable: "Салдаг кабель", included: "Дагалдах", input: "Оролт", output: "Гаралт", maximumSampleRate: "Нягтаршил", weightGrams: "Жин", connector: "Холбогч", lengthMeters: "Урт" };
+const useCaseLabels: Record<string, string> = { "first-iem": "АНХНЫ IEM-Д", bass: "BASS", vocals: "VOCALS", gaming: "GAMING", "daily-carry": "DAILY CARRY" };
+const factLabels: Record<string, string> = { driverConfiguration: "Драйвер", impedanceOhms: "Эсэргүүцэл", detachableCable: "Салдаг кабель", included: "Дагалдах", input: "Оролт", output: "Гаралт", maximumSampleRate: "Нягтаршил", weightGrams: "Жин", connector: "Холбогч", edition: "Хувилбар", connectorOptions: "Холбогч", microphoneOptions: "Микрофон", productType: "Төрөл", platform: "Платформ" };
 ---
 
 <Layout title={`${product.name} · Plugged`} description={product.shortDescription} publicPage>
-  <main id="main-content" tabindex="-1" class="pb-24 [background:url('/textures/paper-grain.avif')_repeat,var(--color-paper)] [background-blend-mode:multiply]">
-    <div class="relative border-b-[5px] border-ink px-[max(0.75rem,3vw)] pt-8 pb-4"><p>{product.brand?.name ?? "PLUGGED"} / {product.category?.name}</p><h1 class="m-0 max-w-[11ch] font-body text-[clamp(2.8rem,8vw,5.5rem)] leading-[0.92] font-black tracking-[-0.04em] text-balance max-md:text-[4.5rem] max-[340px]:text-[3.8rem]">{product.name}</h1><strong class="absolute right-[3vw] bottom-4 rotate-2 border-4 border-ink bg-acid p-3 font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums max-md:relative max-md:right-auto max-md:bottom-auto max-md:mt-[-0.5rem] max-md:inline-block">{formatMnt(firstPrice)}-С</strong></div>
-    <div class="grid grid-cols-[7fr_5fr] max-md:flex max-md:flex-col">
-      <div class="min-w-0 border-r-[5px] border-ink max-md:border-r-0"><ProductPurchase product={purchaseProduct} client:only="solid-js" /></div>
-      <div class="p-[clamp(1rem,4vw,4rem)] max-md:p-4">
-        <div class="mb-8 flex flex-wrap gap-2">{product.useCases.map(item => <span class="-rotate-1 border-3 border-ink bg-acid p-2 font-black">{useCaseLabels[item]}</span>)}</div>
-        <p class="text-[clamp(1.4rem,2.5vw,2.2rem)] leading-[1.2] font-extrabold">{product.shortDescription}</p><p class="max-w-[65ch] text-pretty">{product.description}</p>
-        <div class="mt-12 grid border-y-4 border-ink py-4"><strong>УБ ХҮРГЭЛТ</strong><span>QPay / Дансаар</span><span>Төлбөрийн дараа үлдэгдэл баталгаажна</span></div>
+  <main id="main-content" tabindex="-1" class="min-h-screen bg-petrol pb-24 text-paper">
+    <header class="relative overflow-hidden border-b-4 border-paper-clean px-gutter py-[clamp(1.5rem,4vw,3.5rem)]">
+      <div class="absolute inset-0 opacity-30 [background:url('/textures/paper-grain.avif')_repeat]" aria-hidden="true"></div>
+      <div class="relative mx-auto flex max-w-[82rem] items-end justify-between gap-6 max-md:block">
+        <div><p class="font-black text-cyan">{product.brand?.name ?? "PLUGGED"} / {product.category?.slug === "portable-audio" ? "DAC" : "IEM"}</p><h1 class="m-0 max-w-[16ch] font-body text-[clamp(2.6rem,7vw,5.4rem)] leading-[0.9] font-black tracking-[-0.035em] text-balance">{product.name}</h1></div>
+        <strong class="texture-paper clip-cut shrink-0 px-5 py-3 text-[clamp(1.6rem,4vw,2.7rem)] leading-none font-black text-ink tabular-nums max-md:mt-4 max-md:inline-block">{formatMnt(firstPrice)}-С</strong>
       </div>
-    </div>
-    <section class="-rotate-[0.5deg] border-y-[5px] border-ink bg-cobalt px-[max(1rem,3vw)] py-8 text-paper max-md:rotate-0" aria-labelledby="facts-title"><h2 class="font-display text-[4rem] leading-[0.8] max-md:text-[3.5rem]" id="facts-title">ХЭРЭГТЭЙ БАРИМТ</h2><div class="flex gap-4 overflow-x-auto">{Object.entries(product.details).map(([key, value]) => <dl class="m-0 min-w-45 border-2 border-paper p-3"><dt class="font-extrabold">{factLabels[key] ?? key}</dt><dd class="mt-1 ml-0">{Array.isArray(value) ? value.join(" · ") : typeof value === "boolean" ? value ? "Тийм" : "Үгүй" : `${value}${key === "impedanceOhms" ? " Ω" : key === "weightGrams" ? " г" : ""}`}</dd></dl>)}</div></section>
+    </header>
+
+    <section class="mx-auto grid max-w-[82rem] grid-cols-[minmax(0,7fr)_minmax(20rem,5fr)] border-x-4 border-ink max-md:grid-cols-1 max-md:border-x-0" aria-label="Интерактив барааны тайз">
+      <div class="min-w-0 border-r-4 border-ink max-md:border-r-0"><ProductPurchase product={purchaseProduct} client:only="solid-js" /></div>
+      <div class="texture-paper p-[clamp(1rem,3vw,2.5rem)] text-ink">
+        <div class="mb-7 flex flex-wrap gap-2">{product.useCases.map(item => <span class="border-2 border-cyan-deep px-3 py-2 font-black text-cyan-deep">{useCaseLabels[item]}</span>)}</div>
+        <p class="text-[clamp(1.3rem,2.4vw,2rem)] leading-[1.2] font-black text-pretty">{product.shortDescription}</p>
+        {product.description && <p class="max-w-[65ch] text-pretty">{product.description}</p>}
+        <div class="mt-10 grid border-y-4 border-ink py-4"><strong>УБ ХҮРГЭЛТ</strong><span>QPay / Дансаар шилжүүлэх</span><span>Төлбөр батлагдсаны дараа бэлтгэнэ</span></div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-[82rem] border-x-4 border-b-4 border-ink bg-ink px-gutter py-9 text-paper max-md:border-x-0" aria-labelledby="facts-title">
+      <h2 class="m-0 font-body text-[clamp(2.2rem,5vw,4rem)] leading-[0.9] font-black" id="facts-title">ХЭРЭГТЭЙ БАРИМТ</h2>
+      <div class="mt-5 flex snap-x gap-3 overflow-x-auto pb-2 [scrollbar-color:var(--color-cyan)_var(--color-ink)]">{Object.entries(product.details).map(([key, value]) => <dl class="m-0 min-w-48 snap-start border-t-2 border-cyan p-3"><dt class="font-extrabold text-cyan">{factLabels[key] ?? key}</dt><dd class="mt-1 ml-0">{Array.isArray(value) ? value.join(" · ") : typeof value === "boolean" ? value ? "Тийм" : "Үгүй" : `${value}${key === "impedanceOhms" ? " Ω" : key === "weightGrams" ? " г" : ""}`}</dd></dl>)}</div>
+    </section>
   </main>
 </Layout>

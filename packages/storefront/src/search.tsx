@@ -13,11 +13,11 @@ import type { Accessor, JSX, ParentProps } from 'solid-js'
 import { catalogQuery } from './query-options/catalog'
 import { useQueryResult } from './query-options/result'
 
-type CatalogSearchRootProps = ParentProps<{ initialOpen: boolean }>
+type CatalogSearchRootProps = ParentProps<{ initialOpen: boolean; initialQuery?: string }>
 
-function createCatalogSearchState(options: { initialOpen: boolean }) {
+function createCatalogSearchState(options: { initialOpen: boolean; initialQuery?: string }) {
   const [open, setOpenState] = createSignal(options.initialOpen)
-  const [queryText, setQueryText] = createSignal('')
+  const [queryText, setQueryText] = createSignal(options.initialQuery ?? '')
   const [debouncedQuery, setDebouncedQuery] = createSignal('')
   let inputElement: HTMLInputElement | undefined
   let triggerElement: HTMLElement | undefined
@@ -79,7 +79,10 @@ export function useCatalogSearch() {
 }
 
 function Root(props: CatalogSearchRootProps) {
-  const search = createCatalogSearchState({ initialOpen: props.initialOpen })
+  const search = createCatalogSearchState({
+    initialOpen: props.initialOpen,
+    initialQuery: props.initialQuery,
+  })
   return (
     <CatalogSearchContext.Provider value={search}>{props.children}</CatalogSearchContext.Provider>
   )
@@ -134,6 +137,20 @@ type ResultsProps = {
   children: (product: CatalogSearchProduct) => JSX.Element
 }
 
+function Summary(props: {
+  children: (summary: {
+    query: Accessor<string>
+    count: Accessor<number | undefined>
+  }) => JSX.Element
+}) {
+  const search = useCatalogSearch()
+  const count = () => {
+    const state = search.state()
+    return state.type === 'results' ? state.catalog.total : state.type === 'empty' ? 0 : undefined
+  }
+  return props.children({ query: search.queryText, count })
+}
+
 function Results(props: ResultsProps) {
   const search = useCatalogSearch()
 
@@ -153,4 +170,4 @@ function Results(props: ResultsProps) {
   )
 }
 
-export const CatalogSearch = { Root, DialogState, Input, Results }
+export const CatalogSearch = { Root, DialogState, Input, Summary, Results }

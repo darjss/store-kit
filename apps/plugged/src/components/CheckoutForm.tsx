@@ -58,7 +58,7 @@ const fieldMessage = (state: Accessor<FieldErrorState>, message: string) =>
 function ErrorNotice(props: ParentProps<{ title: string }>) {
   return (
     <Alert
-      class="border-warning bg-paper-clean mb-4 border-4 p-4 [&_[data-slot=alert-action]]:static [&_[data-slot=alert-action]]:mt-3 [&_[data-slot=alert-action]]:translate-y-0"
+      class="border-warning bg-paper-clean text-ink mb-5 rotate-[-0.4deg] border-4 p-4 shadow-[0.35rem_0.4rem_0_var(--color-ink)] [&_[data-slot=alert-action]]:static [&_[data-slot=alert-action]]:mt-3 [&_[data-slot=alert-action]]:translate-y-0"
       variant="destructive"
     >
       <AlertTitle>{props.title}</AlertTitle>
@@ -230,10 +230,11 @@ function FormOwner() {
           </section>
         </Show>
         <Show when={cartItems().length > 0}>
-          <Checkout.Form class="grid grid-cols-12 items-start gap-8 max-md:flex max-md:flex-col">
+          <Checkout.Form class="mx-auto grid max-w-304 grid-cols-12 items-start gap-8 max-md:flex max-md:flex-col">
             <div class="col-[1/8] max-md:w-full">
-              <h1 class="font-display text-[clamp(4rem,9vw,6rem)] leading-[0.75] max-md:text-[4.5rem]">
-                ЗАХИАЛГА
+              <p class="text-cyan m-0 font-black">ORDER DOSSIER / 01—03</p>
+              <h1 class="font-body text-[clamp(3rem,8vw,5.5rem)] leading-[0.86] font-black tracking-[-0.035em] max-md:text-[3.6rem]">
+                ЗАХИАЛГЫН ХЭРЭГ
               </h1>
               <checkout.form.ErrorSummary>
                 {summary => (
@@ -281,8 +282,10 @@ function FormOwner() {
                   </Show>
                 </ErrorNotice>
               </Show>
-              <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
-                <h2>Холбоо барих</h2>
+              <section class="paper-stack border-ink text-ink relative z-3 mb-5 rotate-[0.25deg] border-4 p-[clamp(1rem,2vw,2rem)] [clip-path:polygon(0_0,96%_0,100%_2.2rem,100%_100%,1%_99%)] [&_[data-slot=field]]:mb-4">
+                <h2 class="font-body text-[2rem] leading-none font-black">
+                  <span class="text-cyan-deep mr-3">01</span>ХОЛБОО БАРИХ
+                </h2>
                 <Checkout.Field name="customer.name">
                   {field => (
                     <field.ErrorState>
@@ -334,8 +337,10 @@ function FormOwner() {
                   )}
                 </Checkout.Field>
               </section>
-              <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
-                <h2>Улаанбаатар хүргэлт</h2>
+              <section class="paper-stack border-ink text-ink relative z-2 mb-5 -translate-x-1 rotate-[-0.3deg] border-4 p-[clamp(1rem,2vw,2rem)] [clip-path:polygon(0_0,95%_0,100%_2.2rem,99%_100%,0_98%)] [&_[data-slot=field]]:mb-4">
+                <h2 class="font-body text-[2rem] leading-none font-black">
+                  <span class="text-cyan-deep mr-3">02</span>УЛААНБААТАР ХҮРГЭЛТ
+                </h2>
                 <Checkout.Field name="delivery.district">
                   {field => (
                     <Field>
@@ -421,8 +426,10 @@ function FormOwner() {
                   )}
                 </Checkout.Field>
               </section>
-              <section class="border-ink bg-paper-clean [&>h2]:font-display [&_[role=radiogroup]>label]:border-ink mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
-                <h2>Төлбөр</h2>
+              <section class="paper-stack border-ink text-ink [&_[role=radiogroup]>label]:border-ink relative z-1 mb-4 translate-x-1 rotate-[0.2deg] border-4 p-[clamp(1rem,2vw,2rem)] [clip-path:polygon(0_0,96%_1%,100%_2.2rem,100%_100%,1%_99%)] [&_[data-slot=field]]:mb-4 [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4">
+                <h2 class="font-body text-[2rem] leading-none font-black">
+                  <span class="text-cyan-deep mr-3">03</span>ТӨЛБӨР
+                </h2>
                 <Checkout.Field name="paymentMethod">
                   {field => (
                     <field.ErrorState>
@@ -458,8 +465,11 @@ function FormOwner() {
                 </Checkout.Field>
               </section>
             </div>
-            <aside class="border-ink bg-acid sticky top-4 col-[9/13] min-w-0 border-4 p-4 max-md:relative max-md:top-auto max-md:w-full">
-              <h2 class="font-display text-[3rem] leading-[0.8]">Таны сагс</h2>
+            <aside class="paper-stack border-ink text-ink sticky top-4 col-[9/13] min-w-0 border-4 p-4 max-md:sticky max-md:top-auto max-md:bottom-[calc(68px+env(safe-area-inset-bottom))] max-md:z-20 max-md:w-full max-md:[&>div:not(:last-of-type)]:hidden max-md:[&>h2]:text-xl">
+              <p class="border-cyan-deep text-cyan-deep m-0 inline-block -rotate-2 border-2 px-2 py-1 font-black">
+                БАТАЛГААЖУУЛАХАД БЭЛЭН
+              </p>
+              <h2 class="font-body text-[2.2rem] leading-[0.9] font-black">ТАНЫ САГС</h2>
               <For each={cartItems()}>
                 {item => (
                   <div class="border-ink flex flex-wrap justify-between gap-4 border-b-2 py-3">

@@ -13,15 +13,17 @@ type ProductPurchaseData = Omit<ProductDetail, 'images'> & { images: ProductPurc
 
 export function ProductPurchase(props: { product: ProductPurchaseData }) {
   let imageStage: HTMLDivElement | undefined = undefined
+  let stageAnimation: Animation | undefined
 
   const animateImageStage = () => {
     if (!imageStage || matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    imageStage.animate(
+    stageAnimation?.cancel()
+    stageAnimation = imageStage.animate(
       [
-        { opacity: 0, transform: 'scale(1.025)' },
-        { opacity: 1, transform: 'scale(1)' },
+        { opacity: 0.72, transform: 'translate3d(1rem,-0.5rem,0) rotate(1.2deg)' },
+        { opacity: 1, transform: 'translate3d(0,0,0) rotate(0deg)' },
       ],
-      { duration: 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+      { duration: 220, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
     )
   }
 
@@ -34,25 +36,56 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
           const chooseVariant = (id: string) => {
             if (selection().selectVariant(id)) animateImageStage()
           }
+          const chooseImage = (id: string) => {
+            if (selection().selectImage(id)) animateImageStage()
+          }
 
           return (
             <section class="contents" aria-label="Барааны сонголт">
-              <div
-                class="bg-orange sticky top-0 grid min-h-[min(700px,72svh)] place-items-center overflow-clip max-md:relative max-md:min-h-[52svh]"
-                ref={element => (imageStage = element)}
-              >
-                <Show when={selection().selectedImage}>
-                  {item => (
-                    <ProductImage
-                      class="h-[90%] w-[90%] object-contain filter-[drop-shadow(0_6px_0_rgb(0_0_0/0.2))] max-md:w-[115%] max-md:max-w-none"
-                      image={item()}
-                      layout="detail"
-                      priority
-                    />
-                  )}
-                </Show>
+              <div class="bg-petrol relative grid min-h-[min(700px,72svh)] grid-cols-[5.5rem_minmax(0,1fr)] overflow-clip p-4 max-md:min-h-[50svh] max-md:grid-cols-1 max-md:grid-rows-[minmax(0,1fr)_4.75rem] max-md:p-2">
+                <div
+                  class="order-2 flex flex-col gap-2 overflow-x-auto max-md:flex-row"
+                  aria-label="Барааны зураг"
+                >
+                  {props.product.images.map((image, index) => (
+                    <button
+                      class="pressable border-paper/45 aria-pressed:border-cyan bg-ink grid aspect-square w-full shrink-0 place-items-center border-2 p-1 max-md:w-18"
+                      type="button"
+                      aria-label={`Зураг ${index + 1} / ${props.product.images.length}`}
+                      aria-pressed={image.id === selection().selectedImage?.id}
+                      onClick={() => chooseImage(image.id)}
+                    >
+                      <ProductImage
+                        class="h-full w-full object-contain"
+                        image={image}
+                        layout="thumbnail"
+                      />
+                    </button>
+                  ))}
+                </div>
+                <div
+                  class="before:bg-ink/35 relative grid min-w-0 place-items-center before:absolute before:inset-[8%_5%] before:-rotate-1 before:content-['']"
+                  ref={element => (imageStage = element)}
+                >
+                  <Show when={selection().selectedImage}>
+                    {item => (
+                      <ProductImage
+                        class="relative z-1 h-[90%] w-[90%] object-contain filter-[drop-shadow(0_8px_0_rgb(0_0_0/0.3))] max-md:h-full max-md:w-full"
+                        image={item()}
+                        layout="detail"
+                        priority
+                      />
+                    )}
+                  </Show>
+                  <span class="bg-ink text-cyan absolute right-3 bottom-3 z-2 px-2 py-1 text-sm font-black">
+                    {props.product.images.findIndex(
+                      image => image.id === selection().selectedImage?.id,
+                    ) + 1}{' '}
+                    / {props.product.images.length}
+                  </span>
+                </div>
               </div>
-              <fieldset class="bg-paper m-0 border-0 p-4">
+              <fieldset class="texture-paper border-ink m-0 border-0 border-t-4 p-4">
                 <legend class="text-xl font-black">Сонголт</legend>
                 <RadioGroup value={selection().selectedVariantId} onChange={chooseVariant}>
                   <Purchase.Variants>
@@ -60,7 +93,8 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
                       <label
                         class="border-ink has-focus-visible:outline-acid mb-2 grid min-h-14.5 cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 border-3 p-3 has-focus-visible:outline-4 has-focus-visible:outline-offset-3"
                         classList={{
-                          'bg-acid': variant.id === selection().selectedVariantId,
+                          'border-cyan bg-cyan/20 shadow-[inset_5px_0_0_var(--color-cyan)]':
+                            variant.id === selection().selectedVariantId,
                           'opacity-60 line-through': variant.stockQuantity === 0,
                         }}
                         for={`variant-${variant.id}`}
@@ -110,7 +144,7 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
                   </Button>
                 </ButtonGroup>
                 <Button
-                  class="border-ink bg-orange text-ink min-h-12.5 flex-1 cursor-pointer rounded-none border-3 px-4 py-3 font-black transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none max-md:p-2 max-md:text-[0.82rem]"
+                  class="border-cyan bg-ink text-paper min-h-12.5 flex-1 cursor-pointer rounded-none border-3 px-4 py-3 font-black transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none max-md:p-2 max-md:text-[0.82rem]"
                   type="button"
                   disabled={
                     !selection().selectedVariant || selection().selectedVariant?.stockQuantity === 0
