@@ -1,9 +1,9 @@
 ---
-import { listCatalogProducts } from "@store-kit/commerce/catalog";
-import { mediaUrl } from "../media-url";
-import Layout from "../layouts/Layout.astro";
+import { commerce } from "@store-kit/commerce";
+import Layout from "~/layouts/Layout.astro";
+import { mediaUrl } from "~/media-url";
 
-const result = await listCatalogProducts({ limit: 8 });
+const result = await commerce.catalog.listProducts({ limit: 8 });
 if (result.status === "error") throw new Error("Catalog could not be loaded.");
 const products = result.value.items;
 const lead = products[0];

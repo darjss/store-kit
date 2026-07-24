@@ -4,19 +4,24 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/operations/system-status.ts",
+    ".": "./src/index.ts",
     "./catalog": "./src/catalog/operations.ts",
+    "./cart": "./src/cart/operations.ts",
     "./qpay": "./src/adapters/qpay.ts",
-    "./shopping": "./src/shopping/operations.ts",
-    "./shopping/errors": "./src/shopping/errors.ts",
     "./checkout": "./src/checkout/operations.ts",
+    "./orders": "./src/orders/operations.ts",
     "./payments": "./src/payments/operations.ts",
+    "./system": "./src/operations/system-status.ts",
     "./telegram": "./src/adapters/telegram.ts"
   },
   "dependencies": {
+    "@store-kit/contracts": "workspace:*",
     "@store-kit/db": "workspace:*",
     "better-result": "catalog:",
     "ky": "^2.0.2",
     "typebox": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260721.1"
   }
 }

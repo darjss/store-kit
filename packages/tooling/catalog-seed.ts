@@ -4,6 +4,14 @@ import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
+  brandIdSchema,
+  categoryIdSchema,
+  checkoutSettingsIdSchema,
+  productIdSchema,
+  productImageIdSchema,
+  productVariantIdSchema,
+} from '@store-kit/db/ids'
+import {
   nonNegativeIntegerSchema,
   productDetailsSchema,
   productStatusSchema,
@@ -24,7 +32,6 @@ const generatedSqlPath = resolve(pluggedDirectory, '.wrangler/catalog.seed.sql')
 const d1Binding = 'DB'
 const r2Bucket = 'plugged-media'
 
-const identifierSchema = Type.String({ format: 'uuid' })
 const nonEmptyStringSchema = Type.String({ minLength: 1 })
 const nullableStringSchema = Type.Optional(Type.Union([nonEmptyStringSchema, Type.Null()]))
 const imageContentTypeSchema = Type.Union([
@@ -40,7 +47,7 @@ const strictObject = <Properties extends Parameters<typeof Type.Object>[0]>(
 ) => Type.Object(properties, { additionalProperties: false })
 
 const brandSeedSchema = strictObject({
-  id: identifierSchema,
+  id: brandIdSchema,
   slug: slugSchema,
   name: nonEmptyStringSchema,
   description: nullableStringSchema,
@@ -48,7 +55,7 @@ const brandSeedSchema = strictObject({
 })
 
 const categorySeedSchema = strictObject({
-  id: identifierSchema,
+  id: categoryIdSchema,
   slug: slugSchema,
   name: nonEmptyStringSchema,
   description: nullableStringSchema,
@@ -57,7 +64,7 @@ const categorySeedSchema = strictObject({
 })
 
 const imageSeedSchema = strictObject({
-  id: identifierSchema,
+  id: productImageIdSchema,
   source: nonEmptyStringSchema,
   r2Key: nonEmptyStringSchema,
   contentType: imageContentTypeSchema,
@@ -66,7 +73,7 @@ const imageSeedSchema = strictObject({
 })
 
 const variantSeedSchema = strictObject({
-  id: identifierSchema,
+  id: productVariantIdSchema,
   sku: nonEmptyStringSchema,
   name: nonEmptyStringSchema,
   options: variantOptionsSchema,
@@ -79,7 +86,7 @@ const variantSeedSchema = strictObject({
 })
 
 const productSeedSchema = strictObject({
-  id: identifierSchema,
+  id: productIdSchema,
   slug: slugSchema,
   brandSlug: Type.Optional(slugSchema),
   categorySlug: Type.Optional(slugSchema),
@@ -95,6 +102,7 @@ const productSeedSchema = strictObject({
 })
 
 const checkoutSettingsSeedSchema = strictObject({
+  id: checkoutSettingsIdSchema,
   deliveryFeeMnt: nonNegativeIntegerSchema,
   bankName: nonEmptyStringSchema,
   bankAccountName: nonEmptyStringSchema,
@@ -352,7 +360,7 @@ const buildSql = (seed: CatalogSeed) => {
           'updated_at',
         ],
         [
-          sqlText('default'),
+          sqlText(seed.checkoutSettings.id),
           String(seed.checkoutSettings.deliveryFeeMnt),
           sqlText(seed.checkoutSettings.bankName),
           sqlText(seed.checkoutSettings.bankAccountName),

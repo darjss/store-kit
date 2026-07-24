@@ -1,7 +1,9 @@
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
+import type { PublicOrder } from '@store-kit/contracts/orders'
 import { mediaUrl } from '@store-kit/storefront/media'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
-import { orderQuery, paymentMutation } from '@store-kit/storefront/query-options/shopping'
+import { orderQuery } from '@store-kit/storefront/query-options/orders'
+import { paymentMutation } from '@store-kit/storefront/query-options/payments'
 import { QueryClientProvider, createMutation, createQuery } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
 
@@ -21,25 +23,6 @@ const paymentStatusLabels: Record<string, string> = {
   paid: 'Төлөгдсөн',
   failed: 'Төлбөр амжилтгүй',
 }
-
-type PrivateOrder = {
-  number: string
-  status: string
-  district: string
-  khoroo: string
-  address: string
-  totalMnt: number
-  lines: {
-    productName: string
-    variantName: string
-    quantity: number
-    lineTotalMnt: number
-    imageR2Key: string | null
-  }[]
-  payment: { method: 'qpay' | 'bank_transfer'; status: string } | null
-}
-
-const domainValue = (value: unknown) => value as Record<string, unknown>
 
 function StatusOwner(props: { orderId: string }) {
   const storageKey = `plugged:order-token:${props.orderId}`
@@ -71,17 +54,15 @@ function StatusOwner(props: { orderId: string }) {
         await status.refetch()
         return
       }
-      const failure = domainValue(result.error)
+      const failure = result.error
       if (failure._tag === 'BankTransferClaimNotAllowed') {
-        const paymentStatus = String(failure.paymentStatus ?? 'confirming')
+        const paymentStatus = failure.paymentStatus
         setPaymentMessage(
           `Одоогийн төлөв: ${paymentStatusLabels[paymentStatus] ?? 'Баталгаажуулж байна'}`,
         )
         await status.refetch()
       } else {
-        setPaymentMessage(
-          `${String(failure.message ?? 'Мэдэгдэл илгээж чадсангүй.')} Дахин оролдоно уу.`,
-        )
+        setPaymentMessage(`${failure.message || 'Мэдэгдэл илгээж чадсангүй.'} Дахин оролдоно уу.`)
       }
     } catch {
       setPaymentMessage('Сүлжээний алдаа гарлаа. Дахин оролдоно уу.')
@@ -92,8 +73,8 @@ function StatusOwner(props: { orderId: string }) {
     try {
       const result = await refresh.mutateAsync({ orderId: props.orderId, token: token() })
       if (result.status === 'ok') {
-        const value = domainValue(result.value)
-        if (value.needsStaffAction === true)
+        const value = result.value
+        if ('needsStaffAction' in value && value.needsStaffAction)
           setPaymentMessage(
             'Төлбөр орсон. Барааны үлдэгдлийг гараар шалгаж байна. Дэлгүүр тантай холбогдоно.',
           )
@@ -103,12 +84,12 @@ function StatusOwner(props: { orderId: string }) {
         await status.refetch()
         return
       }
-      const failure = domainValue(result.error)
+      const failure = result.error
       if (failure._tag === 'PaymentVerificationFailed')
         setPaymentMessage(
           failure.retryable === true
-            ? `${String(failure.message)} Дахин оролдоно уу.`
-            : `${String(failure.message)} Дэлгүүртэй холбогдоно уу.`,
+            ? `${failure.message} Дахин оролдоно уу.`
+            : `${failure.message} Дэлгүүртэй холбогдоно уу.`,
         )
       else if (failure._tag === 'PaymentMismatch')
         setPaymentMessage('Төлбөрийн мэдээллийг ажилтнаар шалгуулах шаардлагатай.')
@@ -117,8 +98,8 @@ function StatusOwner(props: { orderId: string }) {
     }
   }
 
-  const privateOrder = () =>
-    status.data?.status === 'ok' ? (status.data.value as PrivateOrder) : undefined
+  const privateOrder = (): PublicOrder | undefined =>
+    status.data?.status === 'ok' ? status.data.value : undefined
 
   return (
     <Switch>

@@ -1,8 +1,8 @@
 ---
-import { listCatalogBrands, listCatalogCategories, listCatalogProducts } from "@store-kit/commerce/catalog";
+import { commerce } from "@store-kit/commerce";
 import type { ProductListFilters } from "@store-kit/commerce/catalog";
-import { mediaUrl } from "../../media-url";
-import Layout from "../../layouts/Layout.astro";
+import Layout from "~/layouts/Layout.astro";
+import { mediaUrl } from "~/media-url";
 
 const params = Astro.url.searchParams;
 const validUseCases = ["first-iem", "bass", "vocals", "gaming", "daily-carry"] as const;
@@ -14,7 +14,11 @@ const filters: ProductListFilters = {
   ...(params.get("query") ? { query: params.get("query")! } : {}),
   limit: 50,
 };
-const [result, categories, brands] = await Promise.all([listCatalogProducts(filters), listCatalogCategories(), listCatalogBrands()]);
+const [result, categories, brands] = await Promise.all([
+  commerce.catalog.listProducts(filters),
+  commerce.catalog.listCategories(),
+  commerce.catalog.listBrands(),
+]);
 if (result.status === "error") throw new Error("Catalog could not be loaded.");
 const products = result.value.items;
 const money = new Intl.NumberFormat("mn-MN");

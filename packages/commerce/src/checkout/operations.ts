@@ -1,40 +1,13 @@
+import type { CartCorrection, CheckoutCreated, CheckoutError } from '@store-kit/contracts'
+import { checkoutInputSchema } from '@store-kit/contracts/checkout'
+import { query as dbQuery } from '@store-kit/db'
+import { createOrderId, createOrderLineId, createPaymentId } from '@store-kit/db/ids'
 /* oxlint-disable eslint/no-underscore-dangle */
-import {
-  findCartVariants,
-  findCheckoutSettings,
-  findOrderWithPayment,
-  findPrivateOrder,
-  insertOrderWithLinesAndPayment,
-  markBankTransferClaimed,
-  rejectBankTransferClaim,
-  storeTelegramMessageId,
-} from '@store-kit/db/queries/shopping'
-import { checkoutInputSchema } from '@store-kit/db/schemas/shopping'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
 import { createQPayInvoice } from '../adapters/qpay'
-import {
-  answerTelegramCallback,
-  editTelegramMessage,
-  sendBankClaimMessage,
-} from '../adapters/telegram'
-import { confirmOrderPayment } from '../payments/operations'
-import type { BankTransferClaimError, CartCorrection, CheckoutError } from '../shopping/errors'
-
-type CheckoutCreated = {
-  orderId: string
-  orderNumber: string
-  statusToken: string
-  nextAction:
-    | { type: 'qpay'; qrText: string; qrImage: string; urls: { name: string; link: string }[] }
-    | { type: 'bank_transfer'; bankName: string; accountName: string; accountNumber: string }
-}
-
-const tokenHash = async (token: string) => {
-  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
-  return [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('')
-}
+import { hashStatusToken } from '../orders/status-token'
 
 const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').replace(/^976/, '')
 
@@ -86,8 +59,8 @@ export const createCheckoutOrder = async (input: unknown) => {
     })
 
   const [settings, variants] = await Promise.all([
-    findCheckoutSettings(),
-    findCartVariants(input.items),
+    dbQuery.checkout.findSettings(),
+    dbQuery.cart.findVariants(input.items),
   ])
   if (!settings)
     return Result.err<CheckoutCreated, CheckoutError>({
@@ -131,7 +104,7 @@ export const createCheckoutOrder = async (input: unknown) => {
       corrections,
     })
 
-  const orderId = crypto.randomUUID()
+  const orderId = createOrderId()
   const orderNumber = `PLG-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
   const statusToken = `${crypto.randomUUID()}${crypto.randomUUID()}`
   const subtotalMnt = input.items.reduce(
@@ -155,11 +128,11 @@ export const createCheckoutOrder = async (input: unknown) => {
       canUseBankTransfer: true,
     })
 
-  await insertOrderWithLinesAndPayment({
+  await dbQuery.checkout.insertOrder({
     order: {
       id: orderId,
       number: orderNumber,
-      statusTokenHash: await tokenHash(statusToken),
+      statusTokenHash: await hashStatusToken(statusToken),
       status: 'new',
       customerName: input.customer.name.trim(),
       customerPhone: phone,
@@ -176,7 +149,7 @@ export const createCheckoutOrder = async (input: unknown) => {
     lines: input.items.map(item => {
       const variant = byId.get(item.variantId)!
       return {
-        id: crypto.randomUUID(),
+        id: createOrderLineId(),
         orderId,
         productId: variant.productId,
         variantId: variant.variantId,
@@ -191,7 +164,7 @@ export const createCheckoutOrder = async (input: unknown) => {
       }
     }),
     payment: {
-      id: crypto.randomUUID(),
+      id: createPaymentId(),
       orderId,
       method: input.paymentMethod,
       status: 'pending',
@@ -224,88 +197,4 @@ export const createCheckoutOrder = async (input: unknown) => {
   })
 }
 
-export const getPrivateOrderStatus = async (orderId: string, statusToken: string) => {
-  const order = await findPrivateOrder(orderId, await tokenHash(statusToken))
-  if (!order)
-    return Result.err({ _tag: 'InvalidStatusToken' as const, message: 'Захиалга олдсонгүй.' })
-  return Result.ok(order)
-}
-
-export const handleBankTransferCallback = async (input: {
-  action: 'confirm' | 'reject'
-  orderId: string
-  callbackQueryId: string
-}) => {
-  const order = await findOrderWithPayment(input.orderId)
-  if (!order?.payment || order.payment.method !== 'bank_transfer') return false
-  if (input.action === 'confirm') {
-    const confirmation = await confirmOrderPayment(input.orderId, {
-      paymentId: `telegram:${input.callbackQueryId}`,
-      amountMnt: order.payment.amountMnt,
-      method: 'bank_transfer',
-    })
-    if (confirmation.status === 'error') {
-      const text =
-        confirmation.error._tag === 'InsufficientStock'
-          ? `⚠️ ${order.number} үлдэгдэл хүрэлцэхгүй байна`
-          : `⚠️ ${order.number} төлбөрийг баталж чадсангүй`
-      await answerTelegramCallback(input.callbackQueryId, text)
-      return true
-    }
-
-    const text = `✅ ${order.number} төлбөр батлагдлаа`
-    await answerTelegramCallback(input.callbackQueryId, text)
-    if (order.payment.telegramMessageId)
-      await editTelegramMessage(order.payment.telegramMessageId, text)
-    return true
-  }
-
-  await rejectBankTransferClaim(input.orderId, Date.now())
-  const text = `❌ ${order.number} төлбөр татгалзлаа`
-  await answerTelegramCallback(input.callbackQueryId, text)
-  if (order.payment.telegramMessageId)
-    await editTelegramMessage(order.payment.telegramMessageId, text)
-  return true
-}
-
-export const claimBankTransfer = async (orderId: string, statusToken: string) => {
-  const privateOrder = await getPrivateOrderStatus(orderId, statusToken)
-  if (privateOrder.status === 'error') return privateOrder
-  const order = privateOrder.value
-  if (!order.payment || order.payment.method !== 'bank_transfer')
-    return Result.err({
-      _tag: 'BankTransferClaimNotAllowed' as const,
-      message: 'Энэ төлбөрт мэдэгдэл өгөх боломжгүй.',
-    })
-  if (order.payment.status === 'paid') return Result.ok({ paymentStatus: 'paid' as const })
-  if (order.payment.status !== 'pending' && order.payment.status !== 'claimed')
-    return Result.err<{ paymentStatus: 'claimed' | 'paid' }, BankTransferClaimError>({
-      _tag: 'BankTransferClaimNotAllowed',
-      message: 'Энэ төлбөрт мэдэгдэл өгөх боломжгүй.',
-      paymentStatus: order.payment.status,
-    })
-  if (order.payment.status === 'claimed' && order.payment.telegramMessageId)
-    return Result.ok({ paymentStatus: 'claimed' as const })
-  if (order.payment.status === 'pending') {
-    const claimed = await markBankTransferClaimed(orderId, Date.now())
-    if (!claimed) return Result.ok({ paymentStatus: order.payment.status })
-  }
-  const sent = await sendBankClaimMessage({
-    orderId,
-    orderNumber: order.number,
-    customerName: order.customerName,
-    customerPhone: order.customerPhone,
-    amountMnt: order.totalMnt,
-  })
-  if (sent.status === 'ok') {
-    await storeTelegramMessageId(orderId, sent.value.messageId, Date.now())
-    return Result.ok({ paymentStatus: 'claimed' as const })
-  }
-
-  await rejectBankTransferClaim(orderId, Date.now())
-  return Result.err<{ paymentStatus: 'claimed' | 'paid' }, BankTransferClaimError>({
-    _tag: 'StaffNotificationFailed',
-    message: 'Ажилтанд мэдэгдэл илгээж чадсангүй. Дахин оролдоно уу.',
-    retryable: true,
-  })
-}
+export const checkoutOperations = { createOrder: createCheckoutOrder }

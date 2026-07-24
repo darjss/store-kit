@@ -10,6 +10,16 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 
+import {
+  createBrandId,
+  createCategoryId,
+  createProductId,
+  createProductImageId,
+  createProductVariantId,
+  entityIdPrefixes,
+} from '../ids.ts'
+import { typeIdCheck } from './typeid-check.ts'
+
 export type ProductDetailValue = string | number | boolean | string[]
 export type ProductDetails = Record<string, ProductDetailValue>
 export type VariantOptions = Record<string, string>
@@ -18,9 +28,7 @@ export type ProductUseCase = 'first-iem' | 'bass' | 'vocals' | 'gaming' | 'daily
 export const brand = sqliteTable(
   'brand',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: text('id').notNull().$defaultFn(createBrandId),
     slug: text('slug').notNull(),
     name: text('name').notNull(),
     description: text('description'),
@@ -28,15 +36,17 @@ export const brand = sqliteTable(
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },
-  table => [uniqueIndex('brand_slug_unique').on(table.slug)],
+  table => [
+    primaryKey({ name: 'brand_pk', columns: [table.id] }),
+    uniqueIndex('brand_slug_unique').on(table.slug),
+    check('brand_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.brand)),
+  ],
 )
 
 export const category = sqliteTable(
   'category',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: text('id').notNull().$defaultFn(createCategoryId),
     slug: text('slug').notNull(),
     name: text('name').notNull(),
     description: text('description'),
@@ -46,17 +56,17 @@ export const category = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'category_pk', columns: [table.id] }),
     uniqueIndex('category_slug_unique').on(table.slug),
     index('category_active_sort_order_name_index').on(table.active, table.sortOrder, table.name),
+    check('category_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.category)),
   ],
 )
 
 export const product = sqliteTable(
   'product',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: text('id').notNull().$defaultFn(createProductId),
     slug: text('slug').notNull(),
     brandId: text('brand_id').references(() => brand.id, { onDelete: 'set null' }),
     categoryId: text('category_id').references(() => category.id, {
@@ -75,6 +85,7 @@ export const product = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'product_pk', columns: [table.id] }),
     uniqueIndex('product_slug_unique').on(table.slug),
     index('product_status_featured_created_at_index').on(
       table.status,
@@ -95,15 +106,14 @@ export const product = sqliteTable(
     ),
     index('product_status_created_at_index').on(table.status, table.createdAt),
     check('product_status_check', sql`${table.status} in ('draft', 'active', 'archived')`),
+    check('product_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.product)),
   ],
 )
 
 export const productImage = sqliteTable(
   'product_image',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: text('id').notNull().$defaultFn(createProductImageId),
     productId: text('product_id')
       .notNull()
       .references(() => product.id, { onDelete: 'cascade' }),
@@ -113,17 +123,17 @@ export const productImage = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'product_image_pk', columns: [table.id] }),
     uniqueIndex('product_image_product_id_sort_order_unique').on(table.productId, table.sortOrder),
     uniqueIndex('product_image_id_product_id_unique').on(table.id, table.productId),
+    check('product_image_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.productImage)),
   ],
 )
 
 export const productVariant = sqliteTable(
   'product_variant',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    id: text('id').notNull().$defaultFn(createProductVariantId),
     productId: text('product_id')
       .notNull()
       .references(() => product.id, { onDelete: 'cascade' }),
@@ -139,6 +149,7 @@ export const productVariant = sqliteTable(
     updatedAt: integer('updated_at').notNull(),
   },
   table => [
+    primaryKey({ name: 'product_variant_pk', columns: [table.id] }),
     uniqueIndex('product_variant_sku_unique').on(table.sku),
     uniqueIndex('product_variant_id_product_id_unique').on(table.id, table.productId),
     index('product_variant_product_id_active_sort_order_index').on(
@@ -157,6 +168,10 @@ export const productVariant = sqliteTable(
       sql`${table.compareAtPriceMnt} is null or ${table.compareAtPriceMnt} >= 0`,
     ),
     check('product_variant_stock_quantity_check', sql`${table.stockQuantity} >= 0`),
+    check(
+      'product_variant_id_typeid_check',
+      typeIdCheck(table.id, entityIdPrefixes.productVariant),
+    ),
   ],
 )
 

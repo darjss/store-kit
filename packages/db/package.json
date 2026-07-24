@@ -4,19 +4,21 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/client.ts",
-    "./queries": "./src/queries/catalog.ts",
-    "./queries/shopping": "./src/queries/shopping.ts",
+    ".": "./src/index.ts",
+    "./ids": "./src/ids.ts",
     "./schema": "./src/schema/catalog.ts",
     "./schema/shopping": "./src/schema/shopping.ts",
     "./schemas": "./src/schemas/catalog.ts",
     "./schemas/shopping": "./src/schemas/shopping.ts"
   },
   "dependencies": {
+    "@store-kit/contracts": "workspace:*",
     "drizzle-orm": "1.0.0-rc.4",
-    "typebox": "catalog:"
+    "typebox": "catalog:",
+    "typeid-js": "^1.2.0"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.7",
     "@cloudflare/workers-types": "^5.20260721.1",
     "drizzle-kit": "1.0.0-rc.4"
   }

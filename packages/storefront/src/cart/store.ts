@@ -1,12 +1,14 @@
 import { makePersisted } from '@solid-primitives/storage'
-import type { CartLineInput, PersistedCartItem } from '@store-kit/db/schemas/shopping'
+import { variantIdPattern } from '@store-kit/contracts/cart'
+import type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
 import { createSignal } from 'solid-js'
 import { isServer } from 'solid-js/web'
 
-export type { CartLineInput, PersistedCartItem } from '@store-kit/db/schemas/shopping'
+export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
 
 const storageKey = 'store-kit:plugged:cart:v1'
 const [cartItems, setNativeCartItems] = createSignal<PersistedCartItem[]>([])
+const variantIdExpression = new RegExp(variantIdPattern)
 let setCartItems = setNativeCartItems
 const [isCartOpen, setIsCartOpen] = createSignal(false)
 let persistenceStarted = false
@@ -16,7 +18,7 @@ function isPersistedCartItem(value: unknown): value is PersistedCartItem {
 
   const item = value as Partial<PersistedCartItem>
   return (
-    typeof item.variantId === 'string' &&
+    variantIdExpression.test(item.variantId ?? '') &&
     Number.isInteger(item.quantity) &&
     (item.quantity ?? 0) > 0 &&
     (item.quantity ?? 11) <= 10 &&

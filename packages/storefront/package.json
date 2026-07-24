@@ -11,13 +11,15 @@
     "./query-client": "./src/query-client.ts",
     "./query-options/cart": "./src/query-options/cart.ts",
     "./query-options/catalog": "./src/query-options/catalog.ts",
-    "./query-options/shopping": "./src/query-options/shopping.ts"
+    "./query-options/checkout": "./src/query-options/checkout.ts",
+    "./query-options/orders": "./src/query-options/orders.ts",
+    "./query-options/payments": "./src/query-options/payments.ts"
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",
     "@solid-primitives/storage": "^4.4.0",
     "@store-kit/api": "workspace:*",
-    "@store-kit/db": "workspace:*",
+    "@store-kit/contracts": "workspace:*",
     "@store-kit/ui": "workspace:*",
     "@tanstack/solid-query": "catalog:",
     "better-result": "catalog:",

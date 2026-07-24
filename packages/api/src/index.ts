@@ -1,4 +1,4 @@
-import { getSystemStatus } from '@store-kit/commerce'
+import { commerce } from '@store-kit/commerce'
 import { Result } from 'better-result'
 import { Elysia } from 'elysia'
 
@@ -8,7 +8,7 @@ import { shoppingRoutes } from './routes/shopping'
 import { telegramWebhook } from './webhooks/telegram'
 
 export const app = new Elysia({ aot: false })
-  .get('/api/system/status', () => Result.serialize(getSystemStatus(true)))
+  .get('/api/system/status', () => Result.serialize(commerce.system.getStatus(true)))
   .use(catalogRoutes)
   .use(cartRoutes)
   .use(shoppingRoutes)

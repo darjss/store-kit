@@ -1,11 +1,14 @@
-import {
-  claimBankTransfer,
-  createCheckoutOrder,
-  getPrivateOrderStatus,
-} from '@store-kit/commerce/checkout'
-import { confirmOrderPayment, findQPayOrder } from '@store-kit/commerce/payments'
+import { commerce } from '@store-kit/commerce'
 import { verifyQPayCallback, verifyQPayPayment } from '@store-kit/commerce/qpay'
 import { sendPaidOrderMessage } from '@store-kit/commerce/telegram'
+import { orderIdPattern } from '@store-kit/contracts/orders'
+import type { PrivateOrderError, PublicOrder } from '@store-kit/contracts/orders'
+import type {
+  BankTransferClaim,
+  BankTransferClaimError,
+  PaymentRefresh,
+  PaymentRefreshError,
+} from '@store-kit/contracts/payments'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
@@ -19,18 +22,26 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .onAfterHandle(({ set }) => {
     set.headers['cache-control'] = 'private, no-store'
   })
-  .post('/checkout', async ({ body }) => Result.serialize(await createCheckoutOrder(body)), {
-    body: t.Any(),
-  })
+  .post(
+    '/checkout',
+    async ({ body }) => Result.serialize(await commerce.checkout.createOrder(body)),
+    {
+      body: t.Any(),
+    },
+  )
   .get(
     '/orders/:id/status',
     async ({ params, headers }) => {
-      const result = await getPrivateOrderStatus(params.id, headers['x-order-token'] ?? '')
-      if (result.status === 'error') return Result.serialize<unknown, unknown>(result)
+      const result = await commerce.orders.getPrivateStatus(
+        params.id,
+        headers['x-order-token'] ?? '',
+      )
+      if (result.status === 'error')
+        return Result.serialize(Result.err<PublicOrder, PrivateOrderError>(result.error))
 
       const order = result.value
-      return Result.serialize<unknown, unknown>(
-        Result.ok({
+      return Result.serialize(
+        Result.ok<PublicOrder, PrivateOrderError>({
           id: order.id,
           number: order.number,
           status: order.status,
@@ -68,7 +79,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
       )
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: t.String({ pattern: orderIdPattern }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },
@@ -78,11 +89,11 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .post(
     '/orders/:id/payment/claim',
     async ({ params, headers }) =>
-      Result.serialize<unknown, unknown>(
-        await claimBankTransfer(params.id, headers['x-order-token'] ?? ''),
+      Result.serialize<BankTransferClaim, BankTransferClaimError>(
+        await commerce.payments.claimBankTransfer(params.id, headers['x-order-token'] ?? ''),
       ),
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: t.String({ pattern: orderIdPattern }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },
@@ -92,24 +103,39 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .post(
     '/orders/:id/payment/refresh',
     async ({ params, headers }) => {
-      const order = await getPrivateOrderStatus(params.id, headers['x-order-token'] ?? '')
-      if (order.status === 'error') return Result.serialize<unknown, unknown>(order)
+      const order = await commerce.orders.getPrivateStatus(
+        params.id,
+        headers['x-order-token'] ?? '',
+      )
+      if (order.status === 'error')
+        return Result.serialize(Result.err<PaymentRefresh, PaymentRefreshError>(order.error))
       const invoiceId = order.value.payment?.providerInvoiceId
       if (!invoiceId)
-        return Result.serialize<unknown, unknown>(
-          Result.err({ _tag: 'PaymentMismatch', message: 'QPay нэхэмжлэл олдсонгүй.' }),
+        return Result.serialize(
+          Result.err<PaymentRefresh, PaymentRefreshError>({
+            _tag: 'PaymentMismatch',
+            message: 'QPay нэхэмжлэл олдсонгүй.',
+          }),
         )
       const verified = await verifyQPayPayment(invoiceId)
       if (verified.status === 'error')
-        return Result.serialize<unknown, unknown>(Result.err(paymentVerificationFailed()))
+        return Result.serialize(
+          Result.err<PaymentRefresh, PaymentRefreshError>(paymentVerificationFailed()),
+        )
       if (!verified.value)
-        return Result.serialize<unknown, unknown>(Result.ok({ paymentStatus: 'pending' as const }))
-      return Result.serialize<unknown, unknown>(
-        await confirmOrderPayment(params.id, { ...verified.value, method: 'qpay' }),
-      )
+        return Result.serialize(
+          Result.ok<PaymentRefresh, PaymentRefreshError>({ paymentStatus: 'pending' }),
+        )
+      const confirmation = await commerce.payments.confirmOrderPayment(params.id, {
+        ...verified.value,
+        method: 'qpay',
+      })
+      return confirmation.status === 'ok'
+        ? Result.serialize(Result.ok<PaymentRefresh, PaymentRefreshError>(confirmation.value))
+        : Result.serialize(Result.err<PaymentRefresh, PaymentRefreshError>(confirmation.error))
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: t.String({ pattern: orderIdPattern }) }),
       headers: t.Object(
         { 'x-order-token': t.Optional(t.String()) },
         { additionalProperties: true },
@@ -121,10 +147,10 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
     async ({ body }) => {
       const verified = await verifyQPayCallback(body.payment_id)
       if (verified.status === 'error') return { ok: true }
-      const localPayment = await findQPayOrder(verified.value.invoiceId)
+      const localPayment = await commerce.payments.findQPayOrder(verified.value.invoiceId)
       if (!localPayment) return { ok: true }
       {
-        const confirmation = await confirmOrderPayment(localPayment.orderId, {
+        const confirmation = await commerce.payments.confirmOrderPayment(localPayment.orderId, {
           paymentId: verified.value.paymentId,
           amountMnt: verified.value.amountMnt,
           method: 'qpay',

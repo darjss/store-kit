@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "8e224f53-2041-4fdf-b7ed-f65c20272885",
+  "id": "fc03aad5-f9ec-4038-ac6c-31b9d5cdf01a",
   "prevIds": [
-    "74fe37c9-98d7-470c-aa00-c4c3420cceb6"
+    "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
@@ -48,7 +48,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -118,7 +118,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -198,7 +198,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -328,7 +328,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -388,7 +388,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -538,7 +538,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -618,7 +618,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -768,7 +768,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -888,7 +888,7 @@
     },
     {
       "type": "text",
-      "notNull": false,
+      "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -1162,6 +1162,51 @@
     },
     {
       "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "brand_pk",
+      "entityType": "pks",
+      "table": "brand"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "category_pk",
+      "entityType": "pks",
+      "table": "category"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "product_pk",
+      "entityType": "pks",
+      "table": "product"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "product_image_pk",
+      "entityType": "pks",
+      "table": "product_image"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": true,
+      "name": "product_variant_pk",
+      "entityType": "pks",
+      "table": "product_variant"
+    },
+    {
+      "columns": [
         "variant_id",
         "image_id"
       ],
@@ -1174,82 +1219,37 @@
       "columns": [
         "id"
       ],
-      "nameExplicit": false,
-      "name": "brand_pk",
-      "table": "brand",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "category_pk",
-      "table": "category",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "product_pk",
-      "table": "product",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "product_image_pk",
-      "table": "product_image",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "product_variant_pk",
-      "table": "product_variant",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
+      "nameExplicit": true,
       "name": "checkout_settings_pk",
-      "table": "checkout_settings",
-      "entityType": "pks"
+      "entityType": "pks",
+      "table": "checkout_settings"
     },
     {
       "columns": [
         "id"
       ],
-      "nameExplicit": false,
+      "nameExplicit": true,
       "name": "customer_order_pk",
-      "table": "customer_order",
-      "entityType": "pks"
+      "entityType": "pks",
+      "table": "customer_order"
     },
     {
       "columns": [
         "id"
       ],
-      "nameExplicit": false,
+      "nameExplicit": true,
       "name": "order_line_pk",
-      "table": "order_line",
-      "entityType": "pks"
+      "entityType": "pks",
+      "table": "order_line"
     },
     {
       "columns": [
         "id"
       ],
-      "nameExplicit": false,
+      "nameExplicit": true,
       "name": "payment_pk",
-      "table": "payment",
-      "entityType": "pks"
+      "entityType": "pks",
+      "table": "payment"
     },
     {
       "columns": [
@@ -1636,10 +1636,34 @@
       "table": "payment"
     },
     {
+      "value": "length(\"id\") = 30\n    and substr(\"id\", 1, 4) = 'brd_'\n    and substr(\"id\", 5, 1) glob '[0-7]'\n    and substr(\"id\", 6) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
+      "name": "brand_id_typeid_check",
+      "entityType": "checks",
+      "table": "brand"
+    },
+    {
+      "value": "length(\"id\") = 30\n    and substr(\"id\", 1, 4) = 'cat_'\n    and substr(\"id\", 5, 1) glob '[0-7]'\n    and substr(\"id\", 6) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
+      "name": "category_id_typeid_check",
+      "entityType": "checks",
+      "table": "category"
+    },
+    {
       "value": "\"status\" in ('draft', 'active', 'archived')",
       "name": "product_status_check",
       "entityType": "checks",
       "table": "product"
+    },
+    {
+      "value": "length(\"id\") = 31\n    and substr(\"id\", 1, 5) = 'prod_'\n    and substr(\"id\", 6, 1) glob '[0-7]'\n    and substr(\"id\", 7) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
+      "name": "product_id_typeid_check",
+      "entityType": "checks",
+      "table": "product"
+    },
+    {
+      "value": "length(\"id\") = 30\n    and substr(\"id\", 1, 4) = 'img_'\n    and substr(\"id\", 5, 1) glob '[0-7]'\n    and substr(\"id\", 6) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
+      "name": "product_image_id_typeid_check",
+      "entityType": "checks",
+      "table": "product_image"
     },
     {
       "value": "\"price_mnt\" >= 0",
@@ -1660,7 +1684,13 @@
       "table": "product_variant"
     },
     {
-      "value": "\"id\" = 'default'",
+      "value": "length(\"id\") = 30\n    and substr(\"id\", 1, 4) = 'var_'\n    and substr(\"id\", 5, 1) glob '[0-7]'\n    and substr(\"id\", 6) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
+      "name": "product_variant_id_typeid_check",
+      "entityType": "checks",
+      "table": "product_variant"
+    },
+    {
+      "value": "\"id\" = 'cfg_00000000000000000000000001'",
       "name": "checkout_settings_id_check",
       "entityType": "checks",
       "table": "checkout_settings"
@@ -1690,6 +1720,12 @@
       "table": "customer_order"
     },
     {
+      "value": "length(\"id\") = 30\n    and substr(\"id\", 1, 4) = 'ord_'\n    and substr(\"id\", 5, 1) glob '[0-7]'\n    and substr(\"id\", 6) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
+      "name": "customer_order_id_typeid_check",
+      "entityType": "checks",
+      "table": "customer_order"
+    },
+    {
       "value": "\"unit_price_mnt\" >= 0",
       "name": "order_line_unit_price_mnt_check",
       "entityType": "checks",
@@ -1714,6 +1750,12 @@
       "table": "order_line"
     },
     {
+      "value": "length(\"id\") = 31\n    and substr(\"id\", 1, 5) = 'line_'\n    and substr(\"id\", 6, 1) glob '[0-7]'\n    and substr(\"id\", 7) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
+      "name": "order_line_id_typeid_check",
+      "entityType": "checks",
+      "table": "order_line"
+    },
+    {
       "value": "\"method\" in ('qpay', 'bank_transfer')",
       "name": "payment_method_check",
       "entityType": "checks",
@@ -1728,6 +1770,12 @@
     {
       "value": "\"amount_mnt\" >= 0",
       "name": "payment_amount_mnt_check",
+      "entityType": "checks",
+      "table": "payment"
+    },
+    {
+      "value": "length(\"id\") = 30\n    and substr(\"id\", 1, 4) = 'pay_'\n    and substr(\"id\", 5, 1) glob '[0-7]'\n    and substr(\"id\", 6) not glob '*[^0123456789abcdefghjkmnpqrstvwxyz]*'",
+      "name": "payment_id_typeid_check",
       "entityType": "checks",
       "table": "payment"
     }

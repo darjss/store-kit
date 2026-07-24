@@ -1,10 +1,35 @@
 import { and, asc, count, desc, eq, sql } from 'drizzle-orm'
 
 import { db } from '../client'
-import { brand, category, product, productVariant } from '../schema/catalog'
+import {
+  brand,
+  category,
+  product,
+  productImage,
+  productVariant,
+  productVariantImage,
+} from '../schema/catalog'
 import type { ProductListFilters } from '../schemas/catalog'
 
-export const listPublishedProducts = async (filters: ProductListFilters = {}) => {
+export type PublishedProduct = typeof product.$inferSelect & {
+  brand: typeof brand.$inferSelect | null
+  category: typeof category.$inferSelect | null
+  images: (typeof productImage.$inferSelect)[]
+  variants: (typeof productVariant.$inferSelect & {
+    imageLinks: (typeof productVariantImage.$inferSelect)[]
+  })[]
+}
+
+type PublishedProductList = {
+  items: PublishedProduct[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export const listPublishedProducts = async (
+  filters: ProductListFilters = {},
+): Promise<PublishedProductList> => {
   const limit = Math.min(filters.limit ?? 24, 100)
   const offset = filters.offset ?? 0
   const conditions = [eq(product.status, 'active')]
@@ -120,7 +145,7 @@ export const listPublishedProducts = async (filters: ProductListFilters = {}) =>
   return { items, total, limit, offset }
 }
 
-export const findPublishedProductBySlug = async (slug: string) =>
+export const findPublishedProductBySlug = (slug: string): Promise<PublishedProduct | undefined> =>
   db.query.product.findFirst({
     where: { slug, status: 'active' },
     with: {
@@ -135,14 +160,21 @@ export const findPublishedProductBySlug = async (slug: string) =>
     },
   })
 
-export const listPublishedCategories = async () =>
+export const listPublishedCategories = (): Promise<(typeof category.$inferSelect)[]> =>
   db.query.category.findMany({
     where: { active: true },
     orderBy: { sortOrder: 'asc', name: 'asc' },
   })
 
-export const listBrands = async () =>
+export const listBrands = (): Promise<(typeof brand.$inferSelect)[]> =>
   db.query.brand.findMany({
     where: { products: { status: 'active' } },
     orderBy: { name: 'asc' },
   })
+
+export const catalogQuery = {
+  listPublishedProducts,
+  findPublishedProductBySlug,
+  listPublishedCategories,
+  listBrands,
+}

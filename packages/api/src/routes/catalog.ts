@@ -1,9 +1,4 @@
-import {
-  getCatalogProduct,
-  listCatalogBrands,
-  listCatalogCategories,
-  listCatalogProducts,
-} from '@store-kit/commerce/catalog'
+import { commerce } from '@store-kit/commerce'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
@@ -43,17 +38,23 @@ export const catalogRoutes = new Elysia({ aot: false, prefix: '/api' })
     set.headers['cloudflare-cdn-cache-control'] =
       'public, max-age=60, stale-while-revalidate=300, stale-if-error=86400'
   })
-  .get('/products', async ({ query }) => Result.serialize(await listCatalogProducts(query)), {
-    query: productListQuery,
-  })
+  .get(
+    '/products',
+    async ({ query }) => Result.serialize(await commerce.catalog.listProducts(query)),
+    {
+      query: productListQuery,
+    },
+  )
   .get(
     '/products/:slug',
-    async ({ params }) => Result.serialize(await getCatalogProduct(params.slug)),
+    async ({ params }) => Result.serialize(await commerce.catalog.getProduct(params.slug)),
     {
       params: t.Object({
         slug: t.String({ pattern: slugPattern }),
       }),
     },
   )
-  .get('/categories', async () => Result.serialize(Result.ok(await listCatalogCategories())))
-  .get('/brands', async () => Result.serialize(Result.ok(await listCatalogBrands())))
+  .get('/categories', async () =>
+    Result.serialize(Result.ok(await commerce.catalog.listCategories())),
+  )
+  .get('/brands', async () => Result.serialize(Result.ok(await commerce.catalog.listBrands())))

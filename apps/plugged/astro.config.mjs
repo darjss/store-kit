@@ -10,5 +10,6 @@ export default defineConfig({
   integrations: [solid()],
   vite: {
     plugins: [tailwindcss()],
+    resolve: { tsconfigPaths: true },
   },
 })

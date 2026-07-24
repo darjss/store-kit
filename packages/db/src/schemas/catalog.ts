@@ -3,6 +3,13 @@ import { Type } from 'typebox'
 import type { Static } from 'typebox'
 
 import {
+  brandIdSchema,
+  categoryIdSchema,
+  productIdSchema,
+  productImageIdSchema,
+  productVariantIdSchema,
+} from '../ids.ts'
+import {
   brand,
   category,
   product,
@@ -38,15 +45,20 @@ export const productDetailsSchema = Type.Record(Type.String(), productDetailValu
 export const variantOptionsSchema = Type.Record(Type.String(), Type.String())
 
 const brandRefinements = {
+  id: () => brandIdSchema,
   slug: () => slugSchema,
   websiteUrl: () => urlSchema,
 }
 
 const categoryRefinements = {
+  id: () => categoryIdSchema,
   slug: () => slugSchema,
 }
 
 const productRefinements = {
+  id: () => productIdSchema,
+  brandId: () => Type.Union([brandIdSchema, Type.Null()]),
+  categoryId: () => Type.Union([categoryIdSchema, Type.Null()]),
   slug: () => slugSchema,
   status: () => productStatusSchema,
   details: () => productDetailsSchema,
@@ -54,10 +66,23 @@ const productRefinements = {
 }
 
 const productVariantRefinements = {
+  id: () => productVariantIdSchema,
+  productId: () => productIdSchema,
   options: () => variantOptionsSchema,
   priceMnt: () => nonNegativeIntegerSchema,
   compareAtPriceMnt: () => nonNegativeIntegerSchema,
   stockQuantity: () => nonNegativeIntegerSchema,
+}
+
+const productImageRefinements = {
+  id: () => productImageIdSchema,
+  productId: () => productIdSchema,
+}
+
+const productVariantImageRefinements = {
+  productId: () => productIdSchema,
+  variantId: () => productVariantIdSchema,
+  imageId: () => productImageIdSchema,
 }
 
 export const selectBrandSchema = createSelectSchema(brand, brandRefinements)
@@ -72,9 +97,9 @@ export const selectProductSchema = createSelectSchema(product, productRefinement
 export const insertProductSchema = createInsertSchema(product, productRefinements)
 export const updateProductSchema = createUpdateSchema(product, productRefinements)
 
-export const selectProductImageSchema = createSelectSchema(productImage)
-export const insertProductImageSchema = createInsertSchema(productImage)
-export const updateProductImageSchema = createUpdateSchema(productImage)
+export const selectProductImageSchema = createSelectSchema(productImage, productImageRefinements)
+export const insertProductImageSchema = createInsertSchema(productImage, productImageRefinements)
+export const updateProductImageSchema = createUpdateSchema(productImage, productImageRefinements)
 
 export const selectProductVariantSchema = createSelectSchema(
   productVariant,
@@ -89,9 +114,18 @@ export const updateProductVariantSchema = createUpdateSchema(
   productVariantRefinements,
 )
 
-export const selectProductVariantImageSchema = createSelectSchema(productVariantImage)
-export const insertProductVariantImageSchema = createInsertSchema(productVariantImage)
-export const updateProductVariantImageSchema = createUpdateSchema(productVariantImage)
+export const selectProductVariantImageSchema = createSelectSchema(
+  productVariantImage,
+  productVariantImageRefinements,
+)
+export const insertProductVariantImageSchema = createInsertSchema(
+  productVariantImage,
+  productVariantImageRefinements,
+)
+export const updateProductVariantImageSchema = createUpdateSchema(
+  productVariantImage,
+  productVariantImageRefinements,
+)
 
 export const productListFiltersSchema = Type.Object({
   category: Type.Optional(slugSchema),

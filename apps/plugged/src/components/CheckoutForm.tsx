@@ -1,8 +1,9 @@
 /* oxlint-disable tailwindcss/no-unknown-classes, eslint/no-underscore-dangle */
+import type { CheckoutCreated, CheckoutError } from '@store-kit/contracts/checkout'
 import { cartItems, cartLineInputs, clearCart, openCart } from '@store-kit/storefront/cart/store'
 import { createStorefrontQueryClient } from '@store-kit/storefront/query-client'
 import { cartQuery } from '@store-kit/storefront/query-options/cart'
-import { checkoutMutation } from '@store-kit/storefront/query-options/shopping'
+import { checkoutMutation } from '@store-kit/storefront/query-options/checkout'
 import { createForm } from '@tanstack/solid-form'
 import { QueryClientProvider, createMutation, createQuery } from '@tanstack/solid-query'
 import { For, Match, Show, Switch, createSignal, onMount } from 'solid-js'
@@ -21,18 +22,11 @@ const districts = [
 const money = new Intl.NumberFormat('mn-MN')
 const fieldErrorId = (name: string) => `${name}-error`
 
-type NextAction =
-  | { type: 'qpay'; qrText: string; qrImage: string; urls: { name: string; link: string }[] }
-  | { type: 'bank_transfer'; bankName: string; accountName: string; accountNumber: string }
-type CreatedOrder = {
-  orderId: string
-  orderNumber: string
-  statusToken: string
-  nextAction: NextAction
-}
-const qpayAction = (order: CreatedOrder) =>
+type TransportError = { _tag: 'TransportError'; message: string }
+
+const qpayAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'qpay' ? order.nextAction : undefined
-const bankAction = (order: CreatedOrder) =>
+const bankAction = (order: CheckoutCreated) =>
   order.nextAction.type === 'bank_transfer' ? order.nextAction : undefined
 
 function FormOwner() {
@@ -41,8 +35,8 @@ function FormOwner() {
     ...cartQuery.validate([...cartItems()]),
     enabled: false,
   }))
-  const [domainError, setDomainError] = createSignal<unknown>()
-  const [created, setCreated] = createSignal<CreatedOrder>()
+  const [domainError, setDomainError] = createSignal<CheckoutError | TransportError>()
+  const [created, setCreated] = createSignal<CheckoutCreated>()
 
   const form = createForm(() => ({
     defaultValues: {
@@ -125,8 +119,8 @@ function FormOwner() {
   const fieldError = (name: string) =>
     error()?.fields?.find(item => item.path.endsWith(`/${name}`))?.message
   const clearFieldError = (name: string) => {
-    const current = error()
-    if (current?._tag !== 'InvalidCheckoutDetails' || !current.fields) return
+    const current = domainError()
+    if (current?._tag !== 'InvalidCheckoutDetails') return
     const fields = current.fields.filter(item => !item.path.endsWith(`/${name}`))
     setDomainError(fields.length > 0 ? { ...current, fields } : undefined)
   }

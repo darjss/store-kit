@@ -16,3 +16,5 @@ export const getSystemStatus = (available: boolean) =>
         _tag: 'SystemUnavailable',
         message: 'The system is unavailable.',
       })
+
+export const systemOperations = { getStatus: getSystemStatus }
