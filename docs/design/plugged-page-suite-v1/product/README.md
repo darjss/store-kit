@@ -3,6 +3,24 @@
 This directory contains design-only raster references for the TANGZU Wan'er 2
 Red Lion product-detail experience.
 
+## Approved experience: interactive product stage
+
+The product page is an interactive product stage. These rasters show the
+static states; the implemented page adds the physical stage behavior.
+
+- The stage is the dominant object. The product sits on the deep-petrol field
+  like a physical object under cold fluorescent light.
+- Gallery and variant changes swap the product on the stage physically: the
+  outgoing sheet peels away and the incoming sheet settles onto the stack.
+  Motion uses transform and opacity only, stays interruptible, and respects
+  reduced motion.
+- Title, price, stock, variants, quantity, and the add action stay grouped as
+  sharp paper strips in one scanning column. Controls do not animate unless
+  the user acts on them.
+- The IEM's attached cable may remain visible inside product photography as
+  part of the listening chain. It is never merchandise: no category, name,
+  price, action, or isolated treatment.
+
 ## Files
 
 - `product-desktop.png` — 1440 × 1200 complete desktop page.
@@ -29,8 +47,8 @@ The interaction reference shows two USB-C / microphone units for a total of
 
 ### Desktop
 
-- Keep the header compact and structurally black. Product-category navigation,
-  search, and cart remain visible without hover.
+- Keep the shared chrome: ink-black top bar with the category navigation, the
+  persistent search/cart action strip, and the paper rail edges.
 - Use a practical 58/42 gallery-to-purchase split. The gallery is the dominant
   visual object, while title, price, stock, variants, quantity, and the primary
   action remain grouped in one scanning column.
@@ -76,6 +94,11 @@ The interaction reference shows two USB-C / microphone units for a total of
   section labels. Never stretch Cyrillic.
 - Keep prices tabular and visually paired with their variants. Preserve the
   tugrik symbol and comma grouping.
+
+## Navigation rule
+
+- Category navigation is `IEM`, `DAC`, and `ACCESSORIES`. Never label
+  navigation Eartips, and never imply unseeded accessory stock.
 
 ## Texture and color
 

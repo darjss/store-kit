@@ -154,6 +154,31 @@ export default defineConfig({
         cwd: 'apps/plugged',
         cache: false,
       },
+      'plugged:browser:start': {
+        command: 'node --experimental-strip-types plugged-local-worker.ts start',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:browser:status': {
+        command: 'node --experimental-strip-types plugged-local-worker.ts status',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:browser:health': {
+        command: 'node --experimental-strip-types plugged-local-worker.ts health',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:browser:logs': {
+        command: 'node --experimental-strip-types plugged-local-worker.ts logs',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'plugged:browser:stop': {
+        command: 'node --experimental-strip-types plugged-local-worker.ts stop',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
       'plugged:route': {
         command: 'node --experimental-strip-types ../../scripts/portless-alias.ts plugged',
         cwd: 'apps/plugged',

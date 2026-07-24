@@ -40,6 +40,7 @@ function createProductPurchaseState(product: PurchasableProduct) {
   const [quantity, setQuantityState] = createSignal(
     clampPurchaseQuantity(1, initialVariant?.stockQuantity ?? 0),
   )
+  const [selectedImageId, setSelectedImageId] = createSignal(product.images[0]?.id ?? '')
   const [announcement, setAnnouncement] = createSignal<PurchaseAnnouncement>()
 
   const selectedVariant = createMemo(() =>
@@ -48,10 +49,9 @@ function createProductPurchaseState(product: PurchasableProduct) {
   const maximumQuantity = createMemo(() =>
     maximumPurchaseQuantity(selectedVariant()?.stockQuantity ?? 0),
   )
-  const selectedImage = createMemo(() => {
-    const linkedImage = selectedVariant()?.imageLinks[0]
-    return product.images.find(image => image.id === linkedImage?.imageId) ?? product.images[0]
-  })
+  const selectedImage = createMemo(
+    () => product.images.find(image => image.id === selectedImageId()) ?? product.images[0],
+  )
 
   const setQuantity = (nextQuantity: number) => {
     const maximum = maximumQuantity()
@@ -66,6 +66,8 @@ function createProductPurchaseState(product: PurchasableProduct) {
     if (!variant) return false
 
     setSelectedVariantId(variant.id)
+    const linkedImage = variant.imageLinks[0]
+    if (linkedImage) setSelectedImageId(linkedImage.imageId)
     const currentQuantity = quantity()
     const clamped = clampPurchaseQuantity(currentQuantity, variant.stockQuantity)
     setQuantityState(clamped)
@@ -107,6 +109,11 @@ function createProductPurchaseState(product: PurchasableProduct) {
     selectedVariantId,
     selectedVariant,
     selectedImage,
+    selectImage: (imageId: string) => {
+      if (!product.images.some(image => image.id === imageId)) return false
+      setSelectedImageId(imageId)
+      return true
+    },
     quantity,
     maximumQuantity,
     announcement,
@@ -144,6 +151,7 @@ export type ProductPurchaseSelection = {
   quantity: number
   maximumQuantity: number
   selectVariant: (variantId: string) => boolean
+  selectImage: (imageId: string) => boolean
   setQuantity: (quantity: number) => void
   decrementQuantity: () => void
   incrementQuantity: () => void
@@ -163,6 +171,7 @@ function Selection(props: SelectionProps) {
     quantity: purchase.quantity(),
     maximumQuantity: purchase.maximumQuantity(),
     selectVariant: purchase.selectVariant,
+    selectImage: purchase.selectImage,
     setQuantity: purchase.setQuantity,
     decrementQuantity: purchase.decrementQuantity,
     incrementQuantity: purchase.incrementQuantity,

@@ -58,7 +58,7 @@ const fieldMessage = (state: Accessor<FieldErrorState>, message: string) =>
 function ErrorNotice(props: ParentProps<{ title: string }>) {
   return (
     <Alert
-      class="border-warning bg-paper-clean mb-4 border-4 p-4 [&_[data-slot=alert-action]]:static [&_[data-slot=alert-action]]:mt-3 [&_[data-slot=alert-action]]:translate-y-0"
+      class="dossier-sheet border-warning! bg-paper-clean text-ink mb-6 p-4 [&_[data-slot=alert-action]]:static [&_[data-slot=alert-action]]:mt-3 [&_[data-slot=alert-action]]:translate-y-0"
       variant="destructive"
     >
       <AlertTitle>{props.title}</AlertTitle>
@@ -174,14 +174,14 @@ function FormOwner() {
     <Switch>
       <Match when={created()}>
         {order => (
-          <section class="border-ink bg-paper-clean [&>h1]:font-display mx-auto w-[min(760px,100%)] border-[5px] p-[clamp(1rem,4vw,3rem)] [&>h1]:text-[5rem] [&>h1]:leading-[0.8] max-md:[&>h1]:text-[3.8rem]">
-            <p class="text-success inline-block -rotate-2 border-3 border-current px-2 py-1 font-black">
-              ЗАХИАЛГА ҮҮСЛЭЭ
-            </p>
-            <h1>{order().orderNumber}</h1>
+          <section class="dossier-sheet mx-auto w-[min(780px,100%)] p-[clamp(1rem,5vw,3.5rem)]">
+            <p class="dossier-stamp text-success">ЗАХИАЛГА ҮҮСЛЭЭ / FILED</p>
+            <h1 class="font-body my-6 text-[clamp(2.5rem,10vw,5.5rem)] leading-[0.9] font-black tracking-[-0.035em]">
+              {order().orderNumber}
+            </h1>
             <Show when={qpayAction(order())}>
               {action => (
-                <div class="border-ink my-4 border-y-4 py-4">
+                <div class="border-ink my-6 border-y-4 py-5">
                   <h2>QPay-аар төлөх</h2>
                   <img
                     class="border-ink aspect-square h-auto w-[min(320px,100%)] border-4"
@@ -193,7 +193,10 @@ function FormOwner() {
                   <div class="mt-4 flex flex-wrap gap-2">
                     <For each={action().urls}>
                       {bank => (
-                        <a class="bg-cobalt text-paper p-3 font-extrabold" href={bank.link}>
+                        <a
+                          class="pressable bg-petrol text-paper inline-flex min-h-12 items-center p-3 font-extrabold"
+                          href={bank.link}
+                        >
                           {bank.name}-аар нээх
                         </a>
                       )}
@@ -214,7 +217,7 @@ function FormOwner() {
               )}
             </Show>
             <a
-              class="border-ink bg-orange text-ink inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 px-4 py-3 font-black no-underline transition-transform duration-100 active:scale-[0.97] motion-reduce:transition-none"
+              class="pressable border-ink bg-cyan text-ink inline-flex min-h-12.5 cursor-pointer items-center justify-center border-3 px-4 py-3 font-black no-underline motion-reduce:transition-none"
               href={`/orders/${order().orderId}#token=${encodeURIComponent(order().statusToken)}`}
             >
               Захиалгын төлөв харах →
@@ -224,17 +227,26 @@ function FormOwner() {
       </Match>
       <Match when={true}>
         <Show when={cartItems().length === 0}>
-          <section class="grid min-h-[60vh] place-content-center text-center">
-            <h1 class="font-display text-[5rem] leading-[0.8]">Сагс хоосон.</h1>
+          <section class="text-paper grid min-h-[60vh] place-content-center text-center">
+            <h1 class="font-body text-[clamp(2.5rem,10vw,5rem)] leading-none font-black">
+              Сагс хоосон.
+            </h1>
             <a href="/products">Дэлгүүр рүү буцах →</a>
           </section>
         </Show>
         <Show when={cartItems().length > 0}>
-          <Checkout.Form class="grid grid-cols-12 items-start gap-8 max-md:flex max-md:flex-col">
-            <div class="col-[1/8] max-md:w-full">
-              <h1 class="font-display text-[clamp(4rem,9vw,6rem)] leading-[0.75] max-md:text-[4.5rem]">
-                ЗАХИАЛГА
-              </h1>
+          <Checkout.Form class="mx-auto grid w-full max-w-295 grid-cols-12 items-start gap-[clamp(1.5rem,4vw,4rem)] pb-8 max-md:flex max-md:flex-col">
+            <div class="col-[1/8] w-full min-w-0">
+              <header class="border-cyan text-paper mb-8 border-b-4 pb-5">
+                <p class="dossier-stamp text-cyan mb-4">ORDER DOSSIER / 001</p>
+                <h1 class="font-body m-0 max-w-[9ch] text-[clamp(2.65rem,8vw,5.5rem)] leading-[0.9] font-black tracking-[-0.035em] text-balance">
+                  ЗАХИАЛГЫН ФАЙЛ
+                </h1>
+                <p class="text-paper/80 mt-4 max-w-[55ch]">
+                  Гурван хуудсыг бөглөж, төлбөрийн аргаа сонгоно уу. Таны оруулсан утга алдаа гарсан
+                  ч хадгалагдана.
+                </p>
+              </header>
               <checkout.form.ErrorSummary>
                 {summary => (
                   <Show when={summary().visible}>
@@ -281,8 +293,18 @@ function FormOwner() {
                   </Show>
                 </ErrorNotice>
               </Show>
-              <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
-                <h2>Холбоо барих</h2>
+              <section class="dossier-sheet [&_input]:border-ink mb-7 animate-[dossier-reveal_420ms_var(--ease-slam)_both] p-[clamp(1rem,3vw,2rem)] [&_[data-slot=field]]:mb-5 [&_input]:rounded-none [&_input]:border-0 [&_input]:border-b-3 [&_input]:bg-transparent [&_input]:shadow-none">
+                <div class="border-ink mb-6 flex items-start justify-between gap-4 border-b-3 pb-3">
+                  <h2 class="font-body m-0 text-[clamp(1.65rem,5vw,2.4rem)] leading-none font-black">
+                    Холбоо барих
+                  </h2>
+                  <strong
+                    class="font-display text-cyan-deep text-5xl leading-[0.7]"
+                    aria-hidden="true"
+                  >
+                    01
+                  </strong>
+                </div>
                 <Checkout.Field name="customer.name">
                   {field => (
                     <field.ErrorState>
@@ -334,8 +356,18 @@ function FormOwner() {
                   )}
                 </Checkout.Field>
               </section>
-              <section class="border-ink bg-paper-clean [&>h2]:font-display mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
-                <h2>Улаанбаатар хүргэлт</h2>
+              <section class="dossier-sheet [&_input]:border-ink [&_select]:border-ink [&_select]:bg-paper-clean [&_textarea]:border-ink mb-7 animate-[dossier-reveal_420ms_var(--ease-slam)_70ms_both] p-[clamp(1rem,3vw,2rem)] [&_[data-slot=field]]:mb-5 [&_input]:rounded-none [&_input]:border-0 [&_input]:border-b-3 [&_input]:bg-transparent [&_input]:shadow-none [&_select]:rounded-none [&_select]:border-3 [&_textarea]:rounded-none [&_textarea]:border-3 [&_textarea]:bg-transparent [&_textarea]:shadow-none">
+                <div class="border-ink mb-6 flex items-start justify-between gap-4 border-b-3 pb-3">
+                  <h2 class="font-body m-0 text-[clamp(1.65rem,5vw,2.4rem)] leading-none font-black">
+                    Улаанбаатар хүргэлт
+                  </h2>
+                  <strong
+                    class="font-display text-cyan-deep text-5xl leading-[0.7]"
+                    aria-hidden="true"
+                  >
+                    02
+                  </strong>
+                </div>
                 <Checkout.Field name="delivery.district">
                   {field => (
                     <Field>
@@ -421,8 +453,18 @@ function FormOwner() {
                   )}
                 </Checkout.Field>
               </section>
-              <section class="border-ink bg-paper-clean [&>h2]:font-display [&_[role=radiogroup]>label]:border-ink mb-4 border-4 p-[clamp(1rem,2vw,2rem)] [&_[data-slot=field]]:mb-4 [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:min-h-22.5 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4 [&>h2]:text-[2.5rem] [&>h2]:leading-[0.8]">
-                <h2>Төлбөр</h2>
+              <section class="dossier-sheet [&_[role=radiogroup]>label]:border-ink mb-7 animate-[dossier-reveal_420ms_var(--ease-slam)_140ms_both] p-[clamp(1rem,3vw,2rem)] [&_[data-slot=field]]:mb-4 [&_[role=radiogroup]]:grid [&_[role=radiogroup]]:grid-cols-2 [&_[role=radiogroup]]:gap-3 max-md:[&_[role=radiogroup]]:grid-cols-1 [&_[role=radiogroup]_small]:col-2 [&_[role=radiogroup]>label]:relative [&_[role=radiogroup]>label]:min-h-28 [&_[role=radiogroup]>label]:grid-cols-[auto_1fr] [&_[role=radiogroup]>label]:items-center [&_[role=radiogroup]>label]:border-3 [&_[role=radiogroup]>label]:p-4 motion-reduce:[&_[role=radiogroup]>label]:transition-none">
+                <div class="border-ink mb-6 flex items-start justify-between gap-4 border-b-3 pb-3">
+                  <h2 class="font-body m-0 text-[clamp(1.65rem,5vw,2.4rem)] leading-none font-black">
+                    Төлбөр
+                  </h2>
+                  <strong
+                    class="font-display text-cyan-deep text-5xl leading-[0.7]"
+                    aria-hidden="true"
+                  >
+                    03
+                  </strong>
+                </div>
                 <Checkout.Field name="paymentMethod">
                   {field => (
                     <field.ErrorState>
@@ -436,13 +478,13 @@ function FormOwner() {
                                 message() ? fieldErrorId('paymentMethod') : undefined
                               }
                             >
-                              <FieldLabel for="payment-qpay">
+                              <FieldLabel class="payment-choice" for="payment-qpay">
                                 <RadioGroupItem id="payment-qpay" value="qpay" />
                                 <span>
                                   QPay <small>QR болон банкны апп</small>
                                 </span>
                               </FieldLabel>
-                              <FieldLabel for="payment-bank-transfer">
+                              <FieldLabel class="payment-choice" for="payment-bank-transfer">
                                 <RadioGroupItem id="payment-bank-transfer" value="bank_transfer" />
                                 <span>
                                   Дансаар шилжүүлэх <small>Ажилтан баталгаажуулна</small>
@@ -458,8 +500,9 @@ function FormOwner() {
                 </Checkout.Field>
               </section>
             </div>
-            <aside class="border-ink bg-acid sticky top-4 col-[9/13] min-w-0 border-4 p-4 max-md:relative max-md:top-auto max-md:w-full">
-              <h2 class="font-display text-[3rem] leading-[0.8]">Таны сагс</h2>
+            <aside class="paper-stack border-ink bg-cyan sticky top-4 col-[9/13] min-w-0 border-3 p-5 max-md:relative max-md:top-auto max-md:w-full max-md:pb-24">
+              <p class="dossier-stamp text-petrol mb-3">PINNED / SUMMARY</p>
+              <h2 class="font-body m-0 text-[2rem] leading-none font-black">Захиалгын дүн</h2>
               <For each={cartItems()}>
                 {item => (
                   <div class="border-ink flex flex-wrap justify-between gap-4 border-b-2 py-3">
@@ -474,7 +517,7 @@ function FormOwner() {
               <Checkout.Submit>
                 {state => (
                   <PendingSubmitButton
-                    class="bg-ink text-paper inline-flex min-h-12.5 w-full cursor-pointer items-center justify-center border-3 px-4 py-3 font-black no-underline transition-transform duration-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
+                    class="pressable bg-ink text-paper border-cyan inline-flex min-h-14 w-full cursor-pointer items-center justify-center rounded-none border-3 px-4 py-3 font-black no-underline disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none max-md:fixed max-md:right-0 max-md:bottom-[calc(4.75rem+env(safe-area-inset-bottom))] max-md:left-0 max-md:z-40 max-md:min-h-16 max-md:border-x-0 max-md:border-b-0 max-md:text-lg"
                     pending={state().pending}
                     pendingChildren="Баталгаажуулж байна…"
                     busyLabel="Захиалгыг баталгаажуулж байна"
@@ -500,7 +543,9 @@ export function CheckoutForm() {
     <Show
       when={mounted()}
       fallback={
-        <div class="grid min-h-[60vh] place-content-center text-center">Сагсыг шалгаж байна…</div>
+        <div class="text-paper grid min-h-[60vh] place-content-center text-center">
+          Сагсыг шалгаж байна…
+        </div>
       }
     >
       {_mounted => {

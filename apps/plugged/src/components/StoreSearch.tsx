@@ -33,33 +33,33 @@ export function StoreSearch(props: { initialOpen: boolean }) {
               <small>Хайх</small>
             </DialogTrigger>
             <DialogContent
-              class="bg-orange! text-ink! fixed! inset-0! z-50! h-dvh! w-full! max-w-none! translate-none! transform-none! gap-0! overflow-y-auto! rounded-none! p-0! ring-0! outline-none! motion-reduce:animate-none!"
+              class="bg-petrol! text-paper! fixed! inset-0! z-50! h-dvh! w-full! max-w-none! translate-none! transform-none! gap-0! overflow-y-auto! rounded-none! p-0! ring-0! outline-none! motion-reduce:animate-none!"
               showCloseButton={false}
               onOpenAutoFocus={event => {
                 event.preventDefault()
                 search.focusInput()
               }}
             >
-              <header class="border-ink flex min-h-30 items-start justify-between gap-4 border-b-[5px] p-[clamp(1rem,3vw,2.5rem)]">
+              <header class="border-paper-clean bg-ink flex min-h-24 items-start justify-between gap-4 border-b-4 p-[clamp(1rem,3vw,2.5rem)]">
                 <div>
-                  <DialogTitle class="font-display text-[clamp(3.8rem,10vw,6rem)] leading-[0.72] tracking-[-0.02em]">
+                  <DialogTitle class="texture-paper clip-cut font-body text-ink inline-block px-4 py-2 text-[clamp(2rem,7vw,4rem)] leading-[0.9] font-black tracking-[-0.035em]">
                     ЮУ СОНСОХ ВЭ?
                   </DialogTitle>
-                  <DialogDescription class="text-ink! mt-2 mb-0 font-extrabold">
-                    IEM, DAC эсвэл cable нэрээр хайна уу.
+                  <DialogDescription class="text-paper! mt-2 mb-0 font-extrabold">
+                    IEM, DAC эсвэл брэндийн нэрээр хайна уу.
                   </DialogDescription>
                 </div>
                 <DialogClose
                   as={Button}
                   variant="outline"
-                  class="border-ink bg-paper-clean text-ink min-h-12 min-w-20 rounded-none border-3 font-black"
+                  class="border-paper-clean bg-paper-clean text-ink min-h-12 min-w-20 rounded-none border-3 font-black"
                   aria-label="Хайлт хаах"
                 >
                   ХААХ ×
                 </DialogClose>
               </header>
               <label
-                class="border-ink bg-paper-clean grid min-h-22 grid-cols-[auto_1fr] items-center gap-4 border-b-[5px] px-[clamp(1rem,3vw,2.5rem)] py-3"
+                class="border-cyan bg-paper-clean text-ink grid min-h-22 grid-cols-[auto_1fr] items-center gap-4 border-b-4 px-[clamp(1rem,3vw,2.5rem)] py-3"
                 for="store-search"
               >
                 <span class="sr-only">Бараа хайх</span>
@@ -72,13 +72,22 @@ export function StoreSearch(props: { initialOpen: boolean }) {
                       id="store-search"
                       value={input.value()}
                       onInput={input.onInput}
-                      placeholder="IEM, DAC, cable…"
+                      placeholder="IEM, DAC, брэнд…"
                       autocomplete="off"
                     />
                   )}
                 </CatalogSearch.Input>
               </label>
               <div class="grid gap-0 p-[clamp(0.75rem,2vw,1.5rem)]" aria-live="polite">
+                <CatalogSearch.Summary>
+                  {summary => (
+                    <Show when={summary.count() !== undefined}>
+                      <p class="border-paper/35 text-cyan m-0 border-b py-3 font-black">
+                        {summary.count()} ҮР ДҮН
+                      </p>
+                    </Show>
+                  )}
+                </CatalogSearch.Summary>
                 <CatalogSearch.Results
                   prompt={() => (
                     <p class="m-0 grid min-h-48 place-items-center text-center text-xl font-extrabold">
@@ -90,10 +99,17 @@ export function StoreSearch(props: { initialOpen: boolean }) {
                       Каталог ухаж байна…
                     </p>
                   )}
-                  error={() => (
-                    <p class="m-0 grid min-h-48 place-items-center text-center text-xl font-extrabold">
-                      Хайлт ажилласангүй. Дахин оролдоно уу.
-                    </p>
+                  error={(_error, retry) => (
+                    <div class="m-0 grid min-h-48 place-items-center text-center text-xl font-extrabold">
+                      <p>Хайлт ажилласангүй.</p>
+                      <Button
+                        class="pressable border-cyan bg-ink text-cyan rounded-none border-2"
+                        type="button"
+                        onClick={retry}
+                      >
+                        ДАХИН ОРОЛДОХ →
+                      </Button>
+                    </div>
                   )}
                   empty={() => (
                     <p class="m-0 grid min-h-48 place-items-center text-center text-xl font-extrabold">
@@ -106,13 +122,13 @@ export function StoreSearch(props: { initialOpen: boolean }) {
                     const variant = product.variants[0]
                     return (
                       <a
-                        class="border-ink bg-paper-clean hover:bg-acid focus-visible:bg-acid grid min-h-30 grid-cols-[7.5rem_minmax(0,1fr)_auto] items-center gap-[clamp(0.75rem,2vw,1.5rem)] border-4 border-b-0 p-3 no-underline last:border-b-4 max-md:grid-cols-[5.5rem_minmax(0,1fr)]"
+                        class="texture-paper text-ink border-ink hover:bg-paper focus-visible:bg-paper pressable mt-3 grid min-h-30 grid-cols-[9rem_minmax(0,1fr)_auto] items-center gap-[clamp(0.75rem,2vw,1.5rem)] border-4 p-3 no-underline transition-[transform,background-color] duration-150 max-md:grid-cols-[7rem_minmax(0,1fr)] max-md:[clip-path:polygon(1%_0,100%_3%,98%_100%,0_96%)]"
                         href={`/products/${product.slug}`}
                       >
                         <Show when={image}>
                           {item => (
                             <ProductImage
-                              class="h-22.5 w-30 object-contain max-md:h-16.5 max-md:w-22"
+                              class="bg-petrol h-24 w-36 object-contain max-md:h-22 max-md:w-28"
                               image={item()}
                               layout="thumbnail"
                             />
@@ -126,7 +142,7 @@ export function StoreSearch(props: { initialOpen: boolean }) {
                             {product.shortDescription}
                           </small>
                         </span>
-                        <b class="border-ink bg-acid border-3 p-2 tabular-nums max-md:col-2 max-md:justify-self-start">
+                        <b class="border-ink bg-cyan text-ink border-3 p-2 text-lg tabular-nums max-md:col-2 max-md:justify-self-start">
                           {variant ? formatMnt(variant.priceMnt) : '—'}
                         </b>
                       </a>
