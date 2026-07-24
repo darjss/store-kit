@@ -33,7 +33,8 @@
     "@tanstack/solid-query": "catalog:",
     "better-result": "catalog:",
     "dismatch": "^2.6.0",
-    "solid-js": "catalog:"
+    "solid-js": "catalog:",
+    "typebox": "catalog:"
   },
   "devDependencies": {
     "@solidjs/testing-library": "^0.8.10",
