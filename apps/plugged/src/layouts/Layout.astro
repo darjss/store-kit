@@ -37,24 +37,24 @@ const activeCategory = Astro.url.searchParams.get("category");
   </head>
   <body class="min-w-0 overflow-x-clip bg-ink pb-20 font-body text-base leading-6 text-ink max-md:pb-nav-clear [&_h1]:[overflow-wrap:anywhere] [&_h2]:[overflow-wrap:anywhere]">
     <a class="fixed top-2 left-2 z-60 -translate-y-[150%] border-3 border-cyan bg-paper-clean px-4 py-3 font-black text-ink focus:translate-y-0" href="#main-content">Үндсэн хэсэг рүү очих</a>
-    <header class="relative z-20 border-b-4 border-paper-clean bg-ink text-paper">
-      <div class="flex min-h-16 items-stretch gap-[clamp(0.5rem,2vw,2rem)] pl-gutter md:pr-[13.25rem] max-md:pr-2">
-        <a class="flex shrink-0 items-center gap-2 no-underline" href="/" aria-label="Plugged нүүр">
-          <img class="size-11 shrink-0 object-cover mix-blend-screen" src="/brand/plugged-logo.webp" width="640" height="640" alt="" />
-          <span class="font-display text-[2rem] leading-[0.8] font-black tracking-[0.02em] text-paper max-[380px]:hidden">PLUGGED<sup class="font-body text-[0.6rem] font-extrabold">®</sup></span>
+    <header class="relative z-20 border-b-4 border-paper-clean bg-ink text-paper xl:fixed xl:inset-y-0 xl:left-0 xl:w-36 xl:border-r-4 xl:border-b-0">
+      <div class="flex min-h-16 items-stretch gap-[clamp(0.5rem,2vw,2rem)] pl-gutter md:pr-[13.25rem] xl:h-full xl:flex-col xl:gap-0 xl:p-3 max-md:pr-2">
+        <a class="flex shrink-0 items-center gap-2 no-underline xl:flex-col xl:py-3" href="/" aria-label="Plugged нүүр">
+          <img class="size-11 shrink-0 object-cover mix-blend-screen xl:size-16" src="/brand/plugged-logo.webp" width="640" height="640" alt="" />
+          <span class="font-display text-[2rem] leading-[0.8] font-black tracking-[0.02em] text-paper xl:text-[1.65rem] max-[380px]:hidden">PLUGGED<sup class="font-body text-[0.6rem] font-extrabold">®</sup></span>
         </a>
-        <nav class="flex items-stretch max-lg:hidden" aria-label="Дэлгүүрийн цэс">
+        <nav class="flex items-stretch xl:mt-10 xl:flex-col max-xl:hidden" aria-label="Дэлгүүрийн цэс">
           {categories.map(category => (
             <a
-              class:list={["pressable flex items-center border-l border-paper/25 px-5 font-extrabold whitespace-nowrap no-underline transition-colors hover:text-cyan", category.slug === activeCategory && "text-cyan shadow-[inset_0_-3px_0_var(--color-cyan)]"]}
+              class:list={["pressable flex items-center border-l border-paper/25 px-5 font-extrabold whitespace-nowrap no-underline transition-colors hover:text-cyan xl:min-h-20 xl:border-t xl:border-l-0 xl:px-2", category.slug === activeCategory && "text-cyan shadow-[inset_0_-3px_0_var(--color-cyan)] xl:shadow-[inset_3px_0_0_var(--color-cyan)]"]}
               href={`/products?category=${category.slug}`}
               aria-current={category.slug === activeCategory ? "page" : undefined}
             >{category.label}</a>
           ))}
         </nav>
-        <a class="pressable m-2 ml-auto flex shrink-0 items-center border-2 border-cyan px-4 font-black whitespace-nowrap text-paper no-underline transition-colors hover:bg-cyan hover:text-ink max-[360px]:px-2 max-[360px]:text-sm" href="/products">БҮХ БАРАА →</a>
+        <a class="pressable m-2 ml-auto flex shrink-0 items-center border-2 border-cyan px-4 font-black whitespace-nowrap text-paper no-underline transition-colors hover:bg-cyan hover:text-ink xl:mt-auto xl:ml-0 xl:min-h-20 xl:justify-center xl:px-2 xl:text-center max-[360px]:px-2 max-[360px]:text-sm" href="/products">БҮХ БАРАА →</a>
       </div>
-      <nav class="flex overflow-x-auto border-t border-paper/20 [scrollbar-width:none] lg:hidden" aria-label="Дэлгүүрийн цэс">
+      <nav class="flex overflow-x-auto border-t border-paper/20 [scrollbar-width:none] xl:hidden" aria-label="Дэлгүүрийн цэс">
         {categories.map(category => (
           <a
             class:list={["pressable shrink-0 px-4 py-2.5 text-sm font-extrabold no-underline", category.slug === activeCategory ? "text-cyan shadow-[inset_0_-2px_0_var(--color-cyan)]" : "border-l border-paper/20 first:border-l-0"]}
@@ -65,7 +65,7 @@ const activeCategory = Astro.url.searchParams.get("category");
       </nav>
     </header>
     <slot />
-    <footer class="border-t-4 border-paper-clean bg-ink text-paper">
+    <footer class="border-t-4 border-paper-clean bg-ink text-paper xl:ml-36">
       <div class="flex justify-between gap-8 px-gutter py-14 max-md:block">
         <strong class="font-display text-[clamp(3rem,8vw,5rem)] leading-[0.8] font-black">PLUGGED / ULAANBAATAR</strong>
         <div class="max-md:mt-6">
