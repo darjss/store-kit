@@ -29,7 +29,10 @@ Do not build customer accounts, admin screens, discounts, reviews, wishlists, de
 - The primary customer is a curious newcomer to portable audio.
 - Storefront navigation and commerce copy use Mongolian.
 - Product names and common audio terms can remain in English where that is natural.
-- The first catalog must present IEMs, DACs, and cables clearly.
+- The first catalog must present IEMs and DACs clearly; DAC remains a primary
+  category. Reserve one broad future Accessories destination without implying
+  stock. Do not promote Eartips as a homepage category or merchandise
+  standalone cables.
 - Plain-language fit labels appear before dense specifications.
 
 ### Visual direction
@@ -384,7 +387,8 @@ Add `useCase?: ProductUseCase` to public product-list filters and stable query k
 
 ### Product type and use-case roles
 
-- `category` remains the product type, such as IEM, DAC, or Cable.
+- `category` remains the product type, such as IEM, DAC, or the future broad
+  Accessories destination.
 - `use_cases` contains customer-oriented guidance.
 - `details` remains display-only product facts.
 - Do not filter arbitrary `details` properties.
@@ -797,7 +801,8 @@ Below the wall, include only sections that support discovery:
 
 - use-case entry points
 - current drop or featured products
-- a compact product-type route for IEMs, DACs, and Cables
+- a compact product-type route for IEMs, DACs, and the future broad Accessories
+  destination
 - delivery and payment reassurance near the first purchase decision
 
 Do not add invented testimonials, fake social proof, fake scarcity, brand counters, generic lifestyle copy, or a long company manifesto.
@@ -807,7 +812,7 @@ Do not add invented testimonials, fake social proof, fake scarcity, brand counte
 Support:
 
 - use-case filters
-- IEM, DAC, and Cable category filters
+- IEM, DAC, and broad Accessories category filters
 - brand filter
 - text search
 - active filter state in the URL
@@ -1095,7 +1100,8 @@ Minimum API and browser checks:
 2. navigate by each use case
 3. filter by product type and brand
 4. search for a product
-5. open an IEM, DAC, and Cable detail page
+5. open seeded IEM and DAC detail pages and confirm the future Accessories
+   destination does not invent product results
 6. change variants and verify image fallback behavior
 7. add, update, and remove cart items across separate Astro islands
 8. reload and confirm browser cart persistence
@@ -1219,7 +1225,10 @@ This plan is complete when:
 - the three dependent pull requests are open with correct bases
 - products can be filtered by the five controlled use cases
 - the homepage, listing, and detail pages use the approved Plugged visual direction
-- IEMs, DACs, and cables have useful newcomer-facing presentation
+- IEMs and DACs have useful newcomer-facing presentation; DAC remains primary,
+  and one broad future Accessories destination does not claim unseeded stock
+- Eartips are not promoted on the homepage and standalone cables are not
+  merchandised
 - the guest cart persists across reloads and separate Astro islands
 - checkout uses server-owned prices, stock, and delivery fee
 - QPay and bank-transfer orders can be created

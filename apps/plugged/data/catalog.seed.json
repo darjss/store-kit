@@ -1,10 +1,29 @@
 {
   "brands": [
     {
-      "id": "brd_0g000000008008000000000001",
-      "slug": "plugged-lab",
-      "name": "Plugged Lab",
-      "description": "Portable audio selected and tested by Plugged."
+      "id": "brd_01ky9frf53e8mshk2e6b3js5b3",
+      "slug": "tangzu",
+      "name": "TANGZU"
+    },
+    {
+      "id": "brd_01ky9frf53e8mshk2msqx7q4tz",
+      "slug": "truthear",
+      "name": "TRUTHEAR"
+    },
+    {
+      "id": "brd_01ky9frf53e8mshk2s4tgmrfx6",
+      "slug": "kz",
+      "name": "KZ"
+    },
+    {
+      "id": "brd_01ky9frf53e8mshk31kyhhrg5f",
+      "slug": "tanchjim",
+      "name": "TANCHJIM"
+    },
+    {
+      "id": "brd_01ky9frf53e8mshk3bbb1vc7by",
+      "slug": "jcally",
+      "name": "JCALLY"
     }
   ],
   "checkoutSettings": {
@@ -18,386 +37,490 @@
   },
   "categories": [
     {
-      "id": "cat_10000000008008000000000001",
+      "id": "cat_01ky9frf53e8mshk3nmnyyeav0",
       "slug": "in-ear-monitors",
-      "name": "In-ear monitors",
-      "description": "Wired earphones for everyday listening and stage monitoring.",
+      "name": "IEMs",
+      "description": "Wired in-ear monitors for hi-fi listening.",
       "sortOrder": 10,
       "active": true
     },
     {
-      "id": "cat_10000000008008000000000002",
+      "id": "cat_01ky9frf53e8mshk3v0b7jn5na",
       "slug": "portable-audio",
-      "name": "Portable audio",
-      "description": "Compact sources and accessories for listening on the move.",
+      "name": "DACs",
+      "description": "Portable USB-C DAC amplifiers for wired listening.",
       "sortOrder": 20,
       "active": true
     },
     {
-      "id": "cat_10000000008008000000000003",
-      "slug": "legacy-audio",
-      "name": "Legacy audio",
-      "description": "Discontinued catalog items kept for historical records.",
-      "sortOrder": 90,
-      "active": false
-    },
-    {
-      "id": "cat_10000000008008000000000004",
-      "slug": "cables",
-      "name": "Cables",
-      "description": "Replacement and balanced portable-audio cables.",
+      "id": "cat_01ky9frf53e8mshk45ngw51wb4",
+      "slug": "eartips",
+      "name": "Eartips",
+      "description": "Replacement silicone and foam eartips for fit, seal, and comfort.",
       "sortOrder": 30,
       "active": true
     }
   ],
   "products": [
     {
-      "id": "prod_1g000000008008000000000001",
-      "slug": "aster-modular-iem",
-      "brandSlug": "plugged-lab",
+      "id": "prod_01ky9frf53e8mshk49nz1tn0wz",
+      "slug": "tangzu-waner-2-red-lion",
+      "brandSlug": "tangzu",
       "categorySlug": "in-ear-monitors",
-      "name": "Aster Modular IEM",
-      "shortDescription": "A balanced dual-driver earphone with an interchangeable plug.",
-      "description": "The Aster combines a dynamic bass driver with a balanced-armature treble driver. Its detachable cable is available with a 3.5 mm plug or a USB-C plug with an integrated DAC.",
+      "name": "TANGZU Wan'er 2 Red Lion",
+      "shortDescription": "Bass Edition hi-fi entry-level IEM, second generation.",
+      "description": "The old Plugged source records three Red Lion variants: 3.5 mm without microphone, 3.5 mm with microphone, and USB-C with microphone.",
       "status": "active",
       "featured": true,
+      "useCases": ["first-iem", "bass"],
       "details": {
-        "driverConfiguration": "1 dynamic + 1 balanced armature",
-        "impedanceOhms": 24,
-        "detachableCable": true,
-        "included": ["Carrying case", "Silicone ear tips", "Foam ear tips"]
+        "edition": "Bass Edition",
+        "connectorOptions": ["3.5 mm", "USB-C"],
+        "microphoneOptions": ["No microphone", "With microphone"]
       },
       "images": [
         {
-          "id": "img_20000000008008000000000001",
-          "source": "data/images/aster-graphite.svg",
-          "r2Key": "catalog/products/aster-modular-iem/graphite.svg",
-          "contentType": "image/svg+xml",
-          "width": 1200,
-          "height": 900,
-          "alt": "Graphite Aster in-ear monitors with braided cable",
+          "id": "img_01ky9frf53e8mshk5scb2mhw3t",
+          "source": "data/images/catalog/tangzu-waner-2-red-lion/1.jpg",
+          "r2Key": "products/product_tangzu-waner-2-red-lion/c24f6d629a344d388d95ed7e3b80c62e.jpg",
+          "contentType": "image/jpeg",
+          "width": 1365,
+          "height": 1278,
+          "alt": "TANGZU Wan'er 2 Red Lion IEM product image",
           "sortOrder": 10
         },
         {
-          "id": "img_20000000008008000000000002",
-          "source": "data/images/aster-copper.svg",
-          "r2Key": "catalog/products/aster-modular-iem/copper.svg",
-          "contentType": "image/svg+xml",
-          "width": 1200,
-          "height": 900,
-          "alt": "Copper Aster in-ear monitors with braided cable",
+          "id": "img_01ky9frf53e8mshk65mcdt4z4k",
+          "source": "data/images/catalog/tangzu-waner-2-red-lion/2.jpg",
+          "r2Key": "products/product_tangzu-waner-2-red-lion/3b31a1410f5c4608952b3494bd50c44d.jpg",
+          "contentType": "image/jpeg",
+          "width": 1500,
+          "height": 931,
+          "alt": "TANGZU Wan'er 2 Red Lion IEM product image",
           "sortOrder": 20
         },
         {
-          "id": "img_20000000008008000000000003",
-          "source": "data/images/aster-kit.svg",
-          "r2Key": "catalog/products/aster-modular-iem/included-kit.svg",
-          "contentType": "image/svg+xml",
-          "width": 1200,
-          "height": 900,
-          "alt": "Aster carrying case, cable, and ear tip set",
+          "id": "img_01ky9frf53e8mshk6c764skg9s",
+          "source": "data/images/catalog/tangzu-waner-2-red-lion/3.jpg",
+          "r2Key": "products/product_tangzu-waner-2-red-lion/16196f68a89a430c93ceedce1e1f4290.jpg",
+          "contentType": "image/jpeg",
+          "width": 1500,
+          "height": 1500,
+          "alt": "TANGZU Wan'er 2 Red Lion IEM product image",
           "sortOrder": 30
+        },
+        {
+          "id": "img_01ky9frf53e8mshk6msdt003cw",
+          "source": "data/images/catalog/tangzu-waner-2-red-lion/4.jpg",
+          "r2Key": "products/product_tangzu-waner-2-red-lion/a3f44d2a08444783aef041e109d126b8.jpg",
+          "contentType": "image/jpeg",
+          "width": 1440,
+          "height": 1440,
+          "alt": "TANGZU Wan'er 2 Red Lion included accessories",
+          "sortOrder": 40
         }
       ],
       "variants": [
         {
-          "id": "var_2g000000008008000000000001",
-          "sku": "PL-ASTER-GR-35",
-          "name": "Graphite / 3.5 mm",
+          "id": "var_01ky9frf53e8mshka354n80wtv",
+          "sku": "PLG-TANGZU-WANER2-35-NOMIC",
+          "name": "3.5 mm / No microphone",
           "options": {
-            "color": "Graphite",
-            "connector": "3.5 mm"
+            "connector": "3.5 mm",
+            "microphone": "No"
           },
-          "priceMnt": 189000,
-          "compareAtPriceMnt": 219000,
-          "stockQuantity": 12,
+          "priceMnt": 135000,
+          "compareAtPriceMnt": 145000,
+          "stockQuantity": 10,
           "active": true,
           "sortOrder": 10,
-          "imageKeys": ["catalog/products/aster-modular-iem/graphite.svg"]
+          "imageKeys": []
         },
         {
-          "id": "var_2g000000008008000000000002",
-          "sku": "PL-ASTER-CP-35",
-          "name": "Copper / 3.5 mm",
+          "id": "var_01ky9frf53e8mshkadpv0ewa5g",
+          "sku": "PLG-TANGZU-WANER2-35-MIC",
+          "name": "3.5 mm / With microphone",
           "options": {
-            "color": "Copper",
-            "connector": "3.5 mm"
+            "connector": "3.5 mm",
+            "microphone": "Yes"
           },
-          "priceMnt": 189000,
-          "stockQuantity": 7,
+          "priceMnt": 140000,
+          "compareAtPriceMnt": 150000,
+          "stockQuantity": 10,
           "active": true,
           "sortOrder": 20,
-          "imageKeys": ["catalog/products/aster-modular-iem/copper.svg"]
+          "imageKeys": []
         },
         {
-          "id": "var_2g000000008008000000000003",
-          "sku": "PL-ASTER-GR-USBC",
-          "name": "Graphite / USB-C",
+          "id": "var_01ky9frf53e8mshkah1299npep",
+          "sku": "PLG-TANGZU-WANER2-USBC-MIC",
+          "name": "USB-C / With microphone",
           "options": {
-            "color": "Graphite",
-            "connector": "USB-C"
+            "connector": "USB-C",
+            "microphone": "Yes"
           },
-          "priceMnt": 229000,
-          "stockQuantity": 4,
+          "priceMnt": 150000,
+          "compareAtPriceMnt": 155000,
+          "stockQuantity": 10,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": []
+        }
+      ]
+    },
+    {
+      "id": "prod_01ky9frf53e8mshk4g7pby1cgq",
+      "slug": "truthear-gate",
+      "brandSlug": "truthear",
+      "categorySlug": "in-ear-monitors",
+      "name": "TRUTHEAR Gate",
+      "shortDescription": "Single dynamic-driver hi-fi IEM with a detachable 3.5 mm cable.",
+      "description": "The old Plugged source records black and white versions, each available with or without a microphone.",
+      "status": "active",
+      "featured": true,
+      "useCases": ["first-iem", "daily-carry"],
+      "details": {
+        "driverConfiguration": "Single dynamic driver",
+        "connector": "3.5 mm",
+        "detachableCable": true,
+        "colorOptions": ["Black", "White"],
+        "microphoneOptions": ["No microphone", "With microphone"]
+      },
+      "images": [
+        {
+          "id": "img_01ky9frf53e8mshk6thje9tvdd",
+          "source": "data/images/catalog/truthear/1.jpg",
+          "r2Key": "products/product_truthear/96679621f15a4e7ca81a550d4a8feecd.jpg",
+          "contentType": "image/jpeg",
+          "width": 1135,
+          "height": 453,
+          "alt": "TRUTHEAR Gate IEM product image",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01ky9frf53e8mshkaw7d9x90fw",
+          "sku": "PLG-TRUTHEAR-GATE-WHITE-MIC",
+          "name": "White / With microphone",
+          "options": {
+            "color": "White",
+            "microphone": "Yes"
+          },
+          "priceMnt": 70000,
+          "stockQuantity": 10,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        },
+        {
+          "id": "var_01ky9frf53e8mshkb4jessrsax",
+          "sku": "PLG-TRUTHEAR-GATE-WHITE-NOMIC",
+          "name": "White / No microphone",
+          "options": {
+            "color": "White",
+            "microphone": "No"
+          },
+          "priceMnt": 65000,
+          "stockQuantity": 10,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": []
+        },
+        {
+          "id": "var_01ky9frf53e8mshkbfx407fjcy",
+          "sku": "PLG-TRUTHEAR-GATE-BLACK-MIC",
+          "name": "Black / With microphone",
+          "options": {
+            "color": "Black",
+            "microphone": "Yes"
+          },
+          "priceMnt": 70000,
+          "stockQuantity": 10,
           "active": true,
           "sortOrder": 30,
           "imageKeys": []
         },
         {
-          "id": "var_2g000000008008000000000004",
-          "sku": "PL-ASTER-CP-USBC",
-          "name": "Copper / USB-C",
+          "id": "var_01ky9frf53e8mshkbjbyns94ac",
+          "sku": "PLG-TRUTHEAR-GATE-BLACK-NOMIC",
+          "name": "Black / No microphone",
           "options": {
-            "color": "Copper",
-            "connector": "USB-C"
+            "color": "Black",
+            "microphone": "No"
           },
-          "priceMnt": 229000,
-          "stockQuantity": 0,
-          "active": false,
+          "priceMnt": 65000,
+          "stockQuantity": 10,
+          "active": true,
           "sortOrder": 40,
-          "imageKeys": ["catalog/products/aster-modular-iem/copper.svg"]
-        }
-      ],
-      "useCases": ["first-iem", "bass", "vocals", "gaming"]
-    },
-    {
-      "id": "prod_1g000000008008000000000002",
-      "slug": "node-mini-usb-c-dac",
-      "brandSlug": "plugged-lab",
-      "categorySlug": "portable-audio",
-      "name": "Node Mini USB-C DAC",
-      "shortDescription": "A pocket-size USB-C DAC with a 3.5 mm headphone output.",
-      "description": "Node Mini adds a clean headphone output to phones, tablets, and laptops. Its aluminum shell and short braided lead are designed for daily carry.",
-      "status": "active",
-      "featured": false,
-      "details": {
-        "input": "USB-C",
-        "output": "3.5 mm",
-        "maximumSampleRate": "32-bit / 384 kHz",
-        "weightGrams": 12
-      },
-      "images": [
-        {
-          "id": "img_20000000008008000000000004",
-          "source": "data/images/node-mini.svg",
-          "r2Key": "catalog/products/node-mini-usb-c-dac/silver.svg",
-          "contentType": "image/svg+xml",
-          "width": 1200,
-          "height": 900,
-          "alt": "Silver Node Mini USB-C DAC and braided lead",
-          "sortOrder": 10
-        }
-      ],
-      "variants": [
-        {
-          "id": "var_2g000000008008000000000005",
-          "sku": "PL-NODE-MINI",
-          "name": "Default",
-          "options": {},
-          "priceMnt": 99000,
-          "stockQuantity": 18,
-          "active": true,
-          "sortOrder": 10,
           "imageKeys": []
         }
-      ],
-      "useCases": ["daily-carry", "gaming"]
+      ]
     },
     {
-      "id": "prod_1g000000008008000000000003",
-      "slug": "arc-mmcx-cable",
-      "brandSlug": "plugged-lab",
-      "name": "Arc MMCX Cable",
-      "shortDescription": "A retired four-core replacement cable with MMCX connectors.",
-      "status": "archived",
-      "featured": false,
-      "details": {
-        "connector": "MMCX",
-        "lengthMeters": 1.2
-      },
-      "images": [],
-      "variants": [
-        {
-          "id": "var_2g000000008008000000000006",
-          "sku": "PL-ARC-MMCX",
-          "name": "Default",
-          "options": {},
-          "priceMnt": 69000,
-          "stockQuantity": 0,
-          "active": false,
-          "sortOrder": 10,
-          "imageKeys": []
-        }
-      ],
-      "useCases": ["daily-carry"]
-    },
-    {
-      "id": "prod_1g000000008008000000000004",
-      "slug": "ember-bass-iem",
-      "brandSlug": "plugged-lab",
+      "id": "prod_01ky9frf53e8mshk4sthnnptdp",
+      "slug": "kz-prx",
+      "brandSlug": "kz",
       "categorySlug": "in-ear-monitors",
-      "name": "Ember Bass IEM",
-      "shortDescription": "A punchy single-dynamic IEM for bass-heavy daily listening.",
-      "description": "A compact metal-shell IEM tuned for firm sub-bass without covering vocals.",
+      "name": "KZ PRX",
+      "shortDescription": "Planar magnetic hi-fi monitoring IEM.",
+      "description": null,
       "status": "active",
       "featured": true,
+      "useCases": ["daily-carry"],
       "details": {
-        "driverConfiguration": "10 mm dynamic",
-        "impedanceOhms": 22,
-        "detachableCable": true
+        "driverConfiguration": "Planar magnetic"
       },
       "images": [
         {
-          "id": "img_20000000008008000000000005",
-          "source": "data/images/aster-copper.svg",
-          "r2Key": "catalog/products/ember-bass-iem/copper.svg",
-          "contentType": "image/svg+xml",
-          "width": 1200,
-          "height": 900,
-          "alt": "Copper Ember IEM and braided cable",
+          "id": "img_01ky9frf53e8mshk73wddbhvg9",
+          "source": "data/images/catalog/kz-prx/1.jpg",
+          "r2Key": "products/product_kz-prx/2e55e0a123564da1a9a11e246dc983e0.jpg",
+          "contentType": "image/jpeg",
+          "width": 1487,
+          "height": 1357,
+          "alt": "KZ PRX planar magnetic IEM product image",
           "sortOrder": 10
+        },
+        {
+          "id": "img_01ky9frf53e8mshk7cd38ysn1s",
+          "source": "data/images/catalog/kz-prx/2.jpg",
+          "r2Key": "products/product_kz-prx/86a09f2eee8f482e937e58a36d4cc247.jpg",
+          "contentType": "image/jpeg",
+          "width": 1500,
+          "height": 1500,
+          "alt": "KZ PRX planar magnetic IEM exploded view",
+          "sortOrder": 20
+        },
+        {
+          "id": "img_01ky9frf53e8mshk7h734y4fq3",
+          "source": "data/images/catalog/kz-prx/3.jpg",
+          "r2Key": "products/product_kz-prx/578b578512854e6b95202a4185b1ed72.jpg",
+          "contentType": "image/jpeg",
+          "width": 1500,
+          "height": 1500,
+          "alt": "KZ PRX planar driver detail",
+          "sortOrder": 30
+        },
+        {
+          "id": "img_01ky9frf53e8mshk7tew7vhbet",
+          "source": "data/images/catalog/kz-prx/4.jpg",
+          "r2Key": "products/product_kz-prx/7892c09bdbbb4415b6ddaee15e465e60.jpg",
+          "contentType": "image/jpeg",
+          "width": 1500,
+          "height": 1500,
+          "alt": "KZ PRX IEM shell product image",
+          "sortOrder": 40
         }
       ],
       "variants": [
         {
-          "id": "var_2g000000008008000000000007",
-          "sku": "PL-EMBER-BA",
+          "id": "var_01ky9frf53e8mshkbxr9kwz324",
+          "sku": "PLG-KZ-PRX",
           "name": "Default",
           "options": {},
-          "priceMnt": 149000,
-          "stockQuantity": 6,
+          "priceMnt": 105000,
+          "compareAtPriceMnt": 155000,
+          "stockQuantity": 10,
           "active": true,
           "sortOrder": 10,
           "imageKeys": []
         }
-      ],
-      "useCases": ["bass", "daily-carry"]
+      ]
     },
     {
-      "id": "prod_1g000000008008000000000005",
-      "slug": "veil-vocal-iem",
-      "brandSlug": "plugged-lab",
+      "id": "prod_01ky9frf53e8mshk548wgfbp2p",
+      "slug": "tanchjim-bunny",
+      "brandSlug": "tanchjim",
       "categorySlug": "in-ear-monitors",
-      "name": "Veil Vocal IEM",
-      "shortDescription": "A clear midrange IEM for vocals, acoustic music, and calls.",
-      "description": "Veil keeps voices forward and edges controlled for long listening sessions.",
+      "name": "TANCHJIM Bunny",
+      "shortDescription": "Wired in-ear hi-fi earphones.",
+      "description": "The old Plugged source records a 3.5 mm version and a USB-C DSP version.",
       "status": "active",
       "featured": false,
+      "useCases": ["first-iem", "daily-carry"],
       "details": {
-        "driverConfiguration": "1 dynamic + 1 balanced armature",
-        "impedanceOhms": 28,
-        "detachableCable": true
+        "connectorOptions": ["3.5 mm", "USB-C DSP"]
       },
       "images": [
         {
-          "id": "img_20000000008008000000000006",
-          "source": "data/images/aster-graphite.svg",
-          "r2Key": "catalog/products/veil-vocal-iem/graphite.svg",
-          "contentType": "image/svg+xml",
-          "width": 1200,
-          "height": 900,
-          "alt": "Graphite Veil IEM with silver cable",
+          "id": "img_01ky9frf53e8mshk86v9z7trha",
+          "source": "data/images/catalog/tanchjim-bunny/1.jpg",
+          "r2Key": "products/product_tanchjim-bunny/077cab1e238d4bfa968fd3049a94e7eb.jpg",
+          "contentType": "image/jpeg",
+          "width": 1500,
+          "height": 1220,
+          "alt": "TANCHJIM Bunny IEM product image",
           "sortOrder": 10
+        },
+        {
+          "id": "img_01ky9frf53e8mshk88ej3fbzbx",
+          "source": "data/images/catalog/tanchjim-bunny/2.jpg",
+          "r2Key": "products/product_tanchjim-bunny/dc84e0989531468db972cd7a92c99d82.jpg",
+          "contentType": "image/jpeg",
+          "width": 1000,
+          "height": 1425,
+          "alt": "TANCHJIM Bunny dual-chamber driver detail",
+          "sortOrder": 20
+        },
+        {
+          "id": "img_01ky9frf53e8mshk8h48j5458v",
+          "source": "data/images/catalog/tanchjim-bunny/3.jpg",
+          "r2Key": "products/product_tanchjim-bunny/705ee2e0b41c4cd7a6a9ed07656322cd.jpg",
+          "contentType": "image/jpeg",
+          "width": 1000,
+          "height": 1425,
+          "alt": "TANCHJIM Bunny diaphragm detail",
+          "sortOrder": 30
+        },
+        {
+          "id": "img_01ky9frf53e8mshk8tz9w6dxz3",
+          "source": "data/images/catalog/tanchjim-bunny/4.jpg",
+          "r2Key": "products/product_tanchjim-bunny/04b4a3fe20404da292a097bd38fe1889.jpg",
+          "contentType": "image/jpeg",
+          "width": 1000,
+          "height": 1500,
+          "alt": "TANCHJIM Bunny acoustic maze detail",
+          "sortOrder": 40
         }
       ],
       "variants": [
         {
-          "id": "var_2g000000008008000000000008",
-          "sku": "PL-VEIL-VOC",
-          "name": "Default",
-          "options": {},
-          "priceMnt": 169000,
-          "stockQuantity": 3,
+          "id": "var_01ky9frf53e8mshkc7tc0hj08x",
+          "sku": "PLG-TANCHJIM-BUNNY-35",
+          "name": "3.5 mm",
+          "options": {
+            "connector": "3.5 mm"
+          },
+          "priceMnt": 65000,
+          "compareAtPriceMnt": 70000,
+          "stockQuantity": 10,
           "active": true,
           "sortOrder": 10,
           "imageKeys": []
+        },
+        {
+          "id": "var_01ky9frf53e8mshkcb6fhb0hcm",
+          "sku": "PLG-TANCHJIM-BUNNY-USBC-DSP",
+          "name": "USB-C DSP",
+          "options": {
+            "connector": "USB-C DSP"
+          },
+          "priceMnt": 65000,
+          "compareAtPriceMnt": 70000,
+          "stockQuantity": 10,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": []
         }
-      ],
-      "useCases": ["vocals", "first-iem"]
+      ]
     },
     {
-      "id": "prod_1g000000008008000000000006",
-      "slug": "node-pro-balanced-dac",
-      "brandSlug": "plugged-lab",
+      "id": "prod_01ky9frf53e8mshk58gbn38vt8",
+      "slug": "truthear-keyx",
+      "brandSlug": "truthear",
       "categorySlug": "portable-audio",
-      "name": "Node Pro Balanced DAC",
-      "shortDescription": "A pocket DAC with 3.5 mm and 4.4 mm headphone outputs.",
-      "description": "Node Pro gives phones and laptops more output power while staying pocketable.",
+      "name": "TRUTHEAR KEYX",
+      "shortDescription": "Portable lossless USB-C DAC/AMP dongle.",
+      "description": null,
       "status": "active",
       "featured": true,
+      "useCases": ["daily-carry"],
       "details": {
         "input": "USB-C",
-        "output": "3.5 mm + 4.4 mm",
-        "maximumSampleRate": "32-bit / 384 kHz",
-        "weightGrams": 28
+        "productType": "Portable DAC/AMP"
       },
       "images": [
         {
-          "id": "img_20000000008008000000000007",
-          "source": "data/images/node-mini.svg",
-          "r2Key": "catalog/products/node-pro-balanced-dac/silver.svg",
-          "contentType": "image/svg+xml",
-          "width": 1200,
-          "height": 900,
-          "alt": "Silver Node Pro portable DAC",
+          "id": "img_01ky9frf53e8mshk94c0cb7cfq",
+          "source": "data/images/catalog/truthear-keyx-portable-dac-amplifier/1.jpg",
+          "r2Key": "products/product_truthear-keyx-portable-dac-amplifier/dbf723c673e7415baa703d35d990ac36.jpg",
+          "contentType": "image/jpeg",
+          "width": 790,
+          "height": 1393,
+          "alt": "TRUTHEAR KEYX portable DAC product image",
           "sortOrder": 10
+        },
+        {
+          "id": "img_01ky9frf53e8mshk98senh1gdx",
+          "source": "data/images/catalog/truthear-keyx-portable-dac-amplifier/2.jpg",
+          "r2Key": "products/product_truthear-keyx-portable-dac-amplifier/5fc2be0ca450451f8bd86212797a14ed.jpg",
+          "contentType": "image/jpeg",
+          "width": 790,
+          "height": 1342,
+          "alt": "TRUTHEAR KEYX DAC compatibility details",
+          "sortOrder": 20
+        },
+        {
+          "id": "img_01ky9frf53e8mshk9p9tvekmqn",
+          "source": "data/images/catalog/truthear-keyx-portable-dac-amplifier/3.jpg",
+          "r2Key": "products/product_truthear-keyx-portable-dac-amplifier/8c27c507513e405fbea8042f496fc35b.jpg",
+          "contentType": "image/jpeg",
+          "width": 790,
+          "height": 1319,
+          "alt": "TRUTHEAR KEYX DAC tuning interface details",
+          "sortOrder": 30
         }
       ],
       "variants": [
         {
-          "id": "var_2g000000008008000000000009",
-          "sku": "PL-NODE-PRO",
-          "name": "Default",
+          "id": "var_01ky9frf53e8mshkcm98yrhxh6",
+          "sku": "PLG-TRUTHEAR-KEYX",
+          "name": "KEYX",
           "options": {},
-          "priceMnt": 239000,
-          "stockQuantity": 8,
+          "priceMnt": 130000,
+          "compareAtPriceMnt": 135000,
+          "stockQuantity": 10,
           "active": true,
           "sortOrder": 10,
           "imageKeys": []
         }
-      ],
-      "useCases": ["gaming", "daily-carry"]
+      ]
     },
     {
-      "id": "prod_1g000000008008000000000007",
-      "slug": "relay-2pin-cable",
-      "brandSlug": "plugged-lab",
-      "categorySlug": "cables",
-      "name": "Relay 2-Pin Cable",
-      "shortDescription": "A soft eight-core replacement cable with a 3.5 mm plug.",
-      "description": "Relay uses standard 0.78 mm two-pin connectors and a low-memory braid for daily carry.",
+      "id": "prod_01ky9frf53e8mshk5m1aajbys7",
+      "slug": "jcally-jm12",
+      "brandSlug": "jcally",
+      "categorySlug": "portable-audio",
+      "name": "JCALLY JM12",
+      "shortDescription": "Portable USB-C DAC/AMP dongle for Android.",
+      "description": null,
       "status": "active",
       "featured": false,
+      "useCases": ["daily-carry"],
       "details": {
-        "connector": "0.78 mm 2-pin",
-        "lengthMeters": 1.2
+        "input": "USB-C",
+        "productType": "Portable DAC/AMP",
+        "platform": "Android"
       },
       "images": [
         {
-          "id": "img_20000000008008000000000008",
-          "source": "data/images/relay-cable.svg",
-          "r2Key": "catalog/products/relay-2pin-cable/black.svg",
-          "contentType": "image/svg+xml",
-          "width": 900,
-          "height": 650,
-          "alt": "Black braided Relay two-pin earphone cable",
+          "id": "img_01ky9frf53e8mshk9vgf0arek9",
+          "source": "data/images/catalog/jcally-jm12-portable-dac-amplifier/1.jpg",
+          "r2Key": "products/product_jcally-jm12-portable-dac-amplifier/f8eab16fc03e46f4a2a2f0dc99d2184f.jpg",
+          "contentType": "image/jpeg",
+          "width": 322,
+          "height": 448,
+          "alt": "JCALLY JM12 portable USB-C DAC product image",
           "sortOrder": 10
         }
       ],
       "variants": [
         {
-          "id": "var_2g00000000800800000000000g",
-          "sku": "PL-RELAY-2P",
-          "name": "Default",
-          "options": {},
-          "priceMnt": 79000,
-          "stockQuantity": 11,
+          "id": "var_01ky9frf53e8mshkcz33vb3pyj",
+          "sku": "PLG-JCALLY-JM12-SILVER",
+          "name": "Silver",
+          "options": {
+            "color": "Silver"
+          },
+          "priceMnt": 25000,
+          "compareAtPriceMnt": 30000,
+          "stockQuantity": 10,
           "active": true,
           "sortOrder": 10,
           "imageKeys": []
         }
-      ],
-      "useCases": ["daily-carry", "gaming"]
+      ]
     }
   ]
 }

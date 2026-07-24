@@ -1,7 +1,7 @@
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
 
-import { nonNegativeIntegerSchema } from './common'
+import { nonNegativeIntegerSchema } from './common.ts'
 
 const slugSchema = Type.String({ pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' })
 
