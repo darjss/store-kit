@@ -2,7 +2,14 @@ import { describe, expect, test } from 'vite-plus/test'
 
 import { catalogSeedTarget } from './catalog-seed-target.ts'
 
-describe('remote catalog seed target selection', () => {
+describe('catalog seed target selection', () => {
+  test('accepts local D1 data without a remote bucket', () => {
+    expect(catalogSeedTarget(['--environment', 'local', '--only', 'data'], {})).toEqual({
+      environment: 'local',
+      scope: 'data',
+    })
+  })
+
   test('requires an explicit development environment and bucket', () => {
     expect(
       catalogSeedTarget(['--environment', 'development', '--only', 'media'], {
@@ -17,6 +24,7 @@ describe('remote catalog seed target selection', () => {
 
   test.each([
     [[], {}],
+    [['--environment', 'local', '--only', 'media'], {}],
     [['--environment', 'development', '--only', 'media'], {}],
     [['--environment', 'production', '--only', 'media'], { PLUGGED_MEDIA_BUCKET: 'plugged' }],
     [

@@ -36,6 +36,11 @@ export default defineConfig({
         cwd: 'apps/plugged',
         cache: false,
       },
+      'catalog:seed:plugged:local': {
+        command: 'node --experimental-strip-types catalog-seed.ts --environment local --only data',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
       'db:migrate:plugged:development': {
         command:
           'node --experimental-strip-types cloudflare-command.ts --environment development --operation migrate',

@@ -1,11 +1,14 @@
-export type CatalogSeedEnvironment = 'development' | 'production'
+export type CatalogSeedEnvironment = 'local' | 'development' | 'production'
+export type CatalogSeedRemoteEnvironment = Exclude<CatalogSeedEnvironment, 'local'>
 export type CatalogSeedScope = 'data' | 'media'
 
-export type CatalogSeedTarget = {
-  environment: CatalogSeedEnvironment
-  scope: CatalogSeedScope
-  bucket: string
-}
+export type CatalogSeedTarget =
+  | { environment: 'local'; scope: 'data' }
+  | {
+      environment: CatalogSeedRemoteEnvironment
+      scope: CatalogSeedScope
+      bucket: string
+    }
 
 const argumentValue = (args: string[], name: string) => {
   const index = args.indexOf(name)
@@ -32,12 +35,19 @@ export const catalogSeedTarget = (
 
   if (
     unknown.length > 0 ||
-    (selectedEnvironment !== 'development' && selectedEnvironment !== 'production') ||
+    (selectedEnvironment !== 'local' &&
+      selectedEnvironment !== 'development' &&
+      selectedEnvironment !== 'production') ||
     (scope !== 'data' && scope !== 'media')
   ) {
     throw new Error(
-      'Usage: catalog-seed.ts --environment <development|production> --only <data|media>',
+      'Usage: catalog-seed.ts --environment <local|development|production> --only <data|media>',
     )
+  }
+
+  if (selectedEnvironment === 'local') {
+    if (scope !== 'data') throw new Error('Local catalog seeding writes D1 data only.')
+    return { environment: selectedEnvironment, scope }
   }
 
   const bucket = environment.PLUGGED_MEDIA_BUCKET?.trim()

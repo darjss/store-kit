@@ -1,7 +1,14 @@
 # Plugged catalog seed
 
-The importer only targets remote resources. Select the Wrangler environment and exact R2 bucket
-explicitly from the workspace root:
+For local development, migrate and seed local D1 while catalog images continue to use the remote
+custom-domain origin configured in `.dev.vars`:
+
+```sh
+vp run db:migrate:plugged:local
+vp run catalog:seed:plugged:local
+```
+
+Remote operations require an explicit Wrangler environment and exact R2 bucket:
 
 ```sh
 PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run catalog:media:plugged:development
@@ -17,9 +24,10 @@ PLUGGED_MEDIA_BUCKET=<production-r2-bucket> \
   vp run catalog:media:plugged:production
 ```
 
-The command reads `apps/plugged/data/catalog.seed.json`. Image `source` paths are relative to
-`apps/plugged`. The file and each referenced image must exist before you run the command. Media and
-data are separate operations so migrations can be applied before the real D1 seed.
+The commands read `apps/plugged/data/catalog.seed.json`. Image `source` paths are relative to
+`apps/plugged`. The file and each referenced image must exist before you run them. Local seeding
+writes D1 data only. Remote media and data are separate operations so migrations can be applied
+before the real remote D1 seed.
 
 ## Required JSON shape
 
@@ -98,8 +106,8 @@ The validator rejects unknown fields. All fields in the example are required unl
 
 Supported image content types are `image/avif`, `image/gif`, `image/jpeg`, `image/png`, `image/svg+xml`, and `image/webp`.
 
-The command validates all data and assets before it writes resources. It uploads each image to the
-explicit `PLUGGED_MEDIA_BUCKET` with immutable cache metadata, then the separate data task upserts
-D1 rows in this order: brands, categories, products, images, variants, and variant-image links.
-Repeated runs replace objects at the same R2 keys and update rows at the same IDs without adding
-duplicates.
+The commands validate all data and assets before writing resources. The media task uploads each
+image to the explicit `PLUGGED_MEDIA_BUCKET` with immutable cache metadata. Local and remote data
+tasks upsert D1 rows in this order: brands, categories, products, images, variants, and
+variant-image links. Repeated runs replace remote objects at the same R2 keys and update rows at the
+same IDs without adding duplicates.

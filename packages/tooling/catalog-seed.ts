@@ -26,7 +26,7 @@ import type { Static } from 'typebox'
 import { Value } from 'typebox/value'
 
 import { catalogSeedTarget } from './catalog-seed-target.ts'
-import type { CatalogSeedEnvironment } from './catalog-seed-target.ts'
+import type { CatalogSeedEnvironment, CatalogSeedRemoteEnvironment } from './catalog-seed-target.ts'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const pluggedDirectory = resolve(projectRoot, 'apps/plugged')
@@ -317,7 +317,7 @@ const runWrangler = (args: string[]) =>
 
 const uploadImages = async (
   seed: CatalogSeed,
-  environment: CatalogSeedEnvironment,
+  environment: CatalogSeedRemoteEnvironment,
   bucket: string,
 ) => {
   const images = seed.products.flatMap(product => product.images)
@@ -590,15 +590,14 @@ const importRows = async (seed: CatalogSeed, environment: CatalogSeedEnvironment
   await mkdir(dirname(generatedSqlPath), { recursive: true })
   await writeFile(generatedSqlPath, buildSql(seed), { mode: 0o600 })
   try {
+    const target = environment === 'local' ? ['--local'] : ['--remote', '--env', environment]
     await runWrangler([
       'd1',
       'execute',
       d1Binding,
       '--file',
       generatedSqlPath,
-      '--remote',
-      '--env',
-      environment,
+      ...target,
       '--yes',
       '--config',
       wranglerConfigPath,
@@ -638,6 +637,16 @@ const printCounts = (seed: CatalogSeed, scope: 'data' | 'media') => {
 
 const main = async () => {
   const target = catalogSeedTarget(process.argv.slice(2), process.env)
+  const seed = await parseSeed()
+  await validateAssets(seed)
+
+  if (target.environment === 'local') {
+    process.stdout.write('Preparing local Plugged data seed. Catalog media remains remote.\n')
+    await importRows(seed, target.environment)
+    printCounts(seed, target.scope)
+    return
+  }
+
   const config = parse(await readFile(wranglerConfigPath, 'utf8')) as SeedWranglerConfig
   const environmentConfig = config.env?.[target.environment]
   if (
@@ -670,8 +679,6 @@ const main = async () => {
   process.stdout.write(
     `Preparing remote Plugged ${target.scope} seed for ${target.environment} (${target.bucket}).\n`,
   )
-  const seed = await parseSeed()
-  await validateAssets(seed)
 
   if (target.scope === 'media') {
     await runWrangler(['r2', 'bucket', 'info', target.bucket])

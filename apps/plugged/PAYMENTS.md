@@ -1,7 +1,8 @@
 # Environment and local preview
 
-Copy `.dev.vars.example` to the ignored `.dev.vars` file. The example uses the stable local
-application URL `https://plugged.localhost` and keeps local media on the same origin.
+Copy `.dev.vars.example` to the ignored `.dev.vars` file. Use the stable local application URL
+`https://plugged.localhost` and set `PUBLIC_MEDIA_BASE_URL` to the remote development R2
+custom-domain origin.
 
 Start a development preview from the workspace root:
 
@@ -9,9 +10,7 @@ Start a development preview from the workspace root:
 vp exec portless proxy start
 vp exec portless trust
 vp run db:migrate:plugged:local
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run catalog:media:plugged:development
-vp run db:migrate:plugged:development
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run catalog:seed:plugged:development
+vp run catalog:seed:plugged:local
 vp run plugged:dev
 vp run plugged:route
 vp exec portless doctor
