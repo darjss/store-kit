@@ -15,10 +15,12 @@ const persistedItem = {
   productName: 'First IEM',
   variantName: 'Black',
   options: { color: 'Black' },
-  imageR2Key: 'products/first-iem/black.webp',
-  imageWidth: 1200,
-  imageHeight: 900,
-  imageAlt: 'Black First IEM',
+  image: {
+    url: 'https://media.example.com/products/first-iem/black.webp',
+    width: 1200,
+    height: 900,
+    alt: 'Black First IEM',
+  },
   unitPriceMnt: 120_000,
 } as const
 
@@ -66,12 +68,7 @@ test('cart corrections and validation results are tagged, serializable contracts
         variantName: persistedItem.variantName,
         sku: 'IEM-BLACK',
         options: persistedItem.options,
-        image: {
-          url: 'https://media.example.com/products/first-iem/black.webp',
-          width: persistedItem.imageWidth,
-          height: persistedItem.imageHeight,
-          alt: persistedItem.imageAlt,
-        },
+        image: persistedItem.image,
         unitPriceMnt: 125_000,
         requestedQuantity: 2,
         availableQuantity: 4,

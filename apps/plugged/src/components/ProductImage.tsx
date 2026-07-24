@@ -1,6 +1,6 @@
-import { cloudflareImageTransformer } from '@store-kit/storefront/media'
-import { transformBaseImageProps } from '@unpic/core/base'
-import type { JSX } from 'solid-js'
+import { Image } from '@unpic/solid/base'
+import { Show } from 'solid-js'
+import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
 import { productImageLayouts } from './product-image'
 import type { ProductImageLayout, ProductImageMetadata } from './product-image'
@@ -11,33 +11,39 @@ export function ProductImage(props: {
   class?: string
   priority?: boolean
 }) {
-  const imageProps = () => {
-    const config = productImageLayouts[props.layout]
-    return transformBaseImageProps<
-      { width?: number; quality?: number },
-      undefined,
-      JSX.ImgHTMLAttributes<HTMLImageElement>
-    >({
-      src: props.image.url,
-      alt: props.image.alt,
-      width: props.image.width,
-      height: props.image.height,
-      layout: 'constrained',
-      sizes: config.sizes,
-      breakpoints: [...config.breakpoints],
-      transformer: cloudflareImageTransformer,
-      operations: { quality: 80 },
-      priority: props.priority,
-      unstyled: true,
-    })
-  }
-
   return (
-    <img
-      {...imageProps()}
-      width={props.image.width}
-      height={props.image.height}
-      class={props.class}
-    />
+    <Show
+      when={!props.image.url.startsWith('/media/')}
+      fallback={
+        <img
+          src={props.image.url}
+          alt={props.image.alt}
+          width={props.image.width}
+          height={props.image.height}
+          sizes={productImageLayouts[props.layout].sizes}
+          loading={props.priority ? 'eager' : 'lazy'}
+          decoding={props.priority ? 'sync' : 'async'}
+          fetchpriority={props.priority ? 'high' : 'auto'}
+          class={props.class}
+        />
+      }
+    >
+      <Image
+        src={props.image.url}
+        alt={props.image.alt}
+        width={props.image.width}
+        height={props.image.height}
+        layout="constrained"
+        sizes={productImageLayouts[props.layout].sizes}
+        breakpoints={[...productImageLayouts[props.layout].breakpoints]}
+        transformer={cloudflare}
+        operations={{ quality: 80, format: 'auto', fit: 'scale-down' }}
+        options={{ domain: new URL(props.image.url).hostname }}
+        loading={props.priority ? 'eager' : 'lazy'}
+        priority={props.priority}
+        unstyled
+        class={props.class}
+      />
+    </Show>
   )
 }

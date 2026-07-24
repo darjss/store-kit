@@ -5,5 +5,5 @@ import Layout from "~/layouts/Layout.astro";
 const orderId = Astro.params.id ?? "";
 ---
 <Layout title="Захиалгын төлөв · Plugged">
-  <main id="main-content" class="min-h-[calc(100vh-66px)] px-[max(0.75rem,3vw)] pt-[clamp(1rem,4vw,4rem)] pb-28 [background:url('/textures/paper-grain.avif')_repeat,var(--color-paper)] [background-blend-mode:multiply] max-md:px-3"><OrderStatus orderId={orderId} client:load /></main>
+  <main id="main-content" tabindex="-1" class="min-h-[calc(100vh-66px)] px-[max(0.75rem,3vw)] pt-[clamp(1rem,4vw,4rem)] pb-28 [background:url('/textures/paper-grain.avif')_repeat,var(--color-paper)] [background-blend-mode:multiply] max-md:px-3"><OrderStatus orderId={orderId} client:only="solid-js" /></main>
 </Layout>

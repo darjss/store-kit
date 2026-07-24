@@ -23,9 +23,7 @@ function parsePersistedCartItem(value: unknown): PersistedCartItem | undefined {
 
   const item = value as Partial<PersistedCartItem>
   const quantity = item.quantity
-  const imageWidth = item.imageWidth ?? null
-  const imageHeight = item.imageHeight ?? null
-  const imageAlt = item.imageAlt ?? null
+  const image = item.image
   const unitPriceMnt = item.unitPriceMnt
   if (
     !(
@@ -42,13 +40,16 @@ function parsePersistedCartItem(value: unknown): PersistedCartItem | undefined {
       item.options !== null &&
       !Array.isArray(item.options) &&
       Object.values(item.options).every(option => typeof option === 'string') &&
-      (typeof item.imageR2Key === 'string' || item.imageR2Key === null) &&
-      (Number.isInteger(imageWidth) || imageWidth === null) &&
-      (imageWidth ?? 1) > 0 &&
-      (Number.isInteger(imageHeight) || imageHeight === null) &&
-      (imageHeight ?? 1) > 0 &&
-      (typeof imageAlt === 'string' || imageAlt === null) &&
-      (imageAlt === null || imageAlt.length > 0) &&
+      (image === null ||
+        (typeof image === 'object' &&
+          typeof image.url === 'string' &&
+          image.url.length > 0 &&
+          Number.isInteger(image.width) &&
+          image.width > 0 &&
+          Number.isInteger(image.height) &&
+          image.height > 0 &&
+          typeof image.alt === 'string' &&
+          image.alt.length > 0)) &&
       typeof unitPriceMnt === 'number' &&
       Number.isInteger(unitPriceMnt) &&
       unitPriceMnt >= 0
@@ -63,10 +64,7 @@ function parsePersistedCartItem(value: unknown): PersistedCartItem | undefined {
     productName: item.productName,
     variantName: item.variantName,
     options: item.options,
-    imageR2Key: item.imageR2Key,
-    imageWidth,
-    imageHeight,
-    imageAlt,
+    image,
     unitPriceMnt,
   }
 }
@@ -139,10 +137,7 @@ export function refreshCartItemSnapshots(
     | 'productName'
     | 'variantName'
     | 'options'
-    | 'imageR2Key'
-    | 'imageWidth'
-    | 'imageHeight'
-    | 'imageAlt'
+    | 'image'
     | 'unitPriceMnt'
   >[],
 ) {
