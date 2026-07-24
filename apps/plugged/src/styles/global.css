@@ -77,6 +77,61 @@
   box-shadow: 0.35rem 0.4rem 0 var(--color-ink);
 }
 
+/* One clipped file in the order dossier. The offset layers stay decorative. */
+@utility dossier-sheet {
+  position: relative;
+  isolation: isolate;
+  border: 3px solid var(--color-ink);
+  background:
+    url('/textures/paper-grain.avif') repeat,
+    var(--color-paper-clean);
+  background-blend-mode: multiply;
+  box-shadow:
+    0.35rem 0.35rem 0 var(--color-petrol),
+    0.7rem 0.7rem 0 color-mix(in oklch, var(--color-paper) 82%, var(--color-ink));
+  clip-path: polygon(
+    0.6rem 0,
+    100% 0,
+    100% calc(100% - 0.7rem),
+    calc(100% - 0.8rem) 100%,
+    0 100%,
+    0 0.65rem
+  );
+}
+
+@utility dossier-stamp {
+  display: inline-block;
+  border: 3px solid currentColor;
+  padding: 0.25rem 0.5rem;
+  color: var(--color-cyan-deep);
+  font-weight: 900;
+  line-height: 1;
+  transform: rotate(-2deg);
+  animation: stamp-in 220ms var(--ease-slam) both;
+}
+
+@utility field-strip {
+  border: 0;
+  border-bottom: 3px solid var(--color-ink);
+  border-radius: 0;
+  background: color-mix(in oklch, var(--color-paper-clean) 88%, transparent);
+  box-shadow: none;
+}
+
+@utility payment-choice {
+  background: var(--color-paper);
+  transition:
+    transform 150ms var(--ease-slam),
+    background-color 150ms ease,
+    color 150ms ease;
+
+  &:has([data-checked]) {
+    background: var(--color-petrol);
+    color: var(--color-paper-clean);
+    transform: rotate(-1deg);
+  }
+}
+
 @utility pressable {
   transition: transform 140ms var(--ease-slam);
 
@@ -158,7 +213,18 @@
   }
   to {
     opacity: 1;
-    transform: scale(1) rotate(-3deg);
+    transform: scale(1) rotate(-2deg);
+  }
+}
+
+@keyframes dossier-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) rotate(0.7deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
   }
 }
 
