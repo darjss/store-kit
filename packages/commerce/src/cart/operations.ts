@@ -1,11 +1,11 @@
 import type {
   CartCorrection,
   CartValidationError,
+  CartValidationInput,
   StockStatus,
   ValidatedCartLine,
-} from '@store-kit/contracts'
+} from '@store-kit/contracts/cart'
 import { cartValidationInputsSchema } from '@store-kit/contracts/cart'
-import type { CartValidationInput } from '@store-kit/contracts/cart'
 import { database } from '@store-kit/db'
 import { Result } from 'better-result'
 import { match } from 'dismatch'
@@ -19,9 +19,7 @@ import {
   insufficientStock,
   invalidCart,
   missingVariant,
-} from '~/errors'
-
-export type { CartLineInput, PersistedCartItem } from '@store-kit/contracts/cart'
+} from '~/errors/cart'
 
 const stockStatus = (quantity: number): StockStatus =>
   match(

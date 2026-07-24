@@ -1,14 +1,14 @@
 import { Value } from 'typebox/value'
 import { expect, test } from 'vite-plus/test'
 
+import { publicOrderSchema } from './orders'
 import {
   bankTransferClaimErrorSchema,
   paymentConfirmationErrorSchema,
   paymentRefreshErrorSchema,
-  privateOrderErrorSchema,
-} from './errors'
-import { publicOrderSchema } from './orders'
-import { paymentConfirmationSchema } from './payments'
+  paymentConfirmationSchema,
+} from './payments'
+import { privateOrderErrorSchema } from './private-orders'
 
 const publicOrder = {
   id: 'ord_01arz3ndektsv4rrffq69g5fav',

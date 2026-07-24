@@ -4,6 +4,17 @@ import type { Static } from 'typebox'
 export const nonNegativeIntegerSchema = Type.Integer({ minimum: 0 })
 export const nullableTimestampSchema = Type.Union([nonNegativeIntegerSchema, Type.Null()])
 export const variantOptionsSchema = Type.Record(Type.String(), Type.String())
+export const validationIssueCodeSchema = Type.Union([
+  Type.Literal('invalid'),
+  Type.Literal('duplicate'),
+])
+export const validationIssueSchema = Type.Object(
+  {
+    path: Type.String({ minLength: 1 }),
+    code: validationIssueCodeSchema,
+  },
+  { additionalProperties: false },
+)
 export const publicImageSchema = Type.Object(
   {
     url: Type.String({ minLength: 1 }),
@@ -14,6 +25,8 @@ export const publicImageSchema = Type.Object(
   { additionalProperties: false },
 )
 export type PublicImage = Static<typeof publicImageSchema>
+export type ValidationIssueCode = Static<typeof validationIssueCodeSchema>
+export type ValidationIssue = Static<typeof validationIssueSchema>
 const typeIdSuffixPattern = '[0-7][0-9a-hjkmnp-tv-z]{25}'
 export const variantIdPattern = `^var_${typeIdSuffixPattern}$`
 export const orderIdPattern = `^ord_${typeIdSuffixPattern}$`

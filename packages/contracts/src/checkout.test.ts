@@ -8,6 +8,7 @@ import {
   checkoutInputSchema,
   paymentInstructionsSchema,
 } from './checkout'
+import { toStandardSchema } from './standard-schema'
 
 const checkout = {
   items: [{ variantId: 'var_01arz3ndektsv4rrffq69g5fav', quantity: 1 }],
@@ -45,6 +46,34 @@ test.each([
   ['address', { ...checkout, delivery: { ...checkout.delivery, address: '   ' } }],
 ])('checkout rejects a whitespace-only required %s', (_label, input) => {
   expect(Value.Check(checkoutInputSchema, input)).toBe(false)
+})
+
+test.each(['55112233', '9911223', '991122334', '+976 9911-2233', '9911 2233'])(
+  'checkout rejects the non-normalized or invalid Mongolian phone %s',
+  phone => {
+    expect(
+      Value.Check(checkoutInputSchema, {
+        ...checkout,
+        customer: { ...checkout.customer, phone },
+      }),
+    ).toBe(false)
+  },
+)
+
+test('checkout Standard Schema validation reports the shared nested field paths', () => {
+  const result = toStandardSchema(checkoutDetailsSchema)['~standard'].validate({
+    customer: { name: 'Бат', phone: '55112233' },
+    delivery: {
+      district: 'Баянзүрх',
+      khoroo: ' ',
+      address: 'Энхтайвны өргөн чөлөө',
+    },
+    paymentMethod: 'bank_transfer',
+  })
+
+  expect(result).toMatchObject({
+    issues: [{ path: ['customer', 'phone'] }, { path: ['delivery', 'khoroo'] }],
+  })
 })
 
 test('checkout result exposes only serialized customer payment instructions', () => {

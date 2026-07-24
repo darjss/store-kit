@@ -27,7 +27,7 @@ import {
   paymentVerificationFailed,
   qpayInvoiceMissing,
   staffNotificationFailed,
-} from '~/errors'
+} from '~/errors/payments'
 import { orderOperations } from '~/orders/operations'
 
 export const confirmOrderPayment = async (

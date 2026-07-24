@@ -1,11 +1,11 @@
-import type { ProductNotFound } from '@store-kit/contracts/errors'
+import type { ProductNotFound } from '@store-kit/contracts/catalog'
 import { database } from '@store-kit/db'
 import { productListFiltersSchema } from '@store-kit/db/schemas'
 import type { ProductListFilters } from '@store-kit/db/schemas'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
-import { createProductNotFound } from '~/errors'
+import { createProductNotFound } from '~/errors/catalog'
 
 export type ProductDetail = NonNullable<
   Awaited<ReturnType<typeof database.query.catalog.findPublishedProductBySlug>>
@@ -45,6 +45,3 @@ export const catalogOperations = {
   listBrands: listCatalogBrands,
   listCategories: listCatalogCategories,
 }
-
-export type { ProductListFilters } from '@store-kit/db/schemas'
-export type { ProductNotFound } from '@store-kit/contracts/errors'

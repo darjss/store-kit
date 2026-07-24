@@ -1,47 +1,94 @@
+import type { CartCorrection, CartLineInput } from '@store-kit/contracts/cart'
 import type {
   BankTransferPaymentInstructions,
-  CartCorrection,
   CheckoutCreated,
   CheckoutError,
   CheckoutInput,
   PaymentInstructions,
-  PaymentMethod,
   QPayPaymentInstructions,
-} from '@store-kit/contracts'
+} from '@store-kit/contracts/checkout'
+import { checkoutInputSchema } from '@store-kit/contracts/checkout'
+import type { ValidationIssue } from '@store-kit/contracts/common'
+import type { PaymentMethod } from '@store-kit/contracts/payments'
 import { database } from '@store-kit/db'
 import { createId } from '@store-kit/db/ids'
 import { Result } from 'better-result'
+import { Value } from 'typebox/value'
 
 import { createQPayInvoice } from '~/adapters/qpay'
+import { inactiveVariant, insufficientStock, missingVariant } from '~/errors/cart'
 import {
   changedCart,
   deliveryUnavailable,
   emptyCheckoutCart,
-  inactiveVariant,
-  insufficientStock,
   invalidCheckoutDetails,
-  missingVariant,
   paymentSetupFailed,
-} from '~/errors'
+} from '~/errors/checkout'
 import { hashStatusToken } from '~/orders/status-token'
 
-const normalizePhone = (phone: string) => phone.replace(/[^0-9]/g, '').replace(/^976/, '')
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
 
-const normalizeCheckoutInput = (input: CheckoutInput) => ({
-  ...input,
-  customer: {
-    name: input.customer.name.trim(),
-    phone: normalizePhone(input.customer.phone),
-  },
-  delivery: {
-    ...input.delivery,
-    khoroo: input.delivery.khoroo.trim(),
-    address: input.delivery.address.trim(),
-    ...(input.delivery.notes?.trim()
-      ? { notes: input.delivery.notes.trim() }
-      : { notes: undefined }),
-  },
-})
+const trimString = (value: unknown) => (typeof value === 'string' ? value.trim() : value)
+const normalizePhone = (value: unknown) =>
+  typeof value === 'string' ? value.replace(/[^0-9]/g, '').replace(/^976/, '') : value
+
+export const normalizeCheckoutInput = (input: unknown): unknown => {
+  if (!isRecord(input)) return input
+
+  const customer = isRecord(input.customer)
+    ? {
+        ...input.customer,
+        name: trimString(input.customer.name),
+        phone: normalizePhone(input.customer.phone),
+      }
+    : input.customer
+  const delivery = isRecord(input.delivery)
+    ? {
+        ...input.delivery,
+        khoroo: trimString(input.delivery.khoroo),
+        address: trimString(input.delivery.address),
+        notes: trimString(input.delivery.notes),
+      }
+    : input.delivery
+
+  if (isRecord(delivery) && (delivery.notes === '' || delivery.notes === undefined)) {
+    delete delivery.notes
+  }
+
+  return { ...input, customer, delivery }
+}
+
+const checkoutValidationIssues = (input: unknown): ValidationIssue[] => {
+  const paths = new Set<string>()
+
+  return [...Value.Errors(checkoutInputSchema, input)].flatMap(error => {
+    const path = error.instancePath || '/'
+    if (paths.has(path)) return []
+    paths.add(path)
+    return [{ path, code: 'invalid' as const }]
+  })
+}
+
+type AuthoritativeVariant = Awaited<
+  ReturnType<typeof database.query.checkout.prepare>
+>['variants'][number]
+
+const validateAuthoritativeCartLine = (
+  item: CartLineInput,
+  variant: AuthoritativeVariant | undefined,
+): CartCorrection[] => {
+  if (!variant) return [missingVariant(item.variantId)]
+
+  const corrections: CartCorrection[] = []
+  if (!variant.active || variant.productStatus !== 'active') {
+    corrections.push(inactiveVariant(item.variantId))
+  }
+  if (variant.stockQuantity < item.quantity) {
+    corrections.push(insufficientStock(item.variantId, variant.stockQuantity))
+  }
+  return corrections
+}
 
 type PreparedPayment = {
   providerInvoiceId: string | null
@@ -79,35 +126,32 @@ const preparePayment = async (
 }
 
 export const createCheckoutOrder = async (rawInput: CheckoutInput) => {
-  const input = normalizeCheckoutInput(rawInput)
-  if (input.items.length === 0)
+  const normalizedInput = normalizeCheckoutInput(rawInput)
+  const validationIssues = checkoutValidationIssues(normalizedInput)
+  if (
+    isRecord(normalizedInput) &&
+    Array.isArray(normalizedInput.items) &&
+    normalizedInput.items.length === 0
+  )
     return Result.err<CheckoutCreated, CheckoutError>(emptyCheckoutCart())
+  if (validationIssues.length > 0) {
+    return Result.err<CheckoutCreated, CheckoutError>(invalidCheckoutDetails(validationIssues))
+  }
+  const input = normalizedInput as CheckoutInput
 
   const variantIds = new Set(input.items.map(item => item.variantId))
   if (variantIds.size !== input.items.length)
     return Result.err<CheckoutCreated, CheckoutError>(
       invalidCheckoutDetails([{ path: '/items', code: 'duplicate' }]),
     )
-  if (!/^[6789]\d{7}$/.test(input.customer.phone))
-    return Result.err<CheckoutCreated, CheckoutError>(
-      invalidCheckoutDetails([{ path: '/customer/phone', code: 'invalid' }]),
-    )
 
   const { settings, variants } = await database.query.checkout.prepare(input.items)
   if (!settings) return Result.err<CheckoutCreated, CheckoutError>(deliveryUnavailable())
 
   const byId = new Map(variants.map(variant => [variant.variantId, variant]))
-  const corrections = input.items.flatMap<CartCorrection>(item => {
-    const variant = byId.get(item.variantId)
-    if (!variant) return [missingVariant(item.variantId)]
-
-    const findings: CartCorrection[] = []
-    if (!variant.active || variant.productStatus !== 'active')
-      findings.push(inactiveVariant(item.variantId))
-    if (variant.stockQuantity < item.quantity)
-      findings.push(insufficientStock(item.variantId, variant.stockQuantity))
-    return findings
-  })
+  const corrections = input.items.flatMap(item =>
+    validateAuthoritativeCartLine(item, byId.get(item.variantId)),
+  )
   if (corrections.length > 0)
     return Result.err<CheckoutCreated, CheckoutError>(changedCart(corrections))
 

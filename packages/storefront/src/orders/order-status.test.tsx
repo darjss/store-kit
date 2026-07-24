@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // @vitest-environment-options { "url": "http://127.0.0.1:1/" }
 
-import type { PrivateOrderError, PublicOrder } from '@store-kit/contracts/orders'
+import type { PublicOrder } from '@store-kit/contracts/orders'
+import type { PrivateOrderError } from '@store-kit/contracts/private-orders'
 import { QueryClient, QueryClientProvider } from '@tanstack/solid-query'
 import { Result } from 'better-result'
 import { render } from 'solid-js/web'

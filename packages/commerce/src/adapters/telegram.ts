@@ -3,13 +3,11 @@ import { env } from 'cloudflare:workers'
 import { match } from 'dismatch'
 import ky from 'ky'
 
-import { telegramRequestError, telegramResponseError } from '~/errors'
-import type { TelegramError } from '~/errors'
+import { telegramRequestError, telegramResponseError } from '~/errors/telegram'
+import type { TelegramError } from '~/errors/telegram'
 
 import { parseTelegramActionResponse, parseTelegramMessageResponse } from './telegram-responses'
 import type { ParsedTelegramResponse } from './telegram-responses'
-
-export type { TelegramError } from '~/errors'
 
 const telegramClient = ky.create({
   prefix: `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}`,
