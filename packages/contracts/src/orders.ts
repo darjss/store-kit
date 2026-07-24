@@ -5,6 +5,7 @@ import {
   nonNegativeIntegerSchema,
   nullableTimestampSchema,
   orderIdSchema,
+  publicImageSchema,
   orderStatusSchema,
   variantOptionsSchema,
 } from './common'
@@ -16,10 +17,7 @@ export const publicOrderLineSchema = Type.Object(
     variantName: Type.String({ minLength: 1 }),
     sku: Type.String({ minLength: 1 }),
     options: variantOptionsSchema,
-    imageR2Key: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
-    imageWidth: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()]),
-    imageHeight: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()]),
-    imageAlt: Type.Union([Type.String({ minLength: 1 }), Type.Null()]),
+    image: Type.Union([publicImageSchema, Type.Null()]),
     unitPriceMnt: nonNegativeIntegerSchema,
     quantity: Type.Integer({ minimum: 1 }),
     lineTotalMnt: nonNegativeIntegerSchema,
@@ -60,17 +58,18 @@ export const publicOrderSchema = Type.Object(
   { additionalProperties: false },
 )
 
-export const privateOrderErrorSchema = Type.Object(
-  {
-    _tag: Type.Literal('InvalidStatusToken'),
-    message: Type.String({ minLength: 1 }),
-  },
-  { additionalProperties: false },
-)
-
 export type OrderStatus = Static<typeof orderStatusSchema>
-export type PublicOrderLine = Static<typeof publicOrderLineSchema>
+type PublicOrderLineDto = Static<typeof publicOrderLineSchema>
+export type PublicOrderLine = PublicOrderLineDto & {
+  imageR2Key?: string | null
+  imageWidth?: number | null
+  imageHeight?: number | null
+  imageAlt?: string | null
+}
 export type PublicOrderPayment = Static<typeof publicOrderPaymentSchema>
-export type PublicOrder = Static<typeof publicOrderSchema>
-export type PrivateOrderError = Static<typeof privateOrderErrorSchema>
+export type PublicOrder = Omit<Static<typeof publicOrderSchema>, 'lines'> & {
+  lines: PublicOrderLine[]
+}
+export type { PrivateOrderError } from './errors'
+export { privateOrderErrorSchema } from './errors'
 export { orderIdPattern, orderStatusSchema } from './common'

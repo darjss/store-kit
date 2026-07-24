@@ -1,14 +1,14 @@
-import { query as dbQuery } from '@store-kit/db'
+import type { ProductNotFound } from '@store-kit/contracts/errors'
+import { database } from '@store-kit/db'
 import { productListFiltersSchema } from '@store-kit/db/schemas'
 import type { ProductListFilters } from '@store-kit/db/schemas'
 import { Result } from 'better-result'
 import { Value } from 'typebox/value'
 
-import { createProductNotFound } from './errors'
-import type { ProductNotFound } from './errors'
+import { createProductNotFound } from '~/errors'
 
 export type ProductDetail = NonNullable<
-  Awaited<ReturnType<typeof dbQuery.catalog.findPublishedProductBySlug>>
+  Awaited<ReturnType<typeof database.query.catalog.findPublishedProductBySlug>>
 >
 
 export const listCatalogProducts = async (filters: ProductListFilters = {}) => {
@@ -25,19 +25,19 @@ export const listCatalogProducts = async (filters: ProductListFilters = {}) => {
   ) {
     throw new Error('Minimum price cannot exceed maximum price.')
   }
-  return Result.ok(await dbQuery.catalog.listPublishedProducts(normalizedFilters))
+  return Result.ok(await database.query.catalog.listPublishedProducts(normalizedFilters))
 }
 
 export const getCatalogProduct = async (slug: string) => {
-  const product = await dbQuery.catalog.findPublishedProductBySlug(slug)
+  const product = await database.query.catalog.findPublishedProductBySlug(slug)
 
   return product
     ? Result.ok<ProductDetail, ProductNotFound>(product)
     : Result.err<ProductDetail, ProductNotFound>(createProductNotFound(slug))
 }
 
-export const listCatalogBrands = dbQuery.catalog.listBrands
-export const listCatalogCategories = dbQuery.catalog.listPublishedCategories
+export const listCatalogBrands = database.query.catalog.listBrands
+export const listCatalogCategories = database.query.catalog.listPublishedCategories
 
 export const catalogOperations = {
   listProducts: listCatalogProducts,
@@ -47,4 +47,4 @@ export const catalogOperations = {
 }
 
 export type { ProductListFilters } from '@store-kit/db/schemas'
-export type { ProductNotFound } from './errors'
+export type { ProductNotFound } from '@store-kit/contracts/errors'

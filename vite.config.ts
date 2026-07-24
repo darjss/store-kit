@@ -4,6 +4,7 @@ import formatConfig from './oxfmt.config'
 import lintConfig from './oxlint.config'
 
 export default defineConfig({
+  resolve: { tsconfigPaths: true },
   run: {
     tasks: {
       'db:generate': {

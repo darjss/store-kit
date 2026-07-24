@@ -7,6 +7,7 @@ import { defineConfig } from 'vite-plus'
 const root = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  resolve: { tsconfigPaths: true },
   plugins: [
     cloudflareTest(async () => ({
       main: path.join(root, 'integration/worker.ts'),
@@ -14,7 +15,7 @@ export default defineConfig({
       miniflare: {
         bindings: {
           TEST_MIGRATIONS: await readD1Migrations(
-            path.join(root, 'packages/db/migrations/20260723121839_overjoyed_captain_flint'),
+            path.join(root, 'packages/db/migrations/20260723180551_old_karnak'),
           ),
           QPAY_USERNAME: 'integration-test',
           QPAY_PASSWORD: 'integration-test',

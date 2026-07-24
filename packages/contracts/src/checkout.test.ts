@@ -3,6 +3,7 @@ import { expect, test } from 'vite-plus/test'
 
 import {
   checkoutCreatedSchema,
+  checkoutDetailsSchema,
   checkoutErrorSchema,
   checkoutInputSchema,
   paymentInstructionsSchema,
@@ -19,7 +20,15 @@ const checkout = {
   paymentMethod: 'bank_transfer',
 } as const
 
-test('checkout accepts the shared Ulaanbaatar request and rejects untrusted fields', () => {
+test('checkout composes browser details with authoritative cart items', () => {
+  const details = {
+    customer: checkout.customer,
+    delivery: checkout.delivery,
+    paymentMethod: checkout.paymentMethod,
+  }
+
+  expect(Value.Check(checkoutDetailsSchema, details)).toBe(true)
+  expect(Value.Check(checkoutDetailsSchema, checkout)).toBe(false)
   expect(Value.Check(checkoutInputSchema, checkout)).toBe(true)
   expect(
     Value.Check(checkoutInputSchema, {
@@ -81,10 +90,15 @@ test('checkout failures preserve tagged correction and field details', () => {
   expect(
     Value.Check(checkoutErrorSchema, {
       _tag: 'InvalidCheckoutDetails',
-      message: 'Захиалгын мэдээллээ шалгана уу.',
-      fields: [{ path: '/customer/phone', message: 'Утасны дугаараа шалгана уу.' }],
+      fields: [{ path: '/customer/phone', code: 'invalid' }],
     }),
   ).toBe(true)
+  expect(
+    Value.Check(checkoutErrorSchema, {
+      _tag: 'InvalidCheckoutDetails',
+      fields: [{ path: '/customer/phone', code: 'invalid', message: 'Presentation text' }],
+    }),
+  ).toBe(false)
   expect(
     Value.Check(checkoutErrorSchema, {
       _tag: 'PaymentSetupFailed',

@@ -6,6 +6,7 @@ import { orderOperations } from './orders/operations'
 import { paymentOperations } from './payments/operations'
 
 export { getSystemStatus } from './operations/system-status'
+export type { QPayError, TelegramError } from './errors'
 export type { SystemError, SystemStatus } from './operations/system-status'
 
 export type Commerce = {
