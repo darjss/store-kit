@@ -52,7 +52,7 @@ clean local database when you need repeatable catalog and checkout behavior:
 rm -rf apps/plugged/.wrangler/state
 vp run db:migrate:plugged:local
 vp run catalog:seed:plugged:local
-PLUGGED_LOCAL_MEDIA_BASE_URL=https://<development-r2-custom-domain>/ \
+PLUGGED_LOCAL_MEDIA_BASE_URL=https://plugged-dev.storekitcdn.darjs.dev/ \
   vp run plugged:browser:start
 vp run plugged:browser:health
 ```
@@ -78,14 +78,14 @@ Set the exact remote development bucket name for every media or deploy command:
 
 ```sh
 vp run plugged:generate-types
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run catalog:media:plugged:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media vp run catalog:media:plugged:development
 vp run db:migrate:plugged:development
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run catalog:seed:plugged:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media vp run catalog:seed:plugged:development
 vp run plugged:secret-names:development
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run plugged:deploy:dry-run:development
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run plugged:deploy:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media vp run plugged:deploy:dry-run:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media vp run plugged:deploy:development
 PLUGGED_SMOKE_URL=https://<development-worker-host>/ \
-  PLUGGED_MEDIA_BASE_URL=https://<development-r2-custom-domain>/ \
+  PLUGGED_MEDIA_BASE_URL=https://plugged-dev.storekitcdn.darjs.dev/ \
   vp run plugged:smoke:development
 ```
 
