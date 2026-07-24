@@ -39,15 +39,9 @@ const categories = [
         <p class="mt-5 ml-3 max-w-64 font-extrabold text-paper">Утастай сонсгол. Цэвэр гаралт.</p>
       </div>
 
-      <img data-cable class="pointer-events-none absolute top-[13%] right-[4%] z-2 h-auto w-[58%] rotate-[72deg] object-contain opacity-95 [filter:drop-shadow(0_5px_4px_rgb(0_0_0/0.55))] max-md:top-[27%] max-md:right-[-43%] max-md:w-[150%] max-md:rotate-[102deg]" src="/objects/iem-signal-cable.webp" width="1536" height="1024" alt="" aria-hidden="true" />
+      <img data-chain class="pointer-events-none absolute top-[4%] right-[2%] z-2 h-auto w-[72%] object-contain [filter:drop-shadow(0_0.65rem_0.45rem_rgb(0_0_0/0.58))] max-md:top-[24%] max-md:right-0 max-md:w-full" src="/objects/iem-dac-listening-chain.png" width="1536" height="1024" alt="Улаан Tangzu IEM-ийн сүлжмэл кабель Truthear KEYX DAC-д залгаастай" />
 
-      <article class="absolute top-[6%] right-[8%] z-5 w-[47%] max-md:top-[25%] max-md:right-[-4%] max-md:w-[92%]">
-        <a href={`/products/${tangzu.slug}`} class="block">
-          {imageOf(tangzu) && <ProductImage class="h-[clamp(20rem,38vw,37rem)] w-full rotate-3 object-contain mix-blend-multiply [filter:contrast(1.08)_drop-shadow(0_0.6rem_0.4rem_rgb(0_0_0/0.5))]" image={imageOf(tangzu)!} layout="hero" priority />}
-        </a>
-      </article>
-
-      <article class="absolute top-[36%] right-[-2%] z-6 w-[59%] max-md:top-[49%] max-md:right-3 max-md:w-[calc(100%-1.5rem)]">
+      <article class="absolute top-[43%] right-[-2%] z-6 w-[59%] max-md:top-[48%] max-md:right-3 max-md:w-[calc(100%-1.5rem)]">
         <div data-strip class="texture-paper grid min-h-24 -rotate-1 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-5 px-7 py-4 text-ink shadow-[0.4rem_0.45rem_0_rgb(0_0_0/0.7)] [clip-path:polygon(1%_2%,100%_0,99%_94%,0_100%)] max-md:min-h-28 max-md:grid-cols-[1fr_auto] max-md:gap-2 max-md:px-4">
           <h2 class="font-body text-[clamp(1.1rem,2vw,1.65rem)] leading-none font-black tracking-[-0.02em] uppercase max-md:col-span-2">{tangzu.name}</h2>
           <strong class="text-[clamp(1.4rem,2.3vw,2rem)] tabular-nums">{formatMnt(priceOf(tangzu))}</strong>
@@ -55,14 +49,7 @@ const categories = [
         </div>
       </article>
 
-      <article class="absolute right-[8%] bottom-[7%] z-5 w-[30%] max-md:top-[62%] max-md:right-auto max-md:bottom-auto max-md:left-[8%] max-md:w-[74%]">
-        <a href={`/products/${keyx.slug}`} class="block">
-          {imageOf(keyx) && <ProductImage class="mx-auto h-[clamp(18rem,29vw,31rem)] w-full -rotate-12 object-contain mix-blend-multiply [filter:contrast(1.1)_drop-shadow(0_0.6rem_0.4rem_rgb(0_0_0/0.55))]" image={imageOf(keyx)!} layout="wall" />}
-        </a>
-        <span class="absolute top-[56%] left-[15%] z-7 size-4 rounded-full border-4 border-cyan bg-ink shadow-[0_0_0_3px_var(--color-ink)]" aria-label="IEM кабель DAC-д холбогдсон"></span>
-      </article>
-
-      <article class="absolute right-[-1%] bottom-[8%] z-6 w-[51%] max-md:top-[81%] max-md:right-3 max-md:bottom-auto max-md:w-[calc(100%-1.5rem)]">
+      <article class="absolute right-[-1%] bottom-[8%] z-6 w-[51%] max-md:top-[72%] max-md:right-3 max-md:bottom-auto max-md:w-[calc(100%-1.5rem)]">
         <div data-strip class="texture-paper grid min-h-24 rotate-1 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-5 px-7 py-4 text-ink shadow-[0.4rem_0.45rem_0_rgb(0_0_0/0.7)] [clip-path:polygon(0_3%,100%_0,98%_100%,1%_95%)] max-md:min-h-28 max-md:grid-cols-[1fr_auto] max-md:gap-2 max-md:px-4">
           <h2 class="font-body text-[clamp(1.1rem,2vw,1.65rem)] leading-none font-black uppercase max-md:col-span-2">{keyx.name}</h2>
           <strong class="text-[clamp(1.4rem,2.3vw,2rem)] tabular-nums">{formatMnt(priceOf(keyx))}</strong>
@@ -124,7 +111,7 @@ const categories = [
           { duration: 520, delay: 70 + index * 75, easing, fill: 'backwards' },
         ),
       )
-      document.querySelector('[data-cable]')?.animate(
+      document.querySelector('[data-chain]')?.animate(
         [
           { opacity: 0, transform: 'translate3d(9%, -5%, 0) scale(0.96)' },
           { opacity: 0.95, transform: '' },

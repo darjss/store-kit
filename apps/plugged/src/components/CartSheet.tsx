@@ -133,13 +133,15 @@ export function CartSheet(props: { initialOpen: boolean }) {
         <div class="border-paper bg-ink text-paper sticky top-0 z-10 flex min-h-17.5 items-center justify-between border-b-4 px-4 py-3">
           <div>
             <p class="text-cyan m-0 text-xs font-black">ACTIVE FILE / CART</p>
-            <Sheet.Title class="font-body text-[2rem] leading-none font-black">САГС</Sheet.Title>
+            <Sheet.Title class="font-body text-paper! text-[2rem] leading-none font-black">
+              САГС
+            </Sheet.Title>
           </div>
           <Sheet.Close
             as={Button}
             variant="outline"
             size="icon-lg"
-            class="border-paper bg-ink text-paper size-12 rounded-none border-3 text-[2rem]"
+            class="border-paper! bg-ink! text-paper! size-12 rounded-none border-3 text-[2rem]"
             aria-label="Сагс хаах"
           >
             <span aria-hidden="true">×</span>
