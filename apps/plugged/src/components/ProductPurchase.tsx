@@ -135,7 +135,7 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
       <div class="border-ink bg-paper-clean sticky bottom-0 z-10 flex min-w-0 gap-3 border-t-4 p-4 max-[340px]:flex-col max-md:bottom-[calc(68px+env(safe-area-inset-bottom))] max-md:flex-wrap max-md:p-2">
         <ButtonGroup class="max-[340px]:self-start" aria-label="Тоо ширхэг">
           <Button
-            class="border-ink bg-paper h-auto w-12 rounded-none border-3 font-black max-md:w-11"
+            class="border-ink bg-paper h-auto min-h-11 w-12 rounded-none border-3 font-black max-md:w-11"
             type="button"
             variant="outline"
             onClick={() => setQuantity(value => Math.max(1, value - 1))}
@@ -147,7 +147,7 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
             <output>{quantity()}</output>
           </ButtonGroupText>
           <Button
-            class="border-ink bg-paper h-auto w-12 rounded-none border-3 font-black max-md:w-11"
+            class="border-ink bg-paper h-auto min-h-11 w-12 rounded-none border-3 font-black max-md:w-11"
             type="button"
             variant="outline"
             disabled={quantity() >= maximumQuantity()}

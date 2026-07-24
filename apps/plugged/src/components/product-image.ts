@@ -34,13 +34,3 @@ export const productImageLayouts = {
 } as const
 
 export type ProductImageLayout = keyof typeof productImageLayouts
-
-export const productImageFallback = (url: string) => {
-  if (url.startsWith('/media/')) return
-  return 'cloudflare' as const
-}
-
-export const productImageOptions = (url: string) => {
-  if (url.startsWith('/media/')) return
-  return { cloudflare: { domain: new URL(url).hostname } }
-}

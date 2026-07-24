@@ -66,7 +66,7 @@ function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransf
       <ErrorNotice title="Сагсаа засна уу">
         <For each={error.corrections}>{correction => <p>{correction.message}</p>}</For>
         <AlertAction>
-          <Button type="button" variant="outline" onClick={openCart}>
+          <Button class="min-h-11" type="button" variant="outline" onClick={openCart}>
             Сагс нээж засах →
           </Button>
         </AlertAction>
@@ -82,7 +82,7 @@ function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransf
       <ErrorNotice title="Сагсаа шалгана уу.">
         <p>Сагсны мэдээлэл буруу байна. Бараагаа дахин сонгоно уу.</p>
         <AlertAction>
-          <Button type="button" variant="outline" onClick={openCart}>
+          <Button class="min-h-11" type="button" variant="outline" onClick={openCart}>
             Сагс нээх →
           </Button>
         </AlertAction>
@@ -103,11 +103,16 @@ function DomainErrorNotice(props: { error: CheckoutDomainError; selectBankTransf
         <p>{error.message}</p>
         <AlertAction>
           <div class="flex flex-wrap gap-2">
-            <Button type="submit" variant="outline">
+            <Button class="min-h-11" type="submit" variant="outline">
               Дахин оролдох
             </Button>
             <Show when={error.canUseBankTransfer}>
-              <Button type="button" variant="secondary" onClick={props.selectBankTransfer}>
+              <Button
+                class="min-h-11"
+                type="button"
+                variant="secondary"
+                onClick={props.selectBankTransfer}
+              >
                 Дансаар төлөх
               </Button>
             </Show>
@@ -201,7 +206,7 @@ function FormOwner() {
                 <ErrorNotice title="Холболт амжилтгүй.">
                   <p>Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.</p>
                   <AlertAction>
-                    <Button type="submit" variant="outline">
+                    <Button class="min-h-11" type="submit" variant="outline">
                       Дахин оролдох
                     </Button>
                   </AlertAction>

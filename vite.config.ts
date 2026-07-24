@@ -16,10 +16,12 @@ export default defineConfig({
       '@store-kit/ui/utils',
       '@tanstack/solid-form',
       '@unpic/solid',
+      '@unpic/solid/base',
       'cmdk-solid',
       'solid-prevent-scroll',
       'solid-presence',
       'solid-sonner',
+      'unpic',
     ],
   },
   run: {

@@ -18,7 +18,7 @@ const factLabels: Record<string, string> = { driverConfiguration: "Драйве�
 ---
 
 <Layout title={`${product.name} · Plugged`} description={product.shortDescription} publicPage>
-  <main id="main-content" class="pb-24 [background:url('/textures/paper-grain.avif')_repeat,var(--color-paper)] [background-blend-mode:multiply]">
+  <main id="main-content" tabindex="-1" class="pb-24 [background:url('/textures/paper-grain.avif')_repeat,var(--color-paper)] [background-blend-mode:multiply]">
     <div class="relative border-b-[5px] border-ink px-[max(0.75rem,3vw)] pt-8 pb-4"><p>{product.brand?.name ?? "PLUGGED"} / {product.category?.name}</p><h1 class="m-0 max-w-[11ch] font-body text-[clamp(2.8rem,8vw,5.5rem)] leading-[0.92] font-black tracking-[-0.04em] text-balance max-md:text-[4.5rem] max-[340px]:text-[3.8rem]">{product.name}</h1><strong class="absolute right-[3vw] bottom-4 rotate-2 border-4 border-ink bg-acid p-3 font-body text-[clamp(1.4rem,4vw,2.5rem)] leading-[0.9] font-black tabular-nums max-md:relative max-md:right-auto max-md:bottom-auto max-md:mt-[-0.5rem] max-md:inline-block">{formatMnt(firstPrice)}-С</strong></div>
     <div class="grid grid-cols-[7fr_5fr] max-md:flex max-md:flex-col">
       <div class="min-w-0 border-r-[5px] border-ink max-md:border-r-0"><ProductPurchase product={purchaseProduct} client:only="solid-js" /></div>

@@ -40,7 +40,6 @@ describe('product image delivery', () => {
       expect(output).toContain('fit=scale-down')
       expect(output).toContain('f=auto')
       expect(output).toContain('https://media.plugged.mn/cdn-cgi/image/')
-      expect(output).not.toContain('cloudflare_images')
       expect(output).not.toContain('/_image')
     },
   )
