@@ -28,7 +28,7 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   )
   .get(
     '/orders/:id/status',
-    async ({ params, headers, request }) =>
+    async ({ params, headers }) =>
       Result.serialize(
         (await commerce.orders.getPrivateStatus(params.id, headers['x-order-token'] ?? '')).map(
           order =>
@@ -52,15 +52,12 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
                 variantName: line.variantName,
                 sku: line.sku,
                 options: line.options,
-                image: nullablePublicImage(
-                  {
-                    r2Key: line.imageR2Key,
-                    width: line.imageWidth,
-                    height: line.imageHeight,
-                    alt: line.imageAlt,
-                  },
-                  request,
-                ),
+                image: nullablePublicImage({
+                  r2Key: line.imageR2Key,
+                  width: line.imageWidth,
+                  height: line.imageHeight,
+                  alt: line.imageAlt,
+                }),
                 unitPriceMnt: line.unitPriceMnt,
                 quantity: line.quantity,
                 lineTotalMnt: line.lineTotalMnt,

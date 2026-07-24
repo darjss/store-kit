@@ -9,6 +9,7 @@
     "./catalog": "./src/catalog.ts",
     "./checkout": "./src/checkout.ts",
     "./common": "./src/common.ts",
+    "./media": "./src/media.ts",
     "./orders": "./src/orders.ts",
     "./payments": "./src/payments.ts",
     "./private-orders": "./src/private-orders.ts",

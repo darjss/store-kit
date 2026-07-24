@@ -7,7 +7,13 @@
     ".": "./index.ts"
   },
   "dependencies": {
+    "@store-kit/contracts": "workspace:*",
     "@store-kit/db": "workspace:*",
+    "jsonc-parser": "^3.3.1",
     "typebox": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "vite-plus": "catalog:"
   }
 }

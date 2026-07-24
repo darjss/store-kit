@@ -6,7 +6,7 @@ import type { ProductImageLayout } from './product-image'
 import { ProductImage } from './ProductImage'
 
 const remoteImage = {
-  url: 'https://media.plugged.mn/catalog/products/aster/graphite.webp',
+  url: 'https://plugged.storekitcdn.darjs.dev/catalog/products/aster/graphite.webp',
   width: 1200,
   height: 900,
   alt: 'Aster Graphite',
@@ -39,7 +39,7 @@ describe('product image delivery', () => {
       expect(output).toContain('quality=80')
       expect(output).toContain('fit=scale-down')
       expect(output).toContain('f=auto')
-      expect(output).toContain('https://media.plugged.mn/cdn-cgi/image/')
+      expect(output).toContain('https://plugged.storekitcdn.darjs.dev/cdn-cgi/image/')
       expect(output).not.toContain('/_image')
     },
   )
@@ -51,14 +51,11 @@ describe('product image delivery', () => {
     expect(renderImage('card')).not.toContain('fetchpriority="high"')
   })
 
-  test('keeps a server-provided local media URL outside Cloudflare transformations', () => {
-    const output = renderImage('thumbnail', false, {
-      ...remoteImage,
-      url: '/media/catalog/products/aster/graphite.webp',
-    })
+  test('preserves intrinsic metadata and alt text', () => {
+    const output = renderImage('thumbnail')
 
-    expect(output).toContain('src="/media/catalog/products/aster/graphite.webp"')
-    expect(output).toContain('loading="lazy"')
-    expect(output).not.toContain('/cdn-cgi/image/')
+    expect(output).toContain('width="1200"')
+    expect(output).toContain('height="900"')
+    expect(output).toContain('alt="Aster Graphite"')
   })
 })

@@ -111,33 +111,41 @@ describe('checked shared request contracts', () => {
   it('returns final public image URLs without exposing R2 keys', async () => {
     const { variantId } = await seedCheckout(95)
     const input = [{ variantId, quantity: 1, previousUnitPriceMnt: 10_000 }]
-    const productionResponse = await postJson('/api/cart/validate', input)
-    const localResponse = await postJson('/api/cart/validate', input, undefined, 'http://localhost')
-    const production = Result.deserialize<ValidatedCart, CartValidationError>(
-      await productionResponse.json(),
+    const publicResponse = await postJson('/api/cart/validate', input)
+    const localHostResponse = await postJson(
+      '/api/cart/validate',
+      input,
+      undefined,
+      'http://localhost',
     )
-    const local = Result.deserialize<ValidatedCart, CartValidationError>(await localResponse.json())
+    const publicResult = Result.deserialize<ValidatedCart, CartValidationError>(
+      await publicResponse.json(),
+    )
+    const localHostResult = Result.deserialize<ValidatedCart, CartValidationError>(
+      await localHostResponse.json(),
+    )
 
-    expect(production).toMatchObject({
+    const expectedImage = {
+      url: 'https://plugged.storekitcdn.darjs.dev/catalog/products/api-product-95/main.webp',
+      width: 1200,
+      height: 900,
+      alt: 'API Product',
+    }
+    expect(publicResult).toMatchObject({
       status: 'ok',
       value: {
         lines: [
           {
-            image: {
-              url: 'https://media.plugged.mn/catalog/products/api-product-95/main.webp',
-              width: 1200,
-              height: 900,
-              alt: 'API Product',
-            },
+            image: expectedImage,
           },
         ],
       },
     })
-    expect(local).toMatchObject({
+    expect(localHostResult).toMatchObject({
       status: 'ok',
-      value: { lines: [{ image: { url: '/media/catalog/products/api-product-95/main.webp' } }] },
+      value: { lines: [{ image: expectedImage }] },
     })
-    expect(JSON.stringify(production)).not.toContain('r2Key')
+    expect(JSON.stringify(publicResult)).not.toContain('r2Key')
   })
 
   it('rejects invalid shared details and persists exactly the normalized valid strings', async () => {

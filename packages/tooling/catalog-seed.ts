@@ -3,6 +3,7 @@ import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
 import {
   brandIdSchema,
   categoryIdSchema,
@@ -19,9 +20,13 @@ import {
   slugSchema,
   variantOptionsSchema,
 } from '@store-kit/db/schemas'
+import { parse } from 'jsonc-parser'
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
 import { Value } from 'typebox/value'
+
+import { catalogSeedTarget } from './catalog-seed-target.ts'
+import type { CatalogSeedEnvironment } from './catalog-seed-target.ts'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const pluggedDirectory = resolve(projectRoot, 'apps/plugged')
@@ -30,8 +35,6 @@ const wranglerConfigPath = resolve(pluggedDirectory, 'wrangler.jsonc')
 const generatedSqlPath = resolve(pluggedDirectory, '.wrangler/catalog.seed.sql')
 
 const d1Binding = 'DB'
-const r2Bucket = 'plugged-media'
-
 const nonEmptyStringSchema = Type.String({ minLength: 1 })
 const nullableStringSchema = Type.Optional(Type.Union([nonEmptyStringSchema, Type.Null()]))
 const imageContentTypeSchema = Type.Union([
@@ -121,6 +124,15 @@ const pluggedCatalogSeedSchema = strictObject({
 })
 
 type CatalogSeed = Static<typeof pluggedCatalogSeedSchema>
+type SeedWranglerConfig = {
+  env?: Record<
+    string,
+    {
+      d1_databases?: { binding?: string; database_name?: string; database_id?: string }[]
+      vars?: Record<string, string>
+    }
+  >
+}
 
 const findDuplicate = (values: string[]) => {
   const seen = new Set<string>()
@@ -303,7 +315,11 @@ const runWrangler = (args: string[]) =>
     })
   })
 
-const uploadImages = async (seed: CatalogSeed, resourceFlag: '--local' | '--remote') => {
+const uploadImages = async (
+  seed: CatalogSeed,
+  environment: CatalogSeedEnvironment,
+  bucket: string,
+) => {
   const images = seed.products.flatMap(product => product.images)
   await images.reduce(async (previousUpload, image) => {
     await previousUpload
@@ -311,12 +327,16 @@ const uploadImages = async (seed: CatalogSeed, resourceFlag: '--local' | '--remo
       'r2',
       'object',
       'put',
-      `${r2Bucket}/${image.r2Key}`,
+      `${bucket}/${image.r2Key}`,
       '--file',
       assetPath(image.source),
       '--content-type',
       image.contentType,
-      resourceFlag,
+      '--cache-control',
+      'public, max-age=31536000, immutable',
+      '--remote',
+      '--env',
+      environment,
       '--config',
       wranglerConfigPath,
     ])
@@ -566,7 +586,7 @@ const buildSql = (seed: CatalogSeed) => {
   return `${statements.join('\n')}\n`
 }
 
-const importRows = async (seed: CatalogSeed, resourceFlag: '--local' | '--remote') => {
+const importRows = async (seed: CatalogSeed, environment: CatalogSeedEnvironment) => {
   await mkdir(dirname(generatedSqlPath), { recursive: true })
   await writeFile(generatedSqlPath, buildSql(seed), { mode: 0o600 })
   try {
@@ -576,7 +596,9 @@ const importRows = async (seed: CatalogSeed, resourceFlag: '--local' | '--remote
       d1Binding,
       '--file',
       generatedSqlPath,
-      resourceFlag,
+      '--remote',
+      '--env',
+      environment,
       '--yes',
       '--config',
       wranglerConfigPath,
@@ -586,7 +608,7 @@ const importRows = async (seed: CatalogSeed, resourceFlag: '--local' | '--remote
   }
 }
 
-const printCounts = (seed: CatalogSeed) => {
+const printCounts = (seed: CatalogSeed, scope: 'data' | 'media') => {
   const products = seed.products.length
   const variants = seed.products.reduce((count, product) => count + product.variants.length, 0)
   const images = seed.products.reduce((count, product) => count + product.images.length, 0)
@@ -602,7 +624,7 @@ const printCounts = (seed: CatalogSeed) => {
 
   process.stdout.write(
     [
-      'Catalog seed complete:',
+      `Catalog ${scope === 'media' ? 'media upload' : 'data seed'} complete:`,
       `brands: ${seed.brands.length}`,
       `categories: ${seed.categories.length}`,
       `products: ${products}`,
@@ -615,20 +637,58 @@ const printCounts = (seed: CatalogSeed) => {
 }
 
 const main = async () => {
-  const args = process.argv.slice(2)
-  const remote = args.includes('--remote')
-  const unknown = args.filter(argument => argument !== '--remote')
-  if (unknown.length > 0 || args.filter(argument => argument === '--remote').length > 1) {
-    throw new Error('Usage: vp run catalog:seed:plugged [--remote]')
+  const target = catalogSeedTarget(process.argv.slice(2), process.env)
+  const config = parse(await readFile(wranglerConfigPath, 'utf8')) as SeedWranglerConfig
+  const environmentConfig = config.env?.[target.environment]
+  if (
+    !environmentConfig ||
+    environmentConfig.vars?.DEPLOYMENT_ENV !== target.environment ||
+    !environmentConfig.vars.PUBLIC_MEDIA_BASE_URL
+  ) {
+    throw new Error(
+      `wrangler.jsonc must define env.${target.environment} with matching DEPLOYMENT_ENV and PUBLIC_MEDIA_BASE_URL before seeding.`,
+    )
+  }
+  const mediaBaseUrl = remoteMediaBaseUrl(environmentConfig.vars.PUBLIC_MEDIA_BASE_URL)
+  if (
+    (target.environment === 'production' &&
+      mediaBaseUrl !== 'https://plugged.storekitcdn.darjs.dev/') ||
+    (target.environment === 'development' &&
+      mediaBaseUrl === 'https://plugged.storekitcdn.darjs.dev/')
+  ) {
+    throw new Error(`env.${target.environment} has an invalid media origin: ${mediaBaseUrl}`)
+  }
+  if (target.scope === 'data') {
+    const d1 = environmentConfig.d1_databases?.find(database => database.binding === d1Binding)
+    if (!d1?.database_name || !d1.database_id) {
+      throw new Error(
+        `env.${target.environment} must define DB database_name and database_id before seeding.`,
+      )
+    }
   }
 
-  const resourceFlag = remote ? '--remote' : '--local'
-  process.stdout.write(`Seeding ${remote ? 'remote' : 'local'} Plugged resources.\n`)
+  process.stdout.write(
+    `Preparing remote Plugged ${target.scope} seed for ${target.environment} (${target.bucket}).\n`,
+  )
   const seed = await parseSeed()
   await validateAssets(seed)
-  await uploadImages(seed, resourceFlag)
-  await importRows(seed, resourceFlag)
-  printCounts(seed)
+
+  if (target.scope === 'media') {
+    await runWrangler(['r2', 'bucket', 'info', target.bucket])
+    await uploadImages(seed, target.environment, target.bucket)
+  } else {
+    await runWrangler([
+      'd1',
+      'info',
+      d1Binding,
+      '--env',
+      target.environment,
+      '--config',
+      wranglerConfigPath,
+    ])
+    await importRows(seed, target.environment)
+  }
+  printCounts(seed, target.scope)
 }
 
 await main()

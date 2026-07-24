@@ -42,13 +42,13 @@ export const catalogRoutes = new Elysia({ aot: false, prefix: '/api' })
   })
   .get(
     '/products',
-    async ({ query, request }) =>
+    async ({ query }) =>
       Result.serialize(
         (await commerce.catalog.listProducts(query)).map(catalog => ({
           ...catalog,
           items: catalog.items.map(product => ({
             ...product,
-            images: product.images.map(image => publicImage(image, request)),
+            images: product.images.map(image => publicImage(image)),
           })),
         })),
       ),
@@ -58,11 +58,11 @@ export const catalogRoutes = new Elysia({ aot: false, prefix: '/api' })
   )
   .get(
     '/products/:slug',
-    async ({ params, request }) =>
+    async ({ params }) =>
       Result.serialize(
         (await commerce.catalog.getProduct(params.slug)).map(product => ({
           ...product,
-          images: product.images.map(image => publicImage(image, request)),
+          images: product.images.map(image => publicImage(image)),
         })),
       ),
     {

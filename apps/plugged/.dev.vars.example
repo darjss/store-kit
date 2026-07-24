@@ -1,5 +1,7 @@
+DEPLOYMENT_ENV=development
 PUBLIC_APP_URL=https://plugged.localhost
-PUBLIC_MEDIA_BASE_URL=https://plugged.localhost/media/
+# Required: set a remote development R2 custom-domain origin. Never use the production origin.
+PUBLIC_MEDIA_BASE_URL=
 QPAY_BASE_URL=https://merchant-sandbox.qpay.mn
 QPAY_USERNAME=
 QPAY_PASSWORD=

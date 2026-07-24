@@ -20,10 +20,10 @@
     },
   ],
   "kv_namespaces": [{ "binding": "CACHE" }, { "binding": "AUTH_KV" }],
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "plugged-media" }],
   "vars": {
+    "DEPLOYMENT_ENV": "production",
     "PUBLIC_APP_URL": "https://plugged.mn",
-    "PUBLIC_MEDIA_BASE_URL": "https://media.plugged.mn/",
+    "PUBLIC_MEDIA_BASE_URL": "https://plugged.storekitcdn.darjs.dev/",
     "QPAY_BASE_URL": "https://merchant.qpay.mn",
   },
   "observability": {

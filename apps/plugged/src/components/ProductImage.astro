@@ -1,11 +1,13 @@
 ---
-import { Image } from 'astro:assets'
+import type { PublicImage } from '@store-kit/contracts'
+import { Image } from '@unpic/astro/base'
+import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
 import { productImageLayouts } from './product-image'
-import type { ProductImageLayout, ProductImageMetadata } from './product-image'
+import type { ProductImageLayout } from './product-image'
 
 interface Props {
-  image: ProductImageMetadata
+  image: PublicImage
   layout: ProductImageLayout
   class?: string
   priority?: boolean
@@ -16,31 +18,19 @@ const config = productImageLayouts[layout]
 ---
 
 {
-  image.url.startsWith('/media/') ? (
-    <img
-      src={image.url}
-      alt={image.alt}
-      width={image.width}
-      height={image.height}
-      sizes={config.sizes}
-      loading={priority ? 'eager' : 'lazy'}
-      decoding={priority ? 'sync' : 'async'}
-      fetchpriority={priority ? 'high' : 'auto'}
-      class={className}
-    />
-  ) : (
-    <Image
-      src={image.url}
-      alt={image.alt}
-      width={image.width}
-      height={image.height}
-      widths={[...config.breakpoints]}
-      sizes={config.sizes}
-      layout="constrained"
-      fit="scale-down"
-      quality={80}
-      priority={priority}
-      class={className}
-    />
-  )
+  <Image
+    src={image.url}
+    alt={image.alt}
+    width={image.width}
+    height={image.height}
+    breakpoints={[...config.breakpoints]}
+    sizes={config.sizes}
+    layout="fixed"
+    transformer={cloudflare}
+    operations={{ quality: 80, format: 'auto', fit: 'scale-down' }}
+    options={{ domain: new URL(image.url).hostname }}
+    priority={priority}
+    unstyled
+    class={className}
+  />
 }

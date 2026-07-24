@@ -1,8 +1,14 @@
+import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import { createEnv } from '@t3-oss/env-core'
 import { Type } from 'typebox'
 
+export const productionMediaBaseUrl = 'https://plugged.storekitcdn.darjs.dev/'
+
 const url = toStandardSchema(Type.String({ format: 'uri' }))
+const deploymentEnvironment = toStandardSchema(
+  Type.Union([Type.Literal('development'), Type.Literal('production')]),
+)
 const optionalSecret = toStandardSchema(
   Type.Union([Type.String({ minLength: 1 }), Type.Undefined()]),
 )
@@ -22,6 +28,7 @@ const telegramCredentialNames = [
 ] as const
 
 export type PluggedRuntimeEnvironment = {
+  DEPLOYMENT_ENV?: string
   PUBLIC_APP_URL?: string
   PUBLIC_MEDIA_BASE_URL?: string
   QPAY_BASE_URL?: string
@@ -53,9 +60,13 @@ const issuePath = (path: readonly (PropertyKey | { key: PropertyKey })[] | undef
     .map(String)
     .join('.') || 'environment'
 
-export const validatePluggedEnvironment = (runtimeEnv: PluggedRuntimeEnvironment) => {
+export const validatePluggedEnvironment = (
+  runtimeEnv: PluggedRuntimeEnvironment,
+  options: { localDevelopment?: boolean } = {},
+) => {
   const environment = createEnv({
     server: {
+      DEPLOYMENT_ENV: deploymentEnvironment,
       QPAY_BASE_URL: url,
       QPAY_USERNAME: optionalSecret,
       QPAY_PASSWORD: optionalSecret,
@@ -81,6 +92,17 @@ export const validatePluggedEnvironment = (runtimeEnv: PluggedRuntimeEnvironment
 
   assertCompleteGroup(environment, 'QPay', qpayCredentialNames)
   assertCompleteGroup(environment, 'Telegram', telegramCredentialNames)
+
+  const mediaBaseUrl = remoteMediaBaseUrl(environment.PUBLIC_MEDIA_BASE_URL)
+  if (environment.DEPLOYMENT_ENV === 'production' && mediaBaseUrl !== productionMediaBaseUrl) {
+    throw new Error(`Production media must use ${productionMediaBaseUrl}`)
+  }
+  if (environment.DEPLOYMENT_ENV === 'development' && mediaBaseUrl === productionMediaBaseUrl) {
+    throw new Error('Development media must not fall back to the production R2 custom domain.')
+  }
+  if (options.localDevelopment && environment.DEPLOYMENT_ENV !== 'development') {
+    throw new Error('Local development requires DEPLOYMENT_ENV=development.')
+  }
 
   return environment
 }
