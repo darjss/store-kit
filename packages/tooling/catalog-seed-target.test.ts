@@ -38,6 +38,14 @@ describe('catalog seed target selection', () => {
     expect(() => catalogSeedTarget(args, environment)).toThrow()
   })
 
+  test('rejects a different development bucket', () => {
+    expect(() =>
+      catalogSeedTarget(['--environment', 'development', '--only', 'media'], {
+        PLUGGED_MEDIA_BUCKET: 'plugged',
+      }),
+    ).toThrow('Development media must use plugged-development-media')
+  })
+
   test('accepts production only with a bucket-specific confirmation', () => {
     expect(
       catalogSeedTarget(['--environment', 'production', '--only', 'data'], {

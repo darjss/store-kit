@@ -68,6 +68,9 @@ test('ProductPurchase parts select variants, clamp quantity, announce changes, a
               {selection().selectedVariant?.name}:{selection().selectedImage?.id}:
               {selection().quantity}
             </output>
+            <button type="button" onClick={() => selection().selectImage('image-copper')}>
+              Copper image
+            </button>
             <button type="button" onClick={() => selection().setQuantity(7)}>
               Seven
             </button>
@@ -98,6 +101,9 @@ test('ProductPurchase parts select variants, clamp quantity, announce changes, a
     'Copper',
     'Silver',
   ])
+
+  fireEvent.click(view.getByRole('button', { name: 'Copper image' }))
+  expect(view.getByLabelText('selection').textContent).toBe('Graphite:image-copper:1')
 
   fireEvent.click(view.getByRole('button', { name: 'Seven' }))
   fireEvent.click(view.getByRole('button', { name: 'Copper' }))

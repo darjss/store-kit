@@ -70,6 +70,13 @@ test('CatalogSearch parts bind dialog focus and render prompt, pending, empty, a
             />
           )}
         </CatalogSearch.Input>
+        <CatalogSearch.Summary>
+          {summary => (
+            <output aria-label="summary">
+              {summary.query()}:{summary.count() ?? 'waiting'}
+            </output>
+          )}
+        </CatalogSearch.Summary>
         <output aria-label="outcome">
           <CatalogSearch.Results
             prompt={() => <>prompt</>}
@@ -93,6 +100,7 @@ test('CatalogSearch parts bind dialog focus and render prompt, pending, empty, a
   fireEvent.input(view.getByLabelText('Query'), { target: { value: '  iem  ' } })
   expect(view.getByLabelText('outcome').textContent).toBe('pending')
   await waitFor(() => expect(view.getByLabelText('outcome').textContent).toBe('empty'))
+  expect(view.getByLabelText('summary').textContent).toBe('  iem  :0')
 
   client.setQueryData(
     options.queryKey,
@@ -104,6 +112,7 @@ test('CatalogSearch parts bind dialog focus and render prompt, pending, empty, a
     }),
   )
   await waitFor(() => expect(view.getByLabelText('outcome').textContent).toBe('result:Aster Kit'))
+  expect(view.getByLabelText('summary').textContent).toBe('  iem  :1')
 
   fireEvent.click(view.getByRole('button', { name: 'Close' }))
   expect(view.getByLabelText('open').textContent).toBe('closed')

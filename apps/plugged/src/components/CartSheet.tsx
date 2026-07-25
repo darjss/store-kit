@@ -14,11 +14,11 @@ function CartLine(props: { item: PersistedCartItem }) {
   return (
     <Cart.ItemValidation item={props.item}>
       {validation => (
-        <article class="border-ink grid grid-cols-[110px_minmax(0,1fr)] gap-3 border-b-3 py-4 max-md:grid-cols-[80px_minmax(0,1fr)]">
+        <article class="border-paper/25 text-paper grid grid-cols-[110px_minmax(0,1fr)] gap-4 border-b-2 py-5 max-md:grid-cols-[80px_minmax(0,1fr)]">
           <Show when={props.item.image}>
             {image => (
               <ProductImage
-                class="bg-paper-clean size-27.5 object-contain max-md:size-20"
+                class="bg-paper size-27.5 -rotate-1 object-contain max-md:size-20"
                 image={image()}
                 layout="thumbnail"
               />
@@ -72,7 +72,7 @@ function CartLine(props: { item: PersistedCartItem }) {
                   type="button"
                   variant="outline"
                   size="icon-lg"
-                  class="border-ink bg-paper-clean min-h-11 min-w-11 rounded-none border-0 shadow-none"
+                  class="border-paper bg-ink text-paper min-h-11 min-w-11 rounded-none border-0 shadow-none"
                   disabled={validation.blocksQuantityChange()}
                   onClick={validation.decrementQuantity}
                   aria-label={`${props.item.productName} тоог нэгээр хасах`}
@@ -86,7 +86,7 @@ function CartLine(props: { item: PersistedCartItem }) {
                   type="button"
                   variant="outline"
                   size="icon-lg"
-                  class="border-ink bg-paper-clean min-h-11 min-w-11 rounded-none border-0 border-l-2 shadow-none"
+                  class="border-paper bg-ink text-paper min-h-11 min-w-11 rounded-none border-0 border-l-2 shadow-none"
                   disabled={validation.blocksQuantityIncrease()}
                   onClick={validation.incrementQuantity}
                   aria-label={`${props.item.productName} тоог нэгээр нэмэх`}
@@ -97,7 +97,7 @@ function CartLine(props: { item: PersistedCartItem }) {
               <Button
                 type="button"
                 variant="destructive"
-                class="text-warning border-ink bg-paper-clean hover:bg-paper ml-auto min-h-11 min-w-24 gap-2 rounded-none border-2 px-3"
+                class="text-paper border-paper bg-ink hover:bg-warning ml-auto min-h-11 min-w-24 gap-2 rounded-none border-2 px-3"
                 onClick={validation.removeItem}
                 aria-label={`${props.item.productName} сагснаас хасах`}
               >
@@ -127,16 +127,21 @@ export function CartSheet(props: { initialOpen: boolean }) {
   return (
     <>
       <Sheet.Content
-        class="border-ink! bg-paper! fixed! top-0! right-0! z-50! h-dvh! w-[min(100%,500px)]! max-w-none! gap-0! overflow-y-auto! border-l-[5px]! p-0! shadow-none! outline-none! data-[side=right]:animate-[sheet-in_280ms_var(--ease-slam)]! motion-reduce:animate-none! max-md:inset-0! max-md:w-full! max-md:border-l-0! max-md:data-[side=right]:animate-[sheet-up_280ms_var(--ease-slam)]!"
+        class="border-paper! bg-petrol! fixed! top-0! right-0! z-50! h-dvh! w-[min(100%,540px)]! max-w-none! gap-0! overflow-y-auto! border-l-[5px]! p-0! shadow-none! outline-none! data-[side=right]:animate-[sheet-in_280ms_var(--ease-paper)]! motion-reduce:animate-none! max-md:inset-0! max-md:w-full! max-md:border-l-0! max-md:data-[side=right]:animate-[sheet-up_280ms_var(--ease-paper)]!"
         showCloseButton={false}
       >
-        <div class="border-ink bg-orange flex min-h-17.5 items-center justify-between border-b-4 px-4 py-3">
-          <Sheet.Title class="font-display text-[3rem] leading-[0.8]">САГС / BAG</Sheet.Title>
+        <div class="border-paper bg-ink text-paper sticky top-0 z-10 flex min-h-17.5 items-center justify-between border-b-4 px-4 py-3">
+          <div>
+            <p class="text-cyan m-0 text-xs font-black">ACTIVE FILE / CART</p>
+            <Sheet.Title class="font-body text-paper! text-[2rem] leading-none font-black">
+              САГС
+            </Sheet.Title>
+          </div>
           <Sheet.Close
             as={Button}
             variant="outline"
             size="icon-lg"
-            class="border-ink bg-paper size-12 rounded-none border-3 text-[2rem]"
+            class="border-paper! bg-ink! text-paper! size-12 rounded-none border-3 text-[2rem]"
             aria-label="Сагс хаах"
           >
             <span aria-hidden="true">×</span>
@@ -145,11 +150,13 @@ export function CartSheet(props: { initialOpen: boolean }) {
         <div class="p-4" aria-busy={validation.isChecking()}>
           <Cart.Empty>
             <div class="grid min-h-[55dvh] place-content-center gap-4 text-center">
-              <strong class="font-display text-[4rem] leading-[0.8]">Сагс хоосон.</strong>
+              <strong class="font-body text-paper text-[2.5rem] leading-none font-black">
+                Сагс хоосон.
+              </strong>
               <Button
                 as="a"
                 variant="outline"
-                class="border-ink bg-paper-clean min-h-11 rounded-none border-3 font-black"
+                class="border-paper bg-cyan text-ink min-h-11 rounded-none border-3 font-black"
                 href="/products"
               >
                 Бараа үзэх →
@@ -218,7 +225,7 @@ export function CartSheet(props: { initialOpen: boolean }) {
           />
           <Cart.Items>{item => <CartLine item={item} />}</Cart.Items>
           <Show when={cartItems().length > 0}>
-            <div class="flex flex-wrap justify-between gap-2 py-4 text-xl">
+            <div class="text-paper flex flex-wrap justify-between gap-2 py-5 text-xl">
               <span>Барааны дүн</span>
               <strong>
                 {formatMnt(
@@ -230,7 +237,7 @@ export function CartSheet(props: { initialOpen: boolean }) {
             </div>
             <Button
               as="a"
-              class="border-ink bg-orange text-ink min-h-12.5 w-full rounded-none border-3 px-4 py-3 font-black no-underline transition-transform duration-100 active:scale-[0.97] motion-reduce:transition-none"
+              class="pressable border-paper bg-cyan text-ink sticky bottom-0 min-h-14 w-full rounded-none border-3 px-4 py-3 font-black no-underline motion-reduce:transition-none"
               href="/checkout"
               onClick={continueCheckout}
             >

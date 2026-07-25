@@ -25,6 +25,16 @@ import type { JSX } from 'solid-js'
 
 import { ProductImage } from './ProductImage'
 
+const orderStages = ['Хүлээн авсан', 'Баталгаажсан', 'Бэлтгэж байна', 'Хүргэлт', 'Дууссан'] as const
+
+const orderStageIndex = (status: PublicOrder['status']) => {
+  if (status === 'confirmed') return 1
+  if (status === 'preparing') return 2
+  if (status === 'delivering') return 3
+  if (status === 'completed') return 4
+  return 0
+}
+
 const paymentSummary = (order: PublicOrder) => {
   const payment = order.payment
   if (!payment) return 'Төлөв тодорхойгүй'
@@ -92,7 +102,7 @@ function OrderAction(props: {
 }) {
   return (
     <Button
-      class="border-ink bg-orange text-ink mr-2 min-h-12.5 cursor-pointer gap-2 rounded-none border-3 px-4 py-3 font-black transition-transform duration-100 active:scale-[0.97] motion-reduce:transition-none"
+      class="pressable border-paper bg-cyan text-ink mr-2 mb-2 min-h-12.5 cursor-pointer gap-2 rounded-none border-3 px-4 py-3 font-black disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
       type="button"
       disabled={props.pending}
       aria-busy={props.pending}
@@ -120,42 +130,84 @@ function StatusContent() {
   return (
     <Switch>
       <Match when={status.state()._tag === 'MissingToken'}>
-        <div class="grid min-h-[60vh] place-content-center text-center">
-          <h1 class="font-display text-[5rem] leading-[0.8]">Захиалга олдсонгүй.</h1>
+        <div class="text-paper grid min-h-[60vh] place-content-center text-center">
+          <h1 class="font-body text-[clamp(2.5rem,10vw,5rem)] leading-none font-black">
+            Захиалга олдсонгүй.
+          </h1>
           <p>Энэ холбоос бүрэн биш эсвэл хугацааны мэдээлэл алга.</p>
           <a href="/">Нүүр рүү буцах</a>
         </div>
       </Match>
       <Match when={status.state()._tag === 'Hydrating' || status.state()._tag === 'Loading'}>
-        <div class="grid min-h-[60vh] place-content-center text-center">
+        <div class="text-paper grid min-h-[60vh] place-content-center text-center">
           Захиалгыг шалгаж байна…
         </div>
       </Match>
-      <Match
-        when={
-          status.state()._tag === 'TransportError' || status.state()._tag === 'InvalidStatusToken'
-        }
-      >
-        <div class="grid min-h-[60vh] place-content-center text-center">
-          <h1 class="font-display text-[5rem] leading-[0.8]">Захиалга олдсонгүй.</h1>
+      <Match when={status.state()._tag === 'TransportError'}>
+        <div class="dossier-sheet mx-auto grid min-h-80 w-[min(620px,100%)] place-content-center p-6 text-center">
+          <p class="dossier-stamp text-warning mx-auto mb-4">CONNECTION / FAILED</p>
+          <h1 class="font-body text-[clamp(2rem,8vw,4rem)] leading-none font-black">
+            Төлөв татаж чадсангүй.
+          </h1>
+          <p>Хувийн холбоос хадгалагдсан. Сүлжээгээ шалгаад дахин оролдоно уу.</p>
+          <OrderAction
+            pending={status.isRefreshingStatus()}
+            pendingLabel="Дахин шалгаж байна…"
+            onClick={() => void status.refreshStatus()}
+          >
+            Дахин шалгах
+          </OrderAction>
+        </div>
+      </Match>
+      <Match when={status.state()._tag === 'InvalidStatusToken'}>
+        <div class="text-paper grid min-h-[60vh] place-content-center text-center">
+          <h1 class="font-body text-[clamp(2rem,8vw,4rem)] leading-none font-black">
+            Захиалга олдсонгүй.
+          </h1>
           <p>Хувийн холбоосоо шалгана уу.</p>
-          <a href="/">Нүүр рүү буцах</a>
+          <a class="text-cyan" href="/">
+            Нүүр рүү буцах
+          </a>
         </div>
       </Match>
       <Match when={privateOrder()}>
         {order => (
-          <article class="mx-auto w-[min(900px,100%)]">
-            <header class="border-ink bg-orange border-[5px] p-4">
-              <p class="inline-block -rotate-2 border-3 border-current px-2 py-1 font-black">
-                ЗАХИАЛГЫН ТӨЛӨВ
-              </p>
-              <h1 class="font-display my-2 text-[clamp(4rem,10vw,6rem)] leading-[0.75] text-balance">
+          <article class="text-ink mx-auto w-[min(960px,100%)]">
+            <header class="dossier-sheet bg-cyan p-[clamp(1rem,4vw,2.5rem)]">
+              <p class="dossier-stamp text-petrol mb-4">PRIVATE ORDER / STATUS</p>
+              <h1 class="font-body my-2 text-[clamp(2.5rem,9vw,5.5rem)] leading-[0.9] font-black tracking-[-0.035em] text-balance">
                 {order().number}
               </h1>
-              <strong>{orderStatusLabel(order().status)}</strong>
+              <strong class="border-ink inline-block border-y-3 py-1 text-xl">
+                {orderStatusLabel(order().status)}
+              </strong>
+              <ol
+                class="mt-8 grid grid-cols-5 gap-1 max-md:grid-cols-1"
+                aria-label="Захиалгын үе шат"
+              >
+                <For each={orderStages}>
+                  {(label, index) => (
+                    <li
+                      class="border-ink flex min-h-14 items-center gap-2 border-t-3 pt-2 text-sm font-extrabold max-md:min-h-0"
+                      classList={{
+                        'text-petrol': index() <= orderStageIndex(order().status),
+                        'opacity-45': index() > orderStageIndex(order().status),
+                      }}
+                      aria-current={
+                        index() === orderStageIndex(order().status) ? 'step' : undefined
+                      }
+                    >
+                      <span class="font-display text-3xl leading-none" aria-hidden="true">
+                        0{index() + 1}
+                      </span>
+                      {label}
+                    </li>
+                  )}
+                </For>
+              </ol>
             </header>
             <section
-              class="border-ink bg-paper-clean [&>h2]:font-display border-4 border-t-0 p-[clamp(1rem,3vw,2rem)] [&>h2]:text-[3rem] [&>h2]:leading-[0.8]"
+              class="dossier-sheet [&>h2]:font-body mt-7 animate-[dossier-reveal_420ms_var(--ease-slam)_both] p-[clamp(1rem,3vw,2rem)] [&>h2]:text-[2rem] [&>h2]:leading-none [&>h2]:font-black"
               aria-busy={status.isClaimingBankTransfer() || status.isRefreshingQPay()}
             >
               <h2>Төлбөр</h2>
@@ -205,7 +257,7 @@ function StatusContent() {
                 </p>
               </Show>
             </section>
-            <section class="border-ink bg-paper-clean [&>h2]:font-display border-4 border-t-0 p-[clamp(1rem,3vw,2rem)] [&>h2]:text-[3rem] [&>h2]:leading-[0.8]">
+            <section class="dossier-sheet [&>h2]:font-body mt-7 animate-[dossier-reveal_420ms_var(--ease-slam)_70ms_both] p-[clamp(1rem,3vw,2rem)] [&>h2]:text-[2rem] [&>h2]:leading-none [&>h2]:font-black">
               <h2>Бараа</h2>
               <For each={order().lines}>
                 {line => (
@@ -234,7 +286,7 @@ function StatusContent() {
                 <strong>{formatMnt(order().totalMnt)}</strong>
               </div>
             </section>
-            <section class="border-ink bg-paper-clean [&>h2]:font-display border-4 border-t-0 p-[clamp(1rem,3vw,2rem)] [&>h2]:text-[3rem] [&>h2]:leading-[0.8]">
+            <section class="dossier-sheet [&>h2]:font-body mt-7 animate-[dossier-reveal_420ms_var(--ease-slam)_140ms_both] p-[clamp(1rem,3vw,2rem)] [&>h2]:text-[2rem] [&>h2]:leading-none [&>h2]:font-black">
               <h2>Хүргэлт</h2>
               <p>
                 {order().district}, {order().khoroo}-р хороо
@@ -257,7 +309,7 @@ export function OrderStatus(props: { orderId: string }) {
     <Show
       when={mounted()}
       fallback={
-        <div class="grid min-h-[60vh] place-content-center text-center">
+        <div class="text-paper grid min-h-[60vh] place-content-center text-center">
           Захиалгыг шалгаж байна…
         </div>
       }

@@ -1,5 +1,7 @@
 export type CatalogSeedEnvironment = 'local' | 'development' | 'production'
 export type CatalogSeedRemoteEnvironment = Exclude<CatalogSeedEnvironment, 'local'>
+
+export const pluggedDevelopmentMediaBucket = 'plugged-development-media'
 export type CatalogSeedScope = 'data' | 'media'
 
 export type CatalogSeedTarget =
@@ -53,6 +55,10 @@ export const catalogSeedTarget = (
   const bucket = environment.PLUGGED_MEDIA_BUCKET?.trim()
   if (!bucket) {
     throw new Error('PLUGGED_MEDIA_BUCKET must name the selected remote R2 bucket.')
+  }
+
+  if (selectedEnvironment === 'development' && bucket !== pluggedDevelopmentMediaBucket) {
+    throw new Error(`Development media must use ${pluggedDevelopmentMediaBucket}.`)
   }
 
   if (selectedEnvironment === 'production') {

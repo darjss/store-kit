@@ -32,20 +32,60 @@ to cache the catalog image types.
 For local development, copy `.dev.vars.example`, set `DEPLOYMENT_ENV=development`, and provide the
 remote development custom-domain origin. An empty value intentionally fails validation.
 
+## Reliable local browser runtime
+
+Astro 7.1.3 with `@astrojs/cloudflare` 14.1.4 currently fails while matching dynamic server routes
+in `astro dev`. A request that considers `products/[slug].astro` returns `require is not defined`
+from `workers/runner-worker/index.js:107` through
+`NonRunnablePipeline.getComponentByRoute`. Static island-only routes can still return 200. The same
+source builds and runs in local Wrangler. This is the Cloudflare SSR dependency-optimizer failure
+tracked in [withastro/astro#16248](https://github.com/withastro/astro/issues/16248); Astro's current
+Cloudflare guide also states that CommonJS dependencies can fail in the development `workerd`
+environment and recommends built local preview for production-like checks. The storefront routes
+used server catalog imports before the warehouse-night redesign, so that redesign did not introduce
+the runtime category.
+
+Use the built Worker for browser QA until the upstream development runner is fixed. Start from a
+clean local database when you need repeatable catalog and checkout behavior:
+
+```sh
+rm -rf apps/plugged/.wrangler/state
+vp run db:migrate:plugged:local
+vp run catalog:seed:plugged:local
+PLUGGED_LOCAL_MEDIA_BASE_URL=https://plugged-dev.storekitcdn.darjs.dev/ \
+  vp run plugged:browser:start
+vp run plugged:browser:health
+```
+
+`plugged:browser:start` builds Astro, starts Wrangler with `--local`, disables remote bindings, and
+writes an explicit development-only environment file under ignored `.astro/`. It rejects the
+production media origin and requires a development R2 custom domain. It does not load provider
+credentials or access production D1 or KV resources.
+
+Manage the background Worker with:
+
+```sh
+vp run plugged:browser:status
+vp run plugged:browser:logs
+vp run plugged:browser:stop
+```
+
+The supported local URL is `http://127.0.0.1:4321`.
+
 ## Development release
 
 Set the exact remote development bucket name for every media or deploy command:
 
 ```sh
 vp run plugged:generate-types
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run catalog:media:plugged:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media vp run catalog:media:plugged:development
 vp run db:migrate:plugged:development
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run catalog:seed:plugged:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media vp run catalog:seed:plugged:development
 vp run plugged:secret-names:development
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run plugged:deploy:dry-run:development
-PLUGGED_MEDIA_BUCKET=<development-r2-bucket> vp run plugged:deploy:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media vp run plugged:deploy:dry-run:development
+PLUGGED_MEDIA_BUCKET=plugged-development-media vp run plugged:deploy:development
 PLUGGED_SMOKE_URL=https://<development-worker-host>/ \
-  PLUGGED_MEDIA_BASE_URL=https://<development-r2-custom-domain>/ \
+  PLUGGED_MEDIA_BASE_URL=https://plugged-dev.storekitcdn.darjs.dev/ \
   vp run plugged:smoke:development
 ```
 

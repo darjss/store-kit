@@ -57,6 +57,7 @@ test('checkout reveals only touched errors until submit, then summarizes and foc
 
   await waitFor(() => expect(document.activeElement).toBe(name))
   expect(name.getAttribute('name')).toBe('customer.name')
+  expect((name as HTMLInputElement).value).toBe(' ')
   expect(name.getAttribute('aria-invalid')).toBe('true')
   expect(phone.getAttribute('aria-invalid')).toBe('true')
   expect(view.getByText('Утасны дугаараа шалгана уу.')).toBeTruthy()
@@ -88,5 +89,9 @@ test('checkout controls edit values shaped like the checkout details schema', as
   expect(address.name).toBe('delivery.address')
   expect((bankTransfer as HTMLInputElement).name).toBe('paymentMethod')
   expect((bankTransfer as HTMLInputElement).checked).toBe(true)
+  expect(bankTransfer.closest('label')?.getAttribute('for')).toBe('payment-bank-transfer')
   expect(view.getByText("TANGZU Wan'er 2 Red Lion × 2")).toBeTruthy()
+  expect(view.getByRole('button', { name: 'Захиалга үүсгэх →' }).className).toContain(
+    'max-md:fixed',
+  )
 })

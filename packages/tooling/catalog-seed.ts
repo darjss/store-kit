@@ -317,8 +317,8 @@ const runWrangler = (args: string[]) =>
 
 const uploadImages = async (
   seed: CatalogSeed,
-  environment: CatalogSeedRemoteEnvironment,
   bucket: string,
+  environment?: CatalogSeedRemoteEnvironment,
 ) => {
   const images = seed.products.flatMap(product => product.images)
   await images.reduce(async (previousUpload, image) => {
@@ -335,8 +335,7 @@ const uploadImages = async (
       '--cache-control',
       'public, max-age=31536000, immutable',
       '--remote',
-      '--env',
-      environment,
+      ...(environment ? ['--env', environment] : []),
       '--config',
       wranglerConfigPath,
     ])
@@ -647,6 +646,16 @@ const main = async () => {
     return
   }
 
+  if (target.environment === 'development' && target.scope === 'media') {
+    process.stdout.write(
+      `Preparing remote Plugged media seed for development (${target.bucket}).\n`,
+    )
+    await runWrangler(['r2', 'bucket', 'info', target.bucket])
+    await uploadImages(seed, target.bucket)
+    printCounts(seed, target.scope)
+    return
+  }
+
   const config = parse(await readFile(wranglerConfigPath, 'utf8')) as SeedWranglerConfig
   const environmentConfig = config.env?.[target.environment]
   if (
@@ -682,7 +691,7 @@ const main = async () => {
 
   if (target.scope === 'media') {
     await runWrangler(['r2', 'bucket', 'info', target.bucket])
-    await uploadImages(seed, target.environment, target.bucket)
+    await uploadImages(seed, target.bucket, target.environment)
   } else {
     await runWrangler([
       'd1',

@@ -1,8 +1,8 @@
 # Environment and local preview
 
 Copy `.dev.vars.example` to the ignored `.dev.vars` file. Use the stable local application URL
-`https://plugged.localhost` and set `PUBLIC_MEDIA_BASE_URL` to the remote development R2
-custom-domain origin.
+`https://plugged.localhost` and the development media origin
+`https://plugged-dev.storekitcdn.darjs.dev/`. Development must not fall back to production media.
 
 Start a development preview from the workspace root:
 

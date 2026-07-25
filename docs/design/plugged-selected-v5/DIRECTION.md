@@ -58,6 +58,25 @@ that unseeded products are in stock. Do not implement the legacy
 `ЧИХНИЙ ХОШУУ` label visible in these supplied rasters as a homepage category.
 There is no cable category or standalone sellable cable.
 
+## Navigation and shared chrome
+
+- The category navigation is exactly `IEM`, `DAC`, and `ACCESSORIES`.
+  `ACCESSORIES` points at the controlled `eartips` category destination until
+  a broader seeded destination exists. It never claims that unseeded accessory
+  types are in stock, and it never uses Eartips as a navigation label.
+- There is no cable navigation entry anywhere.
+- The shared chrome is an ink-black top bar with the paper-tile logo, the
+  category links, and the `БҮХ БАРАА →` primary action. On mobile the
+  categories move to a horizontal strip directly below the bar.
+- Search and cart live in a persistent action strip: fixed at the top right of
+  the header on desktop, and fixed as a bottom bar on mobile for thumb reach.
+  The bottom bar keeps `Нүүр` and `Дэлгүүр` for wayfinding and clears the
+  safe-area inset.
+- The active category carries an electric-cyan state. The state never relies
+  on color alone.
+- Chrome surfaces stay ink black with hard paper rails. Texture and cut-paper
+  treatments belong to page bodies, not to controls.
+
 ## Desktop composition
 
 `home-desktop.png` is a 1536 × 1024 wide homepage view.
@@ -104,15 +123,68 @@ viewport.
 - **Shapes:** sharp paper cuts and hard strips; no rounded SaaS cards,
   glassmorphism, cream page field, or neon gamer treatment
 
-## Interaction direction
+## Page suite direction
 
-If implemented later, keep the static hierarchy complete before motion:
+The page-suite rasters in `docs/design/plugged-page-suite-v1/` are secondary
+references. The selected-v5 rasters and this file stay primary.
 
-- pressable controls use a subtle `scale(0.97)` active response around 120–160 ms
-- rail/header and product-strip interactions use transform/opacity only
-- use a strong ease-out curve for entry and direct state feedback
-- never animate keyboard-initiated search or cart actions
-- reduced motion keeps the same layout with movement removed
+### Product page: interactive product stage
+
+The product page is an interactive product stage, not a spec sheet with an
+image box.
+
+- The stage is the dominant object. The product sits on the petrol field like
+  a physical object on the warehouse table.
+- Gallery and variant changes swap the product on the stage physically: the
+  outgoing sheet peels away, the incoming sheet settles onto the stack.
+- The purchase controls form a stack of sharp paper strips beside or below the
+  stage. Variant selection, quantity, price, and the add action stay in one
+  predictable scanning column.
+- An IEM's attached cable may stay visible inside product photography. It is
+  never a product, and it never gets a name, price, or action.
+
+### Checkout: ORDER DOSSIER
+
+The generated checkout rasters (`checkout-desktop.png`,
+`checkout-mobile-error.png`) are REJECTED. They must not determine checkout
+layout. Their recorded behavioral states (validation timing, focus, value
+preservation, pending submit) remain requirements as text.
+
+The replacement is a mobile-first ORDER DOSSIER:
+
+- Numbered clipped sections (contact, delivery, payment) read as clipped paper
+  files in one dossier.
+- Layered paper files stack with slight physical offsets, not generic cards.
+- Progress and status are stamped, not badged with pills.
+- Errors are clear, field-specific, and keep submitted values.
+- A persistent submit action stays visible on mobile.
+
+### Motion language: physical paper plus signal cable
+
+Motion continues the physical scene. Sheets of paper and the attached signal
+cable are the only moving materials.
+
+- Sheets stack, peel, and settle. Entries use a strong ease-out; sheets that
+  follow the pointer use the drawer curve.
+- Products swap physically on the stage; content never fades through black or
+  slides as a generic carousel.
+- The featured IEM's attached cable can move as one continuous signal path,
+  but it never animates across copy, prices, or controls.
+- All motion is interruptible and uses transform and opacity where practical.
+  Never use `transition-all`.
+- Pressable controls use a subtle `scale(0.97)` active response around
+  120–160 ms.
+- Never animate keyboard-initiated search or cart actions.
+- Reduced motion keeps the same layout with movement removed. Opacity-only
+  state feedback may remain.
+
+### Mobile rules
+
+- Design mobile-first at 390 px and verify 320 px. Validate 768 px and
+  1440 px after.
+- Do not shrink desktop compositions. Recompose into one vertical narrative.
+- Persistent actions (navigation, submit) stay reachable and respect safe-area
+  insets.
 
 ## Generation record
 
