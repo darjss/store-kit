@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process'
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
+import { createHash } from 'node:crypto'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
@@ -25,7 +27,7 @@ import { Type } from 'typebox'
 import type { Static } from 'typebox'
 import { Value } from 'typebox/value'
 
-import { catalogSeedTarget } from './catalog-seed-target.ts'
+import { catalogSeedTarget, pluggedDevelopmentMediaBaseUrl } from './catalog-seed-target.ts'
 import type { CatalogSeedEnvironment, CatalogSeedRemoteEnvironment } from './catalog-seed-target.ts'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -342,6 +344,43 @@ const uploadImages = async (
   }, Promise.resolve())
 }
 
+const fileHash = async (path: string) =>
+  createHash('sha256')
+    .update(await readFile(path))
+    .digest('hex')
+
+const verifyImages = async (
+  seed: CatalogSeed,
+  bucket: string,
+  environment?: CatalogSeedRemoteEnvironment,
+) => {
+  const directory = await mkdtemp(join(tmpdir(), 'plugged-media-verification-'))
+  try {
+    const images = seed.products.flatMap(product => product.images)
+    await images.reduce(async (previousVerification, image, index) => {
+      await previousVerification
+      const downloaded = join(directory, String(index))
+      await runWrangler([
+        'r2',
+        'object',
+        'get',
+        `${bucket}/${image.r2Key}`,
+        '--file',
+        downloaded,
+        '--remote',
+        ...(environment ? ['--env', environment] : []),
+        '--config',
+        wranglerConfigPath,
+      ])
+      if ((await fileHash(downloaded)) !== (await fileHash(assetPath(image.source)))) {
+        throw new Error(`Remote R2 verification failed for ${image.r2Key}.`)
+      }
+    }, Promise.resolve())
+  } finally {
+    await rm(directory, { force: true, recursive: true })
+  }
+}
+
 const sqlText = (value: string) => `'${value.replaceAll("'", "''")}'`
 const sqlNullableText = (value: string | null | undefined) =>
   value === undefined || value === null ? 'NULL' : sqlText(value)
@@ -652,6 +691,7 @@ const main = async () => {
     )
     await runWrangler(['r2', 'bucket', 'info', target.bucket])
     await uploadImages(seed, target.bucket)
+    await verifyImages(seed, target.bucket)
     printCounts(seed, target.scope)
     return
   }
@@ -671,8 +711,7 @@ const main = async () => {
   if (
     (target.environment === 'production' &&
       mediaBaseUrl !== 'https://plugged.storekitcdn.darjs.dev/') ||
-    (target.environment === 'development' &&
-      mediaBaseUrl === 'https://plugged.storekitcdn.darjs.dev/')
+    (target.environment === 'development' && mediaBaseUrl !== pluggedDevelopmentMediaBaseUrl)
   ) {
     throw new Error(`env.${target.environment} has an invalid media origin: ${mediaBaseUrl}`)
   }
@@ -692,6 +731,7 @@ const main = async () => {
   if (target.scope === 'media') {
     await runWrangler(['r2', 'bucket', 'info', target.bucket])
     await uploadImages(seed, target.bucket, target.environment)
+    await verifyImages(seed, target.bucket, target.environment)
   } else {
     await runWrangler([
       'd1',

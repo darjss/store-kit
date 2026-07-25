@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url'
 import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
 import { parse } from 'jsonc-parser'
 
+import {
+  pluggedDevelopmentMediaBaseUrl,
+  pluggedDevelopmentMediaBucket,
+} from './catalog-seed-target.ts'
+import { validateDevelopmentSecretsFile } from './deployment-secrets.ts'
+
 type DeploymentEnvironment = 'development' | 'production'
 type Operation = 'deploy' | 'dry-run' | 'migrate' | 'rollback' | 'secret-names'
 
@@ -23,7 +29,10 @@ type WranglerConfig = {
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const pluggedDirectory = resolve(projectRoot, 'apps/plugged')
 const wranglerConfigPath = resolve(pluggedDirectory, 'wrangler.jsonc')
+const generatedWranglerConfigPath = resolve(pluggedDirectory, 'dist/server/wrangler.json')
 const productionMediaBaseUrl = 'https://plugged.storekitcdn.darjs.dev/'
+const developmentAppUrl = 'https://storekit.plugged.darjs.dev'
+const liveQpayBaseUrl = 'https://merchant.qpay.mn'
 const secretNames = [
   'QPAY_USERNAME',
   'QPAY_PASSWORD',
@@ -128,9 +137,18 @@ if (missing.length > 0) {
 const mediaBaseUrl = remoteMediaBaseUrl(target.vars!.PUBLIC_MEDIA_BASE_URL!)
 if (
   (selectedEnvironment === 'production' && mediaBaseUrl !== productionMediaBaseUrl) ||
-  (selectedEnvironment === 'development' && mediaBaseUrl === productionMediaBaseUrl)
+  (selectedEnvironment === 'development' && mediaBaseUrl !== pluggedDevelopmentMediaBaseUrl)
 ) {
   throw new Error(`env.${selectedEnvironment} has an invalid media origin: ${mediaBaseUrl}`)
+}
+if (
+  selectedEnvironment === 'development' &&
+  (target.vars!.PUBLIC_APP_URL !== developmentAppUrl ||
+    target.vars!.QPAY_BASE_URL !== liveQpayBaseUrl)
+) {
+  throw new Error(
+    `env.development must use ${developmentAppUrl} and the authorized live QPay base URL.`,
+  )
 }
 
 const wranglerEnvironmentArgs = ['--env', selectedEnvironment, '--config', wranglerConfigPath]
@@ -153,8 +171,15 @@ if (selectedOperation === 'migrate') {
 } else {
   const bucket = process.env.PLUGGED_MEDIA_BUCKET?.trim()
   if (!bucket) throw new Error('PLUGGED_MEDIA_BUCKET must name the selected remote R2 bucket.')
+  if (selectedEnvironment === 'development' && bucket !== pluggedDevelopmentMediaBucket) {
+    throw new Error(`Development media must use ${pluggedDevelopmentMediaBucket}.`)
+  }
 
   await run('vp', ['exec', 'wrangler', 'r2', 'bucket', 'info', bucket])
+  const secretsFile =
+    selectedEnvironment === 'development'
+      ? await validateDevelopmentSecretsFile(process.env.PLUGGED_SECRETS_FILE)
+      : undefined
   await run('vp', ['exec', 'astro', 'build'], pluggedDirectory, {
     ...process.env,
     CLOUDFLARE_ENV: selectedEnvironment,
@@ -164,9 +189,11 @@ if (selectedOperation === 'migrate') {
     'wrangler',
     'deploy',
     '--strict',
+    ...(secretsFile ? ['--secrets-file', secretsFile] : []),
     ...(selectedOperation === 'dry-run'
       ? ['--dry-run', '--outdir', `.wrangler/dry-run/${selectedEnvironment}`]
       : []),
-    ...wranglerEnvironmentArgs,
+    '--config',
+    generatedWranglerConfigPath,
   ])
 }

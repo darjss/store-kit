@@ -1,8 +1,9 @@
 DEPLOYMENT_ENV=development
 PUBLIC_APP_URL=https://plugged.localhost
 # Required development R2 custom-domain origin. Never use the production origin.
-PUBLIC_MEDIA_BASE_URL=https://plugged-dev.storekitcdn.darjs.dev/
-QPAY_BASE_URL=https://merchant-sandbox.qpay.mn
+PUBLIC_MEDIA_BASE_URL=https://storekitcdn.plugged.darjs.dev/
+# The client demo uses Vit Store's live QPay merchant. Test invoices are real and must not be paid.
+QPAY_BASE_URL=https://merchant.qpay.mn
 QPAY_USERNAME=
 QPAY_PASSWORD=
 QPAY_INVOICE_CODE=

@@ -2,6 +2,7 @@ export type CatalogSeedEnvironment = 'local' | 'development' | 'production'
 export type CatalogSeedRemoteEnvironment = Exclude<CatalogSeedEnvironment, 'local'>
 
 export const pluggedDevelopmentMediaBucket = 'plugged-development-media'
+export const pluggedDevelopmentMediaBaseUrl = 'https://storekitcdn.plugged.darjs.dev/'
 export type CatalogSeedScope = 'data' | 'media'
 
 export type CatalogSeedTarget =

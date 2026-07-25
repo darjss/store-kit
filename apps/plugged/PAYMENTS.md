@@ -2,7 +2,7 @@
 
 Copy `.dev.vars.example` to the ignored `.dev.vars` file. Use the stable local application URL
 `https://plugged.localhost` and the development media origin
-`https://plugged-dev.storekitcdn.darjs.dev/`. Development must not fall back to production media.
+`https://storekitcdn.plugged.darjs.dev/`. Development must not fall back to production media.
 
 Start a development preview from the workspace root:
 
@@ -36,7 +36,10 @@ vp run plugged:secret-names:development
 
 The task prints the environment-specific interactive `wrangler secret put` commands without
 reading or writing values. Set `DEPLOYMENT_ENV`, `PUBLIC_APP_URL`, `PUBLIC_MEDIA_BASE_URL`, and
-`QPAY_BASE_URL` in `wrangler.jsonc` for the target environment. Use the QPay sandbox URL until the
-real merchant check is complete.
+`QPAY_BASE_URL` in `wrangler.jsonc` for the target environment.
+
+The client demo at `https://storekit.plugged.darjs.dev` uses Vit Store's **live** QPay merchant at
+`https://merchant.qpay.mn` with invoice code `AMERIK_VITAMIN_INVOICE`. A demo checkout creates a
+real merchant invoice. Never pay the invoice during deployment verification.
 
 Register `/api/webhooks/telegram` with Telegram and use the same `TELEGRAM_WEBHOOK_SECRET` as the webhook secret token. QPay and Telegram checks need real sandbox or bot credentials. Local database checks do not replace these provider checks.

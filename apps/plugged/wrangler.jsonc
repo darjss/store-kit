@@ -26,6 +26,49 @@
     "PUBLIC_MEDIA_BASE_URL": "https://plugged.storekitcdn.darjs.dev/",
     "QPAY_BASE_URL": "https://merchant.qpay.mn",
   },
+  "env": {
+    "development": {
+      "name": "plugged-client-demo",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "plugged-client-demo",
+          "database_id": "1741267b-50de-4a0e-b0da-f4454e5d332b",
+          "migrations_dir": "../../packages/db/migrations",
+          "migrations_pattern": "../../packages/db/migrations/*/migration.sql",
+        },
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE",
+          "id": "4e428ce640d44547a127d66ba29e96ed",
+        },
+        {
+          "binding": "AUTH_KV",
+          "id": "de64769aa0254b9c82a48d1e2714f01b",
+        },
+        {
+          "binding": "SESSION",
+          "id": "470331f571da4b08ae62430790e630b8",
+        },
+      ],
+      "vars": {
+        "DEPLOYMENT_ENV": "development",
+        "PUBLIC_APP_URL": "https://storekit.plugged.darjs.dev",
+        "PUBLIC_MEDIA_BASE_URL": "https://storekitcdn.plugged.darjs.dev/",
+        "QPAY_BASE_URL": "https://merchant.qpay.mn",
+      },
+      "secrets": {
+        "required": ["QPAY_USERNAME", "QPAY_PASSWORD", "QPAY_INVOICE_CODE"],
+      },
+      "routes": [
+        {
+          "pattern": "storekit.plugged.darjs.dev",
+          "custom_domain": true,
+        },
+      ],
+    },
+  },
   "observability": {
     "enabled": true,
   },
