@@ -1,7 +1,7 @@
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
 
-import { nonNegativeIntegerSchema } from './common.ts'
+import { nonNegativeIntegerSchema, publicImageSchema } from './common.ts'
 
 export const catalogSlugSchema = Type.String({
   minLength: 1,
@@ -31,6 +31,37 @@ export const productListFiltersSchema = Type.Object({
   offset: Type.Optional(nonNegativeIntegerSchema),
 })
 
+export const catalogSearchInputSchema = Type.Object(
+  {
+    query: Type.String({ minLength: 2, maxLength: 100 }),
+  },
+  { additionalProperties: false },
+)
+
+export const catalogSearchItemSchema = Type.Object(
+  {
+    slug: catalogSlugSchema,
+    name: Type.String({ minLength: 1 }),
+    shortDescription: Type.String({ minLength: 1 }),
+    image: Type.Union([publicImageSchema, Type.Null()]),
+    priceMnt: Type.Union([nonNegativeIntegerSchema, Type.Null()]),
+    stockStatus: Type.Union([
+      Type.Literal('in-stock'),
+      Type.Literal('low-stock'),
+      Type.Literal('sold-out'),
+    ]),
+  },
+  { additionalProperties: false },
+)
+
+export const catalogSearchResultSchema = Type.Object(
+  {
+    items: Type.Array(catalogSearchItemSchema, { maxItems: 8 }),
+    total: nonNegativeIntegerSchema,
+  },
+  { additionalProperties: false },
+)
+
 export const productNotFoundSchema = Type.Object(
   {
     _tag: Type.Literal('ProductNotFound'),
@@ -42,4 +73,7 @@ export const productNotFoundSchema = Type.Object(
 
 export type ProductUseCase = Static<typeof productUseCaseSchema>
 export type ProductListFilters = Static<typeof productListFiltersSchema>
+export type CatalogSearchInput = Static<typeof catalogSearchInputSchema>
+export type CatalogSearchItem = Static<typeof catalogSearchItemSchema>
+export type CatalogSearchResult = Static<typeof catalogSearchResultSchema>
 export type ProductNotFound = Static<typeof productNotFoundSchema>

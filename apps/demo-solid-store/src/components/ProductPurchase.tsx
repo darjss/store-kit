@@ -30,12 +30,11 @@ function ProductImage(props: { image: StoreImage; priority?: boolean }) {
 export function ProductPurchase(props: { product: PurchaseProduct }) {
   const initialProduct = untrack(() => props.product)
   const firstAvailable = initialProduct.variants.find(variant => variant.maxQuantity > 0)
-  const [variantId, setVariantId] = createSignal(
-    firstAvailable?.id ?? initialProduct.variants[0]?.id,
-  )
+  const initialVariant = firstAvailable ?? initialProduct.variants[0]
+  const [variantId, setVariantId] = createSignal(initialVariant?.id)
   const [quantity, setQuantity] = createSignal(1)
   const [imageId, setImageId] = createSignal(
-    firstAvailable?.imageIds[0] ?? initialProduct.images[0]?.id,
+    initialVariant?.imageIds[0] ?? initialProduct.images[0]?.id,
   )
   const [announcement, setAnnouncement] = createSignal('')
   const cart = useCart()
@@ -44,6 +43,17 @@ export function ProductPurchase(props: { product: PurchaseProduct }) {
   const selectedImage = () =>
     props.product.images.find(image => image.id === imageId()) ?? props.product.images[0]
   const maximumQuantity = () => selectedVariant()?.maxQuantity ?? 0
+  const optionValues = (name: 'size' | 'color') => [
+    ...new Set(
+      props.product.variants
+        .map(variant => variant.options[name])
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ]
+  const optionIsAvailable = (name: 'size' | 'color', value: string) =>
+    props.product.variants.some(
+      variant => variant.options[name] === value && variant.maxQuantity > 0,
+    )
 
   const chooseVariant = (nextId: string) => {
     const variant = props.product.variants.find(item => item.id === nextId)
@@ -52,13 +62,38 @@ export function ProductPurchase(props: { product: PurchaseProduct }) {
     setQuantity(current => Math.min(current, variant.maxQuantity))
     const linkedImage = props.product.images.find(image => variant.imageIds.includes(image.id))
     if (linkedImage) setImageId(linkedImage.id)
+    setAnnouncement(`${variant.name} сонгогдлоо. ${stockLabel(variant.stockStatus)}.`)
+  }
+
+  const chooseOption = (name: 'size' | 'color', value: string) => {
+    const current = selectedVariant()
+    const matchingCurrent = props.product.variants.find(
+      variant =>
+        variant.maxQuantity > 0 &&
+        variant.options[name] === value &&
+        (!current ||
+          Object.entries(current.options).every(
+            ([option, selected]) => option === name || variant.options[option] === selected,
+          )),
+    )
+    const next =
+      matchingCurrent ??
+      props.product.variants.find(
+        variant => variant.maxQuantity > 0 && variant.options[name] === value,
+      )
+    if (next) chooseVariant(next.id)
+  }
+
+  const chooseImage = (image: StoreImage) => {
+    setImageId(image.id)
+    setAnnouncement(`${image.alt} зураг сонгогдлоо.`)
   }
 
   const addToCart = () => {
     const variant = selectedVariant()
     if (!variant || variant.maxQuantity === 0) return
     cart.add(props.product, variant, quantity())
-    setAnnouncement(`${props.product.name} сагсанд нэмэгдлээ.`)
+    setAnnouncement(`${props.product.name}, ${variant.name} сагсанд нэмэгдлээ.`)
   }
 
   return (
@@ -85,7 +120,7 @@ export function ProductPurchase(props: { product: PurchaseProduct }) {
                 <button
                   class="aspect-square min-h-11 border-2 bg-white p-1 aria-[current=true]:border-cobalt"
                   type="button"
-                  onClick={() => setImageId(image.id)}
+                  onClick={() => chooseImage(image)}
                   aria-label={`${index() + 1}-р зураг: ${image.alt}`}
                   aria-current={image.id === selectedImage()?.id ? 'true' : undefined}
                 >
@@ -129,33 +164,48 @@ export function ProductPurchase(props: { product: PurchaseProduct }) {
               </div>
 
               <fieldset class="mt-8 border-0 p-0">
-                <legend class="mb-3 text-xl font-extrabold">Хэмжээ / өнгө</legend>
-                <div class="grid gap-2">
-                  <For each={props.product.variants}>
-                    {item => (
-                      <label class="grid min-h-14 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-2 border-ink p-3 has-checked:border-cobalt has-checked:bg-surface has-disabled:cursor-not-allowed has-disabled:opacity-45">
-                        <input
-                          type="radio"
-                          name={`variant-${props.product.id}`}
-                          value={item.id}
-                          checked={item.id === variantId()}
-                          disabled={item.stockStatus === 'sold-out'}
-                          onChange={() => chooseVariant(item.id)}
-                        />
-                        <span class="font-semibold">{item.name}</span>
-                        <span
-                          class={item.stockStatus === 'sold-out' ? 'text-alert' : 'text-cobalt'}
-                        >
-                          {stockLabel(item.stockStatus)}
-                        </span>
-                      </label>
+                <legend class="mb-3 text-xl font-extrabold">Хэмжээ</legend>
+                <div class="flex flex-wrap gap-2">
+                  <For each={optionValues('size')}>
+                    {size => (
+                      <button
+                        class="min-h-12 min-w-14 border-2 border-ink px-4 font-bold disabled:cursor-not-allowed disabled:opacity-40 aria-pressed:border-cobalt aria-pressed:bg-surface"
+                        type="button"
+                        disabled={!optionIsAvailable('size', size)}
+                        aria-pressed={variant().options.size === size ? 'true' : 'false'}
+                        onClick={() => chooseOption('size', size)}
+                      >
+                        {size}
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </fieldset>
+
+              <fieldset class="mt-6 border-0 p-0">
+                <legend class="mb-3 text-xl font-extrabold">Өнгө</legend>
+                <div class="flex flex-wrap gap-2">
+                  <For each={optionValues('color')}>
+                    {color => (
+                      <button
+                        class="min-h-12 border-2 border-ink px-4 font-bold disabled:cursor-not-allowed disabled:opacity-40 aria-pressed:border-cobalt aria-pressed:bg-surface"
+                        type="button"
+                        disabled={!optionIsAvailable('color', color)}
+                        aria-pressed={variant().options.color === color ? 'true' : 'false'}
+                        onClick={() => chooseOption('color', color)}
+                      >
+                        {color}
+                      </button>
                     )}
                   </For>
                 </div>
               </fieldset>
 
               <div class="mt-auto pt-9">
-                <p class="mb-3 font-extrabold">Тоо ширхэг</p>
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p class="m-0 font-extrabold">Тоо ширхэг</p>
+                  <p class="m-0 text-sm text-ink/60">Дээд хэмжээ: {maximumQuantity()}</p>
+                </div>
                 <div class="inline-grid grid-cols-[3rem_4rem_3rem] border-2 border-ink">
                   <button
                     class="min-h-12 text-xl font-bold disabled:opacity-40"
@@ -168,6 +218,7 @@ export function ProductPurchase(props: { product: PurchaseProduct }) {
                   </button>
                   <output
                     class="grid min-h-12 place-items-center border-x-2 border-ink"
+                    aria-live="polite"
                     aria-label="Сонгосон тоо"
                   >
                     {quantity()}
@@ -177,7 +228,7 @@ export function ProductPurchase(props: { product: PurchaseProduct }) {
                     type="button"
                     onClick={() => setQuantity(value => Math.min(maximumQuantity(), value + 1))}
                     disabled={quantity() >= maximumQuantity()}
-                    aria-label="Нэгээр нэмэх"
+                    aria-label={`Нэгээр нэмэх. Дээд хэмжээ ${maximumQuantity()}`}
                   >
                     +
                   </button>

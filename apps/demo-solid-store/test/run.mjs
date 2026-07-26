@@ -184,19 +184,27 @@ try {
   })
 
   const catalog = await fetchHtml('/products?useCase=cold-weather')
-  record('Router search filters render from D1 with no JavaScript requirement', () => {
+  const sortedCatalog = await fetchHtml('/products?sort=price-asc')
+  record('Router search filters and sorting render from D1 with no JavaScript requirement', () => {
     assert.equal(catalog.response.status, 200)
     assert.match(catalog.html, /Шилжилт хүрэм/)
     assert.doesNotMatch(catalog.html, /TRUTHEAR|IEM/)
     assert.match(catalog.html, /name="useCase" value="cold-weather"/)
+    assert.match(catalog.html, /Төрөл, брэндээр шүүх/)
+    assert.ok(
+      sortedCatalog.html.indexOf('Суурь футболк') < sortedCatalog.html.indexOf('Шилжилт хүрэм'),
+    )
   })
 
   const product = await fetchHtml('/products/shiljilt-bridge-coat')
-  record('the product frame SSRs server content and a keyed client purchase slot', () => {
+  record('the product frame SSRs server content and complete client purchase controls', () => {
     assert.equal(product.response.status, 200)
     assert.match(product.html, /<dx-frame\b/)
     assert.match(product.html, /sc:slot:/)
     assert.match(product.html, /DND-COAT-M-ASPHALT/)
+    assert.match(product.html, />Хэмжээ<\/legend>/)
+    assert.match(product.html, />Өнгө<\/legend>/)
+    assert.match(product.html, /disabled aria-pressed="false">XL<\/button>/)
     assert.doesNotMatch(product.html, /stockQuantity/)
     assert.equal(
       occurrenceCount(
@@ -260,6 +268,60 @@ try {
   )
   record('the server boundary rejects a Plugged-only merchandising tag', () => {
     assert.equal(invalidFunctionResponse.status, 400)
+  })
+
+  const searchFunctionId = /registerServerReference\("([^"]+)", async function searchCatalog/.exec(
+    serverSource,
+  )?.[1]
+  assert.ok(searchFunctionId, 'The production server bundle must register searchCatalog.')
+  const searchResponse = await fetch(
+    `${origin}/_server?id=${encodeURIComponent(searchFunctionId)}&args=${encodeURIComponent('[{"query":"хүрэм"}]')}`,
+    { method: 'POST' },
+  )
+  const searchBody = await searchResponse.text()
+  const invalidSearchResponse = await fetch(
+    `${origin}/_server?id=${encodeURIComponent(searchFunctionId)}&args=${encodeURIComponent('[{"query":"x"}]')}`,
+    { method: 'POST' },
+  )
+  record('compact typeahead results come from the validated server function', () => {
+    assert.equal(searchResponse.status, 200)
+    assert.match(searchBody, /Шилжилт хүрэм/)
+    assert.doesNotMatch(searchBody, /stockQuantity|details|imageR2Key/)
+    assert.equal(invalidSearchResponse.status, 400)
+  })
+
+  const cartFunctionId = /registerServerReference\("([^"]+)", async function validateCart/.exec(
+    serverSource,
+  )?.[1]
+  assert.ok(cartFunctionId, 'The production server bundle must register validateCart.')
+  const correctionInput = [
+    [
+      {
+        variantId: 'var_01kyfqxb0me06sxpr1vkrdy49j',
+        quantity: 10,
+        previousUnitPriceMnt: 1,
+      },
+    ],
+  ]
+  const correctedCartResponse = await fetch(
+    `${origin}/_server?id=${encodeURIComponent(cartFunctionId)}&args=${encodeURIComponent(
+      JSON.stringify(correctionInput),
+    )}`,
+    { method: 'POST' },
+  )
+  const correctedCartBody = await correctedCartResponse.text()
+  const invalidCartResponse = await fetch(
+    `${origin}/_server?id=${encodeURIComponent(cartFunctionId)}&args=${encodeURIComponent(
+      '[[{"variantId":"not-a-typeid","quantity":1,"previousUnitPriceMnt":1}]]',
+    )}`,
+    { method: 'POST' },
+  )
+  record('cart authority returns typed stock and price corrections from real D1 state', () => {
+    assert.equal(correctedCartResponse.status, 200)
+    assert.match(correctedCartBody, /InsufficientStock/)
+    assert.match(correctedCartBody, /PriceChanged/)
+    assert.doesNotMatch(correctedCartBody, /imageR2Key/)
+    assert.equal(invalidCartResponse.status, 400)
   })
 
   const assetPath = /<script type="module" src="([^"]+)" async>/.exec(home.html)?.[1]

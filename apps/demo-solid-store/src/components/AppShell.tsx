@@ -1,19 +1,22 @@
-import { Show, createEffect, createSignal } from 'solid-js'
+import { Show, createSignal } from 'solid-js'
 import type { ParentProps } from 'solid-js'
 
 import { paths } from '~/app/router'
 import { CartDialog, useCart } from '~/cart/CartProvider'
+import { CatalogSearchDialog } from '~/components/CatalogSearchDialog'
 
 export function AppShell(props: ParentProps) {
   const [searchOpen, setSearchOpen] = createSignal(false)
   const cart = useCart()
-  let searchDialog: HTMLDialogElement | undefined
+  let searchTrigger: HTMLElement | undefined
 
-  createEffect(searchOpen, open => {
-    if (!searchDialog) return
-    if (open && !searchDialog.open) searchDialog.showModal()
-    if (!open && searchDialog.open) searchDialog.close()
-  })
+  const setSearchVisibility = (open: boolean) => {
+    if (open && document.activeElement instanceof HTMLElement) {
+      searchTrigger = document.activeElement
+    }
+    setSearchOpen(open)
+    if (!open) queueMicrotask(() => searchTrigger?.focus())
+  }
 
   return (
     <>
@@ -56,7 +59,7 @@ export function AppShell(props: ParentProps) {
             <button
               class="min-h-11 min-w-11 px-3 font-bold hover:bg-surface"
               type="button"
-              onClick={() => setSearchOpen(true)}
+              onClick={() => setSearchVisibility(true)}
               aria-label="Хайлт нээх"
             >
               Хайх
@@ -119,7 +122,7 @@ export function AppShell(props: ParentProps) {
         <button
           class="min-h-11 px-1 text-sm font-bold"
           type="button"
-          onClick={() => setSearchOpen(true)}
+          onClick={() => setSearchVisibility(true)}
         >
           Хайх
         </button>
@@ -137,69 +140,7 @@ export function AppShell(props: ParentProps) {
         </button>
       </nav>
 
-      <dialog
-        ref={element => {
-          searchDialog = element
-        }}
-        class="m-0 h-dvh max-h-none w-full max-w-none border-0 bg-cobalt p-0 text-white backdrop:bg-ink/70"
-        onClose={() => setSearchOpen(false)}
-        aria-labelledby="search-title"
-      >
-        <header class="flex min-h-24 items-center justify-between gap-5 border-b-3 border-white px-[clamp(1rem,4vw,4rem)]">
-          <h2 id="search-title" class="text-[clamp(2rem,6vw,4rem)] font-extrabold">
-            Капсулаас хайх
-          </h2>
-          <button
-            class="min-h-11 min-w-11 border-2 border-white px-3 font-bold"
-            type="button"
-            onClick={() => setSearchOpen(false)}
-          >
-            Хаах ×
-          </button>
-        </header>
-        <div class="mx-auto max-w-5xl px-[clamp(1rem,4vw,4rem)] py-12">
-          <form
-            class="grid grid-cols-[minmax(0,1fr)_auto] bg-white text-ink"
-            action="/products"
-            method="get"
-            role="search"
-          >
-            <label class="sr-only" for="shell-search">
-              Бараа хайх
-            </label>
-            <input
-              class="min-h-16 min-w-0 border-0 px-5 text-xl -outline-offset-4"
-              id="shell-search"
-              name="query"
-              placeholder="Хүрэм, ноосон цамц…"
-              autocomplete="off"
-            />
-            <button class="min-h-16 bg-amber-action px-6 font-bold text-white" type="submit">
-              Хайх →
-            </button>
-          </form>
-          <div class="mt-8 flex flex-wrap gap-3">
-            <a
-              class="inline-flex min-h-11 items-center border-2 border-white px-4 font-semibold text-white no-underline"
-              href="/products?useCase=cold-weather"
-            >
-              Хүйтэн өдөр
-            </a>
-            <a
-              class="inline-flex min-h-11 items-center border-2 border-white px-4 font-semibold text-white no-underline"
-              href="/products?useCase=workday"
-            >
-              Ажлын өдөр
-            </a>
-            <a
-              class="inline-flex min-h-11 items-center border-2 border-white px-4 font-semibold text-white no-underline"
-              href="/products?useCase=travel"
-            >
-              Аялал
-            </a>
-          </div>
-        </div>
-      </dialog>
+      <CatalogSearchDialog open={searchOpen} setOpen={setSearchVisibility} />
       <CartDialog />
     </>
   )

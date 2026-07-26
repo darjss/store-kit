@@ -2,8 +2,8 @@
 
 import { respond } from '@solidjs/web'
 import { commerce } from '@store-kit/commerce'
-import { catalogSlugSchema } from '@store-kit/contracts/catalog'
-import type { ProductListFilters } from '@store-kit/contracts/catalog'
+import { catalogSearchInputSchema, catalogSlugSchema } from '@store-kit/contracts/catalog'
+import type { CatalogSearchResult, ProductListFilters } from '@store-kit/contracts/catalog'
 import { remoteMediaUrl } from '@store-kit/contracts/media'
 import type { Element } from 'solid-js'
 import { Value } from 'typebox/value'
@@ -15,6 +15,19 @@ import type { PurchaseProduct, StoreImage } from '~/catalog/model'
 import { getStoreEnvironment } from '~/server/environment'
 
 const imageWidths = [360, 720, 1080] as const
+const useCaseLabels = {
+  'workday': 'Ажлын өдөр',
+  'off-duty': 'Чөлөөт өдөр',
+  'layering': 'Давхарлах',
+  'travel': 'Аялал',
+  'cold-weather': 'Хүйтэн өдөр',
+} as const
+const sortLabels = {
+  'featured': 'Онцлох дараалал',
+  'recent': 'Шинэ эхэнд',
+  'price-asc': 'Үнэ: багаас их',
+  'price-desc': 'Үнэ: ихээс бага',
+} as const
 
 const imageUrl = (r2Key: string, width: number) => {
   const base = new URL(getStoreEnvironment().PUBLIC_MEDIA_BASE_URL)
@@ -24,6 +37,13 @@ const imageUrl = (r2Key: string, width: number) => {
   ).toString()
 }
 
+const toPublicImage = (image: { r2Key: string; width: number; height: number; alt: string }) => ({
+  url: remoteMediaUrl(getStoreEnvironment().PUBLIC_MEDIA_BASE_URL, image.r2Key),
+  width: image.width,
+  height: image.height,
+  alt: image.alt,
+})
+
 const toStoreImage = (image: {
   id: string
   r2Key: string
@@ -32,11 +52,8 @@ const toStoreImage = (image: {
   alt: string
 }): StoreImage => ({
   id: image.id,
-  url: remoteMediaUrl(getStoreEnvironment().PUBLIC_MEDIA_BASE_URL, image.r2Key),
+  ...toPublicImage(image),
   srcset: imageWidths.map(width => `${imageUrl(image.r2Key, width)} ${width}w`).join(', '),
-  width: image.width,
-  height: image.height,
-  alt: image.alt,
 })
 
 const StockLabel = (props: { quantity: number }) => (
@@ -93,6 +110,42 @@ const validateSlug = (input: unknown) => {
     )
   }
   return input
+}
+
+export async function searchCatalog(input: unknown) {
+  if (!Value.Check(catalogSearchInputSchema, input) || input.query.trim().length < 2) {
+    throw respond(
+      { ok: false as const, code: 'invalid_catalog_search' },
+      { status: 400, headers: { 'cache-control': 'private, no-store' } },
+    )
+  }
+
+  const query = input.query.trim()
+  const result = await commerce.catalog.listProducts({ query, limit: 8 })
+  const searchResult: CatalogSearchResult = {
+    items: result.value.items.map(product => {
+      const stockQuantity = product.variants.reduce(
+        (total, variant) => total + variant.stockQuantity,
+        0,
+      )
+      return {
+        slug: product.slug,
+        name: product.name,
+        shortDescription: product.shortDescription ?? 'Тайлбар шинэчлэгдэж байна.',
+        image: product.images[0] ? toPublicImage(product.images[0]) : null,
+        priceMnt: minimumPrice(product.variants) ?? null,
+        stockStatus:
+          stockQuantity === 0
+            ? ('sold-out' as const)
+            : stockQuantity <= 3
+              ? ('low-stock' as const)
+              : ('in-stock' as const),
+      }
+    }),
+    total: result.value.total,
+  }
+
+  return searchResult
 }
 
 export async function getHomeFrame() {
@@ -307,30 +360,146 @@ export async function getCatalogFrame(input: unknown) {
         class="border-b border-ink/20 px-[clamp(1rem,4vw,4rem)] py-5"
         aria-label="Каталогийн шүүлтүүр"
       >
-        <div class="mx-auto flex max-w-360 flex-wrap gap-2">
-          <a
-            class="inline-flex min-h-11 items-center border-2 border-ink px-4 font-semibold no-underline"
-            href="/products"
+        <div class="mx-auto max-w-360">
+          <nav
+            class="flex snap-x scrollbar-none gap-2 overflow-x-auto pb-2"
+            aria-label="Хэрэглээгээр шүүх"
           >
-            Бүгд
-          </a>
-          {categories.map(category => (
             <a
-              class="inline-flex min-h-11 items-center border-2 border-ink px-4 font-semibold text-ink no-underline aria-[current=page]:bg-amber"
-              href={catalogHref(filters, { category: category.slug })}
-              aria-current={filters.category === category.slug ? 'page' : undefined}
+              class="inline-flex min-h-11 shrink-0 snap-start items-center border-2 border-ink px-4 font-semibold text-ink no-underline aria-[current=page]:bg-amber"
+              href={catalogHref(filters, { useCase: undefined })}
+              aria-current={!filters.useCase ? 'page' : undefined}
             >
-              {category.name}
+              Бүх хэрэглээ
             </a>
-          ))}
-          {brands.map(brand => (
-            <a
-              class="inline-flex min-h-11 items-center border-2 border-cobalt px-4 font-semibold text-cobalt no-underline"
-              href={catalogHref(filters, { brand: brand.slug })}
-            >
-              {brand.name}
-            </a>
-          ))}
+            {Object.entries(useCaseLabels).map(([slug, label]) => (
+              <a
+                class="inline-flex min-h-11 shrink-0 snap-start items-center border-2 border-ink px-4 font-semibold text-ink no-underline aria-[current=page]:bg-amber"
+                href={catalogHref(filters, { useCase: slug })}
+                aria-current={filters.useCase === slug ? 'page' : undefined}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+
+          <details
+            class="mt-3 border-2 border-ink bg-white"
+            open={Boolean(filters.category || filters.brand)}
+          >
+            <summary class="flex min-h-12 cursor-pointer items-center justify-between px-4 font-bold">
+              Төрөл, брэндээр шүүх <span aria-hidden="true">＋</span>
+            </summary>
+            <div class="grid gap-5 border-t-2 border-ink p-4 md:grid-cols-2">
+              <div>
+                <strong class="text-cobalt">Төрөл</strong>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <a
+                    class="inline-flex min-h-11 items-center border-2 border-ink px-3 font-semibold text-ink no-underline"
+                    href={catalogHref(filters, { category: undefined })}
+                  >
+                    Бүх төрөл
+                  </a>
+                  {categories.map(category => (
+                    <a
+                      class="inline-flex min-h-11 items-center border-2 border-ink px-3 font-semibold text-ink no-underline aria-[current=page]:bg-amber"
+                      href={catalogHref(filters, { category: category.slug })}
+                      aria-current={filters.category === category.slug ? 'page' : undefined}
+                    >
+                      {category.name}
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <strong class="text-cobalt">Брэнд</strong>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <a
+                    class="inline-flex min-h-11 items-center border-2 border-cobalt px-3 font-semibold text-cobalt no-underline"
+                    href={catalogHref(filters, { brand: undefined })}
+                  >
+                    Бүх брэнд
+                  </a>
+                  {brands.map(brand => (
+                    <a
+                      class="inline-flex min-h-11 items-center border-2 border-cobalt px-3 font-semibold text-cobalt no-underline aria-[current=page]:bg-cobalt aria-[current=page]:text-white"
+                      href={catalogHref(filters, { brand: brand.slug })}
+                      aria-current={filters.brand === brand.slug ? 'page' : undefined}
+                    >
+                      {brand.name}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <div class="mt-3 flex flex-wrap items-end justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2" aria-label="Идэвхтэй шүүлтүүр">
+              {filters.query && (
+                <a
+                  class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
+                  href={catalogHref(filters, { query: undefined })}
+                >
+                  “{filters.query}” ×
+                </a>
+              )}
+              {filters.category && (
+                <a
+                  class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
+                  href={catalogHref(filters, { category: undefined })}
+                >
+                  {categories.find(category => category.slug === filters.category)?.name ??
+                    filters.category}{' '}
+                  ×
+                </a>
+              )}
+              {filters.brand && (
+                <a
+                  class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
+                  href={catalogHref(filters, { brand: undefined })}
+                >
+                  {brands.find(brand => brand.slug === filters.brand)?.name ?? filters.brand} ×
+                </a>
+              )}
+              {filters.useCase && (
+                <a
+                  class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
+                  href={catalogHref(filters, { useCase: undefined })}
+                >
+                  {useCaseLabels[filters.useCase as keyof typeof useCaseLabels]} ×
+                </a>
+              )}
+              {(filters.query || filters.category || filters.brand || filters.useCase) && (
+                <a class="inline-flex min-h-11 items-center font-bold text-alert" href="/products">
+                  Бүгдийг цэвэрлэх
+                </a>
+              )}
+            </div>
+            <form class="flex items-end gap-2" action="/products" method="get">
+              {filters.category && <input type="hidden" name="category" value={filters.category} />}
+              {filters.brand && <input type="hidden" name="brand" value={filters.brand} />}
+              {filters.useCase && <input type="hidden" name="useCase" value={filters.useCase} />}
+              {filters.query && <input type="hidden" name="query" value={filters.query} />}
+              <label class="grid gap-1 text-sm font-bold" for="catalog-sort">
+                Эрэмбэ
+                <select
+                  class="min-h-11 border-2 border-ink bg-white px-3"
+                  id="catalog-sort"
+                  name="sort"
+                >
+                  {Object.entries(sortLabels).map(([value, label]) => (
+                    <option value={value} selected={(filters.sort ?? 'featured') === value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button class="min-h-11 bg-ink px-4 font-bold text-white" type="submit">
+                Хэрэглэх
+              </button>
+            </form>
+          </div>
         </div>
       </section>
 
