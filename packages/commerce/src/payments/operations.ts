@@ -138,21 +138,30 @@ export const handleQPayCallback = async (paymentLookupId: string): Promise<Webho
       ).match({
         err: async () => acknowledged(),
         ok: async confirmation => {
-          const persistedPayment = await database.query.payments.findById(paymentLookupId)
-          if (persistedPayment?.telegramMessageId) return acknowledged()
+          const notification = await database.query.payments.claimQPayStaffNotification(
+            paymentLookupId,
+            Date.now(),
+          )
+          if (!notification) return acknowledged()
 
           const label = confirmation.needsStaffAction
             ? `ЯАРАЛТАЙ: үлдэгдэл хүрэлцэхгүй · ${localPayment.orderId}`
             : localPayment.orderId
           return (await sendPaidOrderMessage(label, localPayment.amountMnt)).match({
-            err: async () => retryableFailure(),
+            err: async () => {
+              await database.query.payments.releaseQPayStaffNotification(
+                paymentLookupId,
+                Date.now(),
+              )
+              return retryableFailure()
+            },
             ok: async sent => {
-              await database.query.payments.storeQPayTelegramMessageId(
+              const completed = await database.query.payments.completeQPayStaffNotification(
                 paymentLookupId,
                 sent.messageId,
                 Date.now(),
               )
-              return acknowledged()
+              return completed ? acknowledged() : retryableFailure()
             },
           })
         },

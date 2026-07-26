@@ -32,6 +32,14 @@ export default defineConfig({
               ...migration,
               name: `20260726173427_nice_archangel/${migration.name}`,
             })),
+            ...(
+              await readD1Migrations(
+                path.join(root, 'packages/db/migrations/20260726194955_petite_talon'),
+              )
+            ).map(migration => ({
+              ...migration,
+              name: `20260726194955_petite_talon/${migration.name}`,
+            })),
           ],
           PUBLIC_APP_URL: 'https://plugged.mn',
           PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',

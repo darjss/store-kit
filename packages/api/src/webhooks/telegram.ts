@@ -6,6 +6,22 @@ import { Type } from 'typebox'
 import { Value } from 'typebox/value'
 
 const orderIdExpression = new RegExp(orderIdPattern)
+const encoder = new TextEncoder()
+
+const matchesSecret = async (provided: string | null | undefined, expected: string) => {
+  const [providedHash, expectedHash] = await Promise.all([
+    crypto.subtle.digest('SHA-256', encoder.encode(provided ?? '')),
+    crypto.subtle.digest('SHA-256', encoder.encode(expected)),
+  ])
+  const providedBytes = new Uint8Array(providedHash)
+  const expectedBytes = new Uint8Array(expectedHash)
+  let difference = 0
+  for (let index = 0; index < providedBytes.length; index += 1) {
+    difference |= providedBytes[index]! ^ expectedBytes[index]!
+  }
+  return difference === 0
+}
+
 const telegramUpdateSchema = Type.Object(
   {
     callback_query: Type.Optional(
@@ -29,7 +45,12 @@ export const telegramWebhook = new Elysia({ aot: false, prefix: '/api/webhooks' 
   '/telegram',
   async ({ body, headers, set }) => {
     set.headers['cache-control'] = 'no-store'
-    if (headers['x-telegram-bot-api-secret-token'] !== env.TELEGRAM_WEBHOOK_SECRET) {
+    if (
+      !(await matchesSecret(
+        headers['x-telegram-bot-api-secret-token'],
+        env.TELEGRAM_WEBHOOK_SECRET,
+      ))
+    ) {
       set.status = 401
       return { ok: false }
     }
@@ -54,8 +75,11 @@ export const telegramWebhook = new Elysia({ aot: false, prefix: '/api/webhooks' 
     return { ok: true }
   },
   {
-    parse: ({ request }) =>
-      request.headers.get('x-telegram-bot-api-secret-token') === env.TELEGRAM_WEBHOOK_SECRET
+    parse: async ({ request }) =>
+      (await matchesSecret(
+        request.headers.get('x-telegram-bot-api-secret-token'),
+        env.TELEGRAM_WEBHOOK_SECRET,
+      ))
         ? request.json().catch(() => undefined)
         : null,
     headers: t.Object(

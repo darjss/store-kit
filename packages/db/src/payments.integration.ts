@@ -276,7 +276,38 @@ describe('atomic payment confirmation', () => {
   })
 })
 
-describe('bank-transfer claim and callback ownership', () => {
+describe('notification and bank-transfer claim ownership', () => {
+  it('allows only one concurrent QPay callback to own the staff notification', async () => {
+    const fixture = await createFixture({
+      method: 'qpay',
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      telegramMessageId: null,
+    })
+
+    const claims = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        paymentQuery.claimQPayStaffNotification(fixture.paymentId, Date.now()),
+      ),
+    )
+    const owner = claims.find(claim => claim !== undefined)
+    expect(claims.filter(Boolean)).toHaveLength(1)
+    expect(owner?.staffNotificationStatus).toBe('sending')
+
+    const completed = await paymentQuery.completeQPayStaffNotification(
+      fixture.paymentId,
+      'qpay-paid-message',
+      Date.now(),
+    )
+    const repeated = await paymentQuery.claimQPayStaffNotification(fixture.paymentId, Date.now())
+
+    expect(completed).toMatchObject({
+      telegramMessageId: 'qpay-paid-message',
+      staffNotificationStatus: 'sent',
+    })
+    expect(repeated).toBeUndefined()
+  })
+
   it('allows only one concurrent pending-to-claimed request to own notification sending', async () => {
     const fixture = await createFixture({
       paymentStatus: 'pending',

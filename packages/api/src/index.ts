@@ -8,13 +8,14 @@ import { shoppingRoutes } from './routes/shopping'
 import { qpayWebhook } from './webhooks/qpay'
 import { telegramWebhook } from './webhooks/telegram'
 
+export const webhookApp = new Elysia({ aot: false }).use(qpayWebhook).use(telegramWebhook)
+
 export const app = new Elysia({ aot: false })
   .get('/api/system/status', () => Result.serialize(commerce.system.getStatus(true)))
   .use(catalogRoutes)
   .use(cartRoutes)
   .use(shoppingRoutes)
-  .use(qpayWebhook)
-  .use(telegramWebhook)
+  .use(webhookApp)
 
 export { cartRoutes, catalogRoutes, qpayWebhook, shoppingRoutes, telegramWebhook }
 export type App = typeof app

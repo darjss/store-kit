@@ -2,7 +2,11 @@
 
 import { respond } from '@solidjs/web'
 import { commerce } from '@store-kit/commerce'
-import { catalogSearchInputSchema, catalogSlugSchema } from '@store-kit/contracts/catalog'
+import {
+  catalogSearchInputSchema,
+  catalogSearchResultSchema,
+  catalogSlugSchema,
+} from '@store-kit/contracts/catalog'
 import type { CatalogSearchResult, ProductListFilters } from '@store-kit/contracts/catalog'
 import { remoteMediaUrl } from '@store-kit/contracts/media'
 import type { Element } from 'solid-js'
@@ -121,6 +125,19 @@ export async function searchCatalog(input: unknown) {
   }
 
   const query = input.query.trim()
+  const cache = getStoreEnvironment().CACHE
+  const cacheKey = `dund:data:v1:catalog-search:${encodeURIComponent(query.toLocaleLowerCase('mn-MN'))}`
+  const cached: unknown = await cache.get(cacheKey, 'json')
+  if (Value.Check(catalogSearchResultSchema, cached)) {
+    return respond(cached, {
+      headers: {
+        'cache-control': 'private, no-store',
+        'x-dund-data-cache': 'HIT',
+      },
+    })
+  }
+  if (cached !== null) await cache.delete(cacheKey)
+
   const result = await commerce.catalog.listProducts({ query, limit: 8 })
   const searchResult: CatalogSearchResult = {
     items: result.value.items.map(product => {
@@ -145,7 +162,19 @@ export async function searchCatalog(input: unknown) {
     total: result.value.total,
   }
 
-  return searchResult
+  if (!Value.Check(catalogSearchResultSchema, searchResult)) {
+    throw respond(
+      { ok: false as const, code: 'invalid_catalog_search_result' },
+      { status: 500, headers: { 'cache-control': 'private, no-store' } },
+    )
+  }
+  await cache.put(cacheKey, JSON.stringify(searchResult), { expirationTtl: 60 })
+  return respond(searchResult, {
+    headers: {
+      'cache-control': 'private, no-store',
+      'x-dund-data-cache': 'MISS',
+    },
+  })
 }
 
 export async function getHomeFrame() {

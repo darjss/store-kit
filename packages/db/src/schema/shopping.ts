@@ -143,6 +143,11 @@ export const payment = sqliteTable(
     providerPaymentId: text('provider_payment_id'),
     claimedAt: integer('claimed_at'),
     telegramMessageId: text('telegram_message_id'),
+    staffNotificationStatus: text('staff_notification_status', {
+      enum: ['pending', 'sending', 'sent'],
+    })
+      .notNull()
+      .default('pending'),
     paidAt: integer('paid_at'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
@@ -159,6 +164,10 @@ export const payment = sqliteTable(
       sql`${table.status} in ('pending', 'claimed', 'confirming', 'paid', 'failed')`,
     ),
     check('payment_amount_mnt_check', sql`${table.amountMnt} >= 0`),
+    check(
+      'payment_staff_notification_status_check',
+      sql`${table.staffNotificationStatus} in ('pending', 'sending', 'sent')`,
+    ),
     check('payment_id_typeid_check', typeIdCheck(table.id, entityIdPrefixes.payment)),
   ],
 )

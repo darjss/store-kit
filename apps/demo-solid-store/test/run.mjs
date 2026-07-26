@@ -110,6 +110,7 @@ try {
   )
 
   const seed = JSON.parse(await readFile(path.join(appDirectory, 'data/catalog.seed.json'), 'utf8'))
+  const wranglerConfig = await readFile(path.join(appDirectory, 'wrangler.jsonc'), 'utf8')
   record('the original ДУНД seed has five controlled clothing categories', () => {
     assert.deepEqual(
       seed.categories.map(category => category.slug),
@@ -125,6 +126,11 @@ try {
     )
     const allowed = new Set(['workday', 'off-duty', 'layering', 'travel', 'cold-weather'])
     assert.ok(seed.products.flatMap(product => product.useCases).every(tag => allowed.has(tag)))
+  })
+  record('Wrangler names only isolated ДУНД data and cache resources', () => {
+    assert.match(wranglerConfig, /"database_name": "demo-solid-store"/)
+    assert.match(wranglerConfig, /"kv_namespaces": \[\{ "binding": "CACHE" \}\]/)
+    assert.doesNotMatch(wranglerConfig, /plugged/i)
   })
 
   worker = spawn(
@@ -274,19 +280,24 @@ try {
     serverSource,
   )?.[1]
   assert.ok(searchFunctionId, 'The production server bundle must register searchCatalog.')
-  const searchResponse = await fetch(
-    `${origin}/_server?id=${encodeURIComponent(searchFunctionId)}&args=${encodeURIComponent('[{"query":"хүрэм"}]')}`,
-    { method: 'POST' },
-  )
+  const searchUrl = `${origin}/_server?id=${encodeURIComponent(searchFunctionId)}&args=${encodeURIComponent('[{"query":"хүрэм"}]')}`
+  const searchResponse = await fetch(searchUrl, { method: 'POST' })
   const searchBody = await searchResponse.text()
+  const cachedSearchResponse = await fetch(searchUrl, { method: 'POST' })
+  const cachedSearchBody = await cachedSearchResponse.text()
   const invalidSearchResponse = await fetch(
     `${origin}/_server?id=${encodeURIComponent(searchFunctionId)}&args=${encodeURIComponent('[{"query":"x"}]')}`,
     { method: 'POST' },
   )
   record('compact typeahead results come from the validated server function', () => {
     assert.equal(searchResponse.status, 200)
+    assert.equal(searchResponse.headers.get('cache-control'), 'private, no-store')
+    assert.equal(searchResponse.headers.get('x-dund-data-cache'), 'MISS')
     assert.match(searchBody, /Шилжилт хүрэм/)
     assert.doesNotMatch(searchBody, /stockQuantity|details|imageR2Key/)
+    assert.equal(cachedSearchResponse.status, 200)
+    assert.equal(cachedSearchResponse.headers.get('x-dund-data-cache'), 'HIT')
+    assert.equal(cachedSearchBody, searchBody)
     assert.equal(invalidSearchResponse.status, 400)
   })
 
@@ -435,13 +446,75 @@ try {
   assert.ok(assetPath, 'The SSR document must include the generated client entry.')
   const assetResponse = await fetch(`${origin}${assetPath}`)
   const broadApi = await fetch(`${origin}/api/system/status`, { headers: { accept: 'text/html' } })
-  const webhook = await fetch(`${origin}/api/webhooks/qpay`)
-  record('assets are immutable and Elysia is limited to exact webhook paths', () => {
+  const webhookGet = await fetch(`${origin}/api/webhooks/qpay`)
+  const qpayMissingQuery = await fetch(`${origin}/api/webhooks/qpay`, { method: 'POST' })
+  const qpayUnknownPayment = await fetch(`${origin}/api/webhooks/qpay?payment_id=unknown-payment`, {
+    method: 'POST',
+  })
+  const telegramUnauthorized = await fetch(`${origin}/api/webhooks/telegram`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  })
+  const telegramAuthorized = await fetch(`${origin}/api/webhooks/telegram`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-telegram-bot-api-secret-token': 'test-only',
+    },
+    body: '{}',
+  })
+  record('assets are immutable and Elysia is limited to exact validated webhook paths', () => {
     assert.equal(assetResponse.status, 200)
     assert.equal(assetResponse.headers.get('cache-control'), 'public, max-age=31536000, immutable')
     assert.equal(broadApi.status, 404)
-    assert.equal(webhook.status, 404)
-    assert.equal(webhook.headers.get('cache-control'), 'no-store')
+    assert.equal(webhookGet.status, 404)
+    assert.equal(webhookGet.headers.get('cache-control'), 'no-store')
+    assert.equal(qpayMissingQuery.status, 422)
+    assert.equal(qpayUnknownPayment.status, 200)
+    assert.equal(qpayUnknownPayment.headers.get('cache-control'), 'no-store')
+    assert.equal(telegramUnauthorized.status, 401)
+    assert.equal(telegramAuthorized.status, 200)
+    assert.equal(telegramAuthorized.headers.get('cache-control'), 'no-store')
+  })
+
+  const workerExited = new Promise(resolve => worker.once('exit', resolve))
+  process.kill(-worker.pid, 'SIGTERM')
+  await workerExited
+  worker = undefined
+  const cachedHome = run('vp', [
+    'exec',
+    'wrangler',
+    'kv',
+    'key',
+    'get',
+    'dund:document:v1:/',
+    '--binding',
+    'CACHE',
+    '--local',
+    '--persist-to',
+    persistenceDirectory,
+    '--text',
+  ])
+  const cachedSearch = run('vp', [
+    'exec',
+    'wrangler',
+    'kv',
+    'key',
+    'get',
+    `dund:data:v1:catalog-search:${encodeURIComponent('хүрэм'.toLocaleLowerCase('mn-MN'))}`,
+    '--binding',
+    'CACHE',
+    '--local',
+    '--persist-to',
+    persistenceDirectory,
+    '--text',
+  ])
+  record('dedicated CACHE KV stores only public document and catalog data', () => {
+    assert.match(cachedHome, /^<!DOCTYPE html>/)
+    assert.match(cachedHome, /Давхарга бүр ажиллана/)
+    assert.match(cachedSearch, /Шилжилт хүрэм/)
+    assert.doesNotMatch(cachedSearch, /statusToken|QPAY|TELEGRAM/)
   })
 
   process.stdout.write(`\n${results.length} real-runtime checks passed.\n`)

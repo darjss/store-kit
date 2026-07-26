@@ -58,25 +58,68 @@ export const storeTelegramMessageId = async (
   return stored
 }
 
-export const storeQPayTelegramMessageId = async (
+export const claimQPayStaffNotification = async (
   paymentId: string,
-  messageId: string,
   updatedAt: number,
 ): Promise<Payment | undefined> => {
-  const [stored] = await db
+  const [claimed] = await db
     .update(payment)
-    .set({ telegramMessageId: messageId, updatedAt })
+    .set({ staffNotificationStatus: 'sending', updatedAt })
     .where(
       and(
         eq(payment.id, paymentId),
         eq(payment.method, 'qpay'),
         eq(payment.status, 'paid'),
+        eq(payment.staffNotificationStatus, 'pending'),
         isNull(payment.telegramMessageId),
       ),
     )
     .returning()
-  return stored
+  return claimed
 }
+
+export const completeQPayStaffNotification = async (
+  paymentId: string,
+  messageId: string,
+  updatedAt: number,
+): Promise<Payment | undefined> => {
+  const [completed] = await db
+    .update(payment)
+    .set({
+      telegramMessageId: messageId,
+      staffNotificationStatus: 'sent',
+      updatedAt,
+    })
+    .where(
+      and(
+        eq(payment.id, paymentId),
+        eq(payment.method, 'qpay'),
+        eq(payment.status, 'paid'),
+        eq(payment.staffNotificationStatus, 'sending'),
+        isNull(payment.telegramMessageId),
+      ),
+    )
+    .returning()
+  return completed
+}
+
+export const releaseQPayStaffNotification = (
+  paymentId: string,
+  updatedAt: number,
+): Promise<Payment[]> =>
+  db
+    .update(payment)
+    .set({ staffNotificationStatus: 'pending', updatedAt })
+    .where(
+      and(
+        eq(payment.id, paymentId),
+        eq(payment.method, 'qpay'),
+        eq(payment.status, 'paid'),
+        eq(payment.staffNotificationStatus, 'sending'),
+        isNull(payment.telegramMessageId),
+      ),
+    )
+    .returning()
 
 export const releaseBankTransferClaim = (orderId: string, updatedAt: number): Promise<Payment[]> =>
   db
@@ -433,7 +476,9 @@ export const paymentQuery = {
   findById,
   findByOrderId,
   storeTelegramMessageId,
-  storeQPayTelegramMessageId,
+  claimQPayStaffNotification,
+  completeQPayStaffNotification,
+  releaseQPayStaffNotification,
   releaseBankTransferClaim,
   rejectBankTransferClaim,
   confirmAndDecrementStock,

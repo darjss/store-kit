@@ -36,6 +36,17 @@ export default defineConfig({
         cwd: 'apps/plugged',
         cache: false,
       },
+      'db:migrate:dund:local': {
+        command: 'vp exec wrangler d1 migrations apply DB --local',
+        cwd: 'apps/demo-solid-store',
+        cache: false,
+      },
+      'catalog:seed:dund:local': {
+        command:
+          'STORE_KIT_APP=demo-solid-store node --experimental-strip-types catalog-seed.ts --environment local --only data',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
       'catalog:seed:plugged:local': {
         command: 'node --experimental-strip-types catalog-seed.ts --environment local --only data',
         cwd: 'packages/tooling',
