@@ -324,6 +324,113 @@ try {
     assert.equal(invalidCartResponse.status, 400)
   })
 
+  const checkoutFunctionId =
+    /registerServerReference\("([^"]+)", async function submitCheckout/.exec(serverSource)?.[1]
+  assert.ok(checkoutFunctionId, 'The production server bundle must register submitCheckout.')
+  const checkoutInput = {
+    items: [{ variantId: 'var_01kyfqxb0me06sxpr1vkrdy49j', quantity: 1 }],
+    customer: { name: '  Тэмүүлэн  ', phone: '99112233' },
+    delivery: {
+      district: 'Баянзүрх',
+      khoroo: '  1-р хороо  ',
+      address: '  Энхтайвны өргөн чөлөө 1  ',
+      notes: '  Орцны код 1234  ',
+    },
+    paymentMethod: 'bank_transfer',
+  }
+  const checkoutResponse = await fetch(
+    `${origin}/_server?id=${encodeURIComponent(checkoutFunctionId)}&args=${encodeURIComponent(
+      JSON.stringify([checkoutInput]),
+    )}`,
+    { method: 'POST' },
+  )
+  const checkoutBody = await checkoutResponse.text()
+  const invalidCheckoutResponse = await fetch(
+    `${origin}/_server?id=${encodeURIComponent(checkoutFunctionId)}&args=${encodeURIComponent(
+      JSON.stringify([{ ...checkoutInput, customer: { name: '', phone: '55' } }]),
+    )}`,
+    { method: 'POST' },
+  )
+  const invalidCheckoutBody = await invalidCheckoutResponse.text()
+  const createdOrderId = /ord_[0-7][0-9a-hjkmnp-tv-z]{25}/.exec(checkoutBody)?.[0]
+  const createdStatusToken =
+    /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/.exec(
+      checkoutBody,
+    )?.[0]
+  record('bank-transfer checkout validates fields and persists an authoritative D1 order', () => {
+    assert.equal(checkoutResponse.status, 200)
+    assert.match(checkoutBody, /DND-/)
+    assert.match(checkoutBody, /bank_transfer/)
+    assert.match(checkoutBody, /Хаан банк/)
+    assert.ok(createdOrderId)
+    assert.ok(createdStatusToken)
+    assert.equal(invalidCheckoutResponse.status, 200)
+    assert.match(invalidCheckoutBody, /field/)
+    assert.match(invalidCheckoutBody, /customer\/name/)
+  })
+
+  const privateOrderFunctionId =
+    /registerServerReference\("([^"]+)", async function getPrivateOrder/.exec(serverSource)?.[1]
+  assert.ok(privateOrderFunctionId, 'The production server bundle must register getPrivateOrder.')
+  assert.ok(createdOrderId)
+  assert.ok(createdStatusToken)
+  const privateOrderResponse = await fetch(
+    `${origin}/_server?id=${encodeURIComponent(privateOrderFunctionId)}&args=${encodeURIComponent(
+      JSON.stringify([{ orderId: createdOrderId, statusToken: createdStatusToken }]),
+    )}`,
+    { method: 'POST' },
+  )
+  const privateOrderBody = await privateOrderResponse.text()
+  const wrongTokenResponse = await fetch(
+    `${origin}/_server?id=${encodeURIComponent(privateOrderFunctionId)}&args=${encodeURIComponent(
+      JSON.stringify([{ orderId: createdOrderId, statusToken: 'x'.repeat(32) }]),
+    )}`,
+    { method: 'POST' },
+  )
+  const wrongTokenBody = await wrongTokenResponse.text()
+  record('private order status returns snapshots only for the matching fragment token', () => {
+    assert.equal(privateOrderResponse.status, 200)
+    assert.match(privateOrderBody, /Тэмүүлэн/)
+    assert.match(privateOrderBody, /Энхтайвны өргөн чөлөө 1/)
+    assert.match(privateOrderBody, /pending/)
+    assert.doesNotMatch(privateOrderBody, /statusTokenHash|providerInvoiceId/)
+    assert.equal(wrongTokenResponse.status, 200)
+    assert.match(wrongTokenBody, /InvalidStatusToken/)
+    assert.doesNotMatch(wrongTokenBody, /Тэмүүлэн|99112233/)
+  })
+
+  const claimFunctionId =
+    /registerServerReference\("([^"]+)", async function claimPrivateBankTransfer/.exec(
+      serverSource,
+    )?.[1]
+  const qpayRefreshFunctionId =
+    /registerServerReference\("([^"]+)", async function refreshPrivateQPay/.exec(serverSource)?.[1]
+  assert.ok(claimFunctionId, 'The production server bundle must register bank claims.')
+  assert.ok(qpayRefreshFunctionId, 'The production server bundle must register QPay refresh.')
+  const invalidPaymentAccess = JSON.stringify([
+    { orderId: createdOrderId, statusToken: 'x'.repeat(32) },
+  ])
+  const [claimResponse, qpayRefreshResponse] = await Promise.all([
+    fetch(
+      `${origin}/_server?id=${encodeURIComponent(claimFunctionId)}&args=${encodeURIComponent(invalidPaymentAccess)}`,
+      { method: 'POST' },
+    ),
+    fetch(
+      `${origin}/_server?id=${encodeURIComponent(qpayRefreshFunctionId)}&args=${encodeURIComponent(invalidPaymentAccess)}`,
+      { method: 'POST' },
+    ),
+  ])
+  const [claimBody, qpayRefreshBody] = await Promise.all([
+    claimResponse.text(),
+    qpayRefreshResponse.text(),
+  ])
+  record('private payment commands reject the wrong token before provider work', () => {
+    assert.equal(claimResponse.status, 200)
+    assert.equal(qpayRefreshResponse.status, 200)
+    assert.match(claimBody, /InvalidStatusToken/)
+    assert.match(qpayRefreshBody, /InvalidStatusToken/)
+  })
+
   const assetPath = /<script type="module" src="([^"]+)" async>/.exec(home.html)?.[1]
   assert.ok(assetPath, 'The SSR document must include the generated client entry.')
   const assetResponse = await fetch(`${origin}${assetPath}`)

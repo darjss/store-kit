@@ -1,106 +1,749 @@
-import { For, Show, onSettled } from 'solid-js'
+import type { CartValidationError } from '@store-kit/contracts/cart'
+import { checkoutDetailsSchema, ulaanbaatarDistrictSchema } from '@store-kit/contracts/checkout'
+import type {
+  CheckoutCreated,
+  CheckoutDetails,
+  CheckoutError,
+  UlaanbaatarDistrict,
+} from '@store-kit/contracts/checkout'
+import type { ValidationIssue } from '@store-kit/contracts/common'
+import { For, Show, createSignal, createStore, onSettled, snapshot } from 'solid-js'
+import { Value } from 'typebox/value'
 
 import { useCart } from '~/cart/CartProvider'
 import { formatMnt } from '~/catalog/format'
+import { submitCheckout } from '~/server/checkout'
 
-export default function CheckoutPage() {
-  const cart = useCart()
+const districts = ulaanbaatarDistrictSchema.anyOf.map(district => district.const)
 
-  onSettled(() => {
-    queueMicrotask(() => {
-      if (cart.validation().type === 'idle') void cart.validate()
-    })
-  })
+const fieldLabels: Record<string, string> = {
+  '/customer/name': 'Нэр',
+  '/customer/phone': 'Утас',
+  '/delivery/district': 'Дүүрэг',
+  '/delivery/khoroo': 'Хороо',
+  '/delivery/address': 'Дэлгэрэнгүй хаяг',
+  '/delivery/notes': 'Нэмэлт тайлбар',
+  '/paymentMethod': 'Төлбөрийн арга',
+  '/items': 'Сагс',
+}
 
+const fieldNames: Record<string, string> = {
+  '/customer/name': 'customer.name',
+  '/customer/phone': 'customer.phone',
+  '/delivery/district': 'delivery.district',
+  '/delivery/khoroo': 'delivery.khoroo',
+  '/delivery/address': 'delivery.address',
+  '/delivery/notes': 'delivery.notes',
+  '/paymentMethod': 'paymentMethod',
+}
+
+const fieldMessages: Record<string, string> = {
+  '/customer/name': 'Нэрээ оруулна уу.',
+  '/customer/phone': 'Монгол утасны дугаараа шалгана уу.',
+  '/delivery/district': 'Улаанбаатарын дүүргээ сонгоно уу.',
+  '/delivery/khoroo': 'Хороогоо оруулна уу.',
+  '/delivery/address': 'Дэлгэрэнгүй хаягаа оруулна уу.',
+  '/delivery/notes': 'Нэмэлт тайлбар 500 тэмдэгтээс ихгүй байна.',
+  '/paymentMethod': 'Төлбөрийн аргаа сонгоно уу.',
+}
+
+const normalizePhone = (phone: string) => phone.replace(/\D/g, '').replace(/^976/, '')
+
+const normalizeDetails = (details: CheckoutDetails): CheckoutDetails => {
+  const notes = details.delivery.notes?.trim()
+  return {
+    customer: {
+      name: details.customer.name.trim(),
+      phone: normalizePhone(details.customer.phone),
+    },
+    delivery: {
+      district: details.delivery.district,
+      khoroo: details.delivery.khoroo.trim(),
+      address: details.delivery.address.trim(),
+      ...(notes ? { notes } : {}),
+    },
+    paymentMethod: details.paymentMethod,
+  }
+}
+
+const validationIssues = (details: CheckoutDetails): ValidationIssue[] =>
+  Value.Errors(checkoutDetailsSchema, details).map(error => ({
+    path: error.instancePath || '/',
+    code: 'invalid',
+  }))
+
+type CheckoutDomainFailure = CheckoutError | CartValidationError
+
+type CheckoutFailure =
+  | { type: 'field'; fields: ValidationIssue[] }
+  | { type: 'domain'; error: CheckoutDomainFailure }
+  | { type: 'transport'; message: string }
+
+function FailureNotice(props: {
+  failure: CheckoutFailure
+  retry: () => void
+  useBankTransfer: () => void
+  openCart: () => void
+}) {
+  if (props.failure.type === 'field') {
+    return (
+      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
+        <h2 class="m-0 text-2xl font-extrabold">Мэдээллээ шалгана уу</h2>
+        <p class="mt-2">Тодруулсан талбаруудыг засаад дахин оролдоно уу.</p>
+        <ul class="mt-3 list-disc pl-5">
+          <For each={props.failure.fields}>
+            {field => <li>{fieldLabels[field.path] ?? 'Оруулсан мэдээлэл'}</li>}
+          </For>
+        </ul>
+      </div>
+    )
+  }
+
+  if (props.failure.type === 'transport') {
+    return (
+      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
+        <h2 class="m-0 text-2xl font-extrabold">Холболт амжилтгүй</h2>
+        <p class="mt-2">{props.failure.message}</p>
+        <button
+          class="mt-4 min-h-11 border-2 border-ink px-4 font-bold"
+          type="button"
+          onClick={props.retry}
+        >
+          Дахин оролдох
+        </button>
+      </div>
+    )
+  }
+
+  const error = props.failure.error
+  if (error._tag === 'CartChanged') {
+    return (
+      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
+        <h2 class="m-0 text-2xl font-extrabold">Сагсаа засна уу</h2>
+        <For each={error.corrections}>{correction => <p class="mt-2">{correction.message}</p>}</For>
+        <button
+          class="mt-4 min-h-11 bg-alert px-4 font-bold text-white"
+          type="button"
+          onClick={props.openCart}
+        >
+          Сагсны засварыг нээх
+        </button>
+      </div>
+    )
+  }
+
+  if (error._tag === 'CartEmpty') {
+    return (
+      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
+        <h2 class="m-0 text-2xl font-extrabold">Сагс хоосон байна</h2>
+        <p class="mt-2">{error.message}</p>
+        <a class="mt-4 inline-flex min-h-11 items-center font-bold text-cobalt" href="/products">
+          Бараа сонгох →
+        </a>
+      </div>
+    )
+  }
+
+  if (error._tag === 'InvalidCart') {
+    return (
+      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
+        <h2 class="m-0 text-2xl font-extrabold">Сагсны мэдээлэл буруу байна</h2>
+        <button
+          class="mt-4 min-h-11 border-2 border-ink px-4 font-bold"
+          type="button"
+          onClick={props.openCart}
+        >
+          Сагсаа шалгах
+        </button>
+      </div>
+    )
+  }
+
+  if (error._tag === 'PaymentSetupFailed') {
+    return (
+      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
+        <h2 class="m-0 text-2xl font-extrabold">Төлбөр үүсгэж чадсангүй</h2>
+        <p class="mt-2">{error.message}</p>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <button
+            class="min-h-11 border-2 border-ink px-4 font-bold"
+            type="button"
+            onClick={props.retry}
+          >
+            Дахин оролдох
+          </button>
+          <Show when={error.canUseBankTransfer}>
+            <button
+              class="min-h-11 bg-cobalt px-4 font-bold text-white"
+              type="button"
+              onClick={props.useBankTransfer}
+            >
+              Дансаар төлөх
+            </button>
+          </Show>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
+      <h2 class="m-0 text-2xl font-extrabold">Захиалга үүсгэж чадсангүй</h2>
+      <p class="mt-2">
+        {error._tag === 'DeliveryUnavailable'
+          ? error.message
+          : 'Тодруулсан талбаруудыг засаад дахин оролдоно уу.'}
+      </p>
+    </div>
+  )
+}
+
+function CheckoutSuccess(props: { order: CheckoutCreated }) {
   return (
     <main
       id="main-content"
       tabindex="-1"
       class="min-h-[70svh] bg-surface px-[clamp(1rem,4vw,4rem)] py-[clamp(3rem,7vw,6rem)]"
     >
-      <div class="mx-auto max-w-3xl border-3 border-ink bg-white p-[clamp(1.25rem,4vw,3.5rem)]">
-        <p class="font-bold text-cobalt">CHECKOUT / SERVER CHECK</p>
-        <h1 class="mt-3 text-[clamp(2.5rem,7vw,5rem)] leading-none font-extrabold">Захиалга</h1>
-        <Show
-          when={cart.items.length > 0}
-          fallback={
-            <>
-              <p class="mt-6 text-lg">Сагс хоосон байна.</p>
-              <a
-                class="mt-4 inline-flex min-h-11 items-center font-bold text-cobalt"
-                href="/products"
-              >
-                Бараа сонгох →
-              </a>
-            </>
-          }
-        >
-          <Show when={cart.validation().type === 'checking' || cart.validation().type === 'idle'}>
-            <p class="mt-6 text-lg" role="status">
-              Үнэ, идэвхтэй төлөв, үлдэгдлийг шалгаж байна…
-            </p>
-          </Show>
-          <Show when={cart.validation().type === 'corrections'}>
-            <div class="mt-6 border-3 border-alert bg-surface p-5" role="alert">
-              <h2 class="m-0 text-2xl font-extrabold">Сагсаа эхлээд засна уу</h2>
-              <p class="mt-2">Серверийн өөрчлөлтийг зөвшөөрсний дараа checkout үргэлжилнэ.</p>
-              <button
-                class="mt-4 min-h-11 bg-alert px-4 font-bold text-white"
-                type="button"
-                onClick={() => cart.setOpen(true)}
-              >
-                Сагсны засварыг нээх
-              </button>
-            </div>
-          </Show>
-          <Show
-            when={
-              cart.validation().type === 'domain-error' ||
-              cart.validation().type === 'transport-error'
-            }
-          >
-            <div class="mt-6 border-3 border-alert bg-surface p-5" role="alert">
-              <h2 class="m-0 text-2xl font-extrabold">Сагсыг шалгаж чадсангүй</h2>
-              <button
-                class="mt-4 min-h-11 border-2 border-ink px-4 font-bold"
-                type="button"
-                onClick={() => void cart.validate()}
-              >
-                Дахин шалгах
-              </button>
-            </div>
-          </Show>
-          <Show when={cart.validation().type === 'ready'}>
-            <section class="mt-6" aria-labelledby="validated-cart-title">
-              <h2 id="validated-cart-title" class="text-2xl font-extrabold">
-                Сагс баталгаажлаа
-              </h2>
-              <div class="mt-4 divide-y divide-ink/25 border-y border-ink/25">
-                <For each={cart.validatedCart()?.lines ?? []}>
-                  {line => (
-                    <div class="flex flex-wrap justify-between gap-3 py-4">
-                      <span>
-                        <strong>{line.productName}</strong>
-                        <small class="mt-1 block text-ink/65">
-                          {line.variantName} · {line.requestedQuantity} ш
-                        </small>
-                      </span>
-                      <strong>{formatMnt(line.lineTotalMnt)}</strong>
-                    </div>
-                  )}
-                </For>
-              </div>
-              <p class="mt-5 flex justify-between gap-4 text-xl">
-                <span>Барааны дүн</span>
-                <strong>{formatMnt(cart.validatedCart()?.subtotalMnt ?? 0)}</strong>
-              </p>
-              <p class="mt-6 border-l-4 border-cobalt pl-4 text-ink/70">
-                Хүргэлтийн мэдээлэл болон төлбөрийн алхам дараагийн checkout үе шатанд орно.
-              </p>
-            </section>
-          </Show>
+      <article class="mx-auto max-w-3xl border-3 border-ink bg-white p-[clamp(1.25rem,4vw,3.5rem)]">
+        <p class="font-bold text-cobalt">ORDER / CREATED</p>
+        <h1 class="mt-3 text-[clamp(2.5rem,8vw,5rem)] leading-none font-extrabold wrap-break-word">
+          {props.order.orderNumber}
+        </h1>
+        <p class="mt-5 text-lg">Захиалга үүслээ. Төлбөрөө доорх заавраар хийнэ үү.</p>
+
+        <Show when={props.order.nextAction.type === 'qpay'}>
+          <section class="mt-8 border-t-3 border-ink pt-6" aria-labelledby="qpay-title">
+            <h2 id="qpay-title" class="text-3xl font-extrabold">
+              QPay-аар төлөх
+            </h2>
+            {props.order.nextAction.type === 'qpay' && (
+              <>
+                <img
+                  class="mt-5 aspect-square h-auto w-full max-w-80 border-3 border-ink"
+                  src={props.order.nextAction.qrImage}
+                  width="320"
+                  height="320"
+                  alt="QPay төлбөрийн QR код"
+                />
+                <div class="mt-5 flex flex-wrap gap-3">
+                  <For each={props.order.nextAction.urls}>
+                    {bank => (
+                      <a
+                        class="inline-flex min-h-11 items-center bg-cobalt px-4 font-bold text-white no-underline"
+                        href={bank.link}
+                      >
+                        {bank.name}-аар нээх
+                      </a>
+                    )}
+                  </For>
+                </div>
+              </>
+            )}
+          </section>
         </Show>
-      </div>
+
+        <Show when={props.order.nextAction.type === 'bank_transfer'}>
+          <section class="mt-8 border-t-3 border-ink pt-6" aria-labelledby="bank-title">
+            <h2 id="bank-title" class="text-3xl font-extrabold">
+              Дансаар шилжүүлэх
+            </h2>
+            {props.order.nextAction.type === 'bank_transfer' && (
+              <dl class="mt-5 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt class="text-sm font-bold text-ink/60">Банк</dt>
+                  <dd class="mt-1 text-xl font-extrabold">{props.order.nextAction.bankName}</dd>
+                </div>
+                <div>
+                  <dt class="text-sm font-bold text-ink/60">Данс эзэмшигч</dt>
+                  <dd class="mt-1 text-xl font-extrabold">{props.order.nextAction.accountName}</dd>
+                </div>
+                <div class="sm:col-span-2">
+                  <dt class="text-sm font-bold text-ink/60">Дансны дугаар</dt>
+                  <dd class="mt-1 text-3xl font-extrabold break-all">
+                    {props.order.nextAction.accountNumber}
+                  </dd>
+                </div>
+              </dl>
+            )}
+            <p class="mt-5 border-l-4 border-coral pl-4 font-bold">
+              Гүйлгээний утгад {props.order.orderNumber} гэж бичнэ үү.
+            </p>
+          </section>
+        </Show>
+
+        <a
+          class="mt-8 inline-flex min-h-12 items-center bg-ink px-5 font-bold text-white no-underline"
+          href={`/orders/${props.order.orderId}#token=${encodeURIComponent(props.order.statusToken)}`}
+          target="_self"
+        >
+          Захиалгын төлөв харах →
+        </a>
+      </article>
     </main>
+  )
+}
+
+export default function CheckoutPage() {
+  const cart = useCart()
+  const [details, setDetails] = createStore<CheckoutDetails>({
+    customer: { name: '', phone: '' },
+    delivery: { district: 'Баянзүрх', khoroo: '', address: '', notes: '' },
+    paymentMethod: 'qpay',
+  })
+  const [failure, setFailure] = createSignal<CheckoutFailure>()
+  const [pending, setPending] = createSignal(false)
+  const [created, setCreated] = createSignal<CheckoutCreated>()
+  const fieldElements = new Map<string, { focus: () => void }>()
+  let submissionInFlight = false
+
+  const fieldIssues = () => {
+    const current = failure()
+    return current?.type === 'field' ? current.fields : []
+  }
+  const fieldError = (path: string) => fieldIssues().some(issue => issue.path === path)
+  const fieldMessage = (path: string) => (fieldError(path) ? fieldMessages[path] : undefined)
+  const registerField = (name: string, element: { focus: () => void }) =>
+    fieldElements.set(name, element)
+  const focusFirstInvalid = (fields: ValidationIssue[]) => {
+    const first = fields.find(field => fieldNames[field.path])
+    if (first) queueMicrotask(() => fieldElements.get(fieldNames[first.path]!)?.focus())
+  }
+
+  const setFieldFailure = (fields: ValidationIssue[]) => {
+    setFailure({ type: 'field', fields })
+    focusFirstInvalid(fields)
+  }
+
+  const submit = async () => {
+    if (submissionInFlight || cart.items.length === 0) return
+    submissionInFlight = true
+    setPending(true)
+    setFailure()
+
+    try {
+      const normalized = normalizeDetails(snapshot(details))
+      if (!Value.Check(checkoutDetailsSchema, normalized)) {
+        setFieldFailure(validationIssues(normalized))
+        return
+      }
+
+      const cartReady = await cart.validate()
+      await Promise.resolve()
+      if (!cartReady) {
+        const cartState = cart.validation()
+        if (cartState.type === 'corrections') {
+          setFailure({
+            type: 'domain',
+            error: {
+              _tag: 'CartChanged',
+              message: 'Сагсны бараа эсвэл үлдэгдэл өөрчлөгдсөн байна.',
+              corrections: cartState.cart.corrections,
+            },
+          })
+          cart.setOpen(true)
+        } else if (cartState.type === 'domain-error') {
+          setFailure({ type: 'domain', error: cartState.error })
+        } else {
+          setFailure({
+            type: 'transport',
+            message: 'Сагсны үнэ, үлдэгдлийг шалгаж чадсангүй. Мэдээлэл тань хадгалагдсан.',
+          })
+        }
+        return
+      }
+
+      const result = await submitCheckout({
+        ...normalized,
+        items: snapshot(cart.items).map(item => ({
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+      })
+
+      if (!result.ok) {
+        if (result.failure.type === 'field') {
+          setFieldFailure(result.failure.fields)
+          return
+        }
+        if (result.failure.error._tag === 'InvalidCheckoutDetails') {
+          setFieldFailure(result.failure.error.fields)
+          return
+        }
+        setFailure({ type: 'domain', error: result.failure.error })
+        return
+      }
+
+      cart.clear()
+      setCreated(result.order)
+    } catch {
+      setFailure({
+        type: 'transport',
+        message: 'Сүлжээний алдаа гарлаа. Мэдээлэл тань хадгалагдсан тул дахин оролдоно уу.',
+      })
+    } finally {
+      submissionInFlight = false
+      setPending(false)
+    }
+  }
+
+  const useBankTransfer = () => {
+    setDetails(draft => {
+      draft.paymentMethod = 'bank_transfer'
+    })
+    queueMicrotask(() => void submit())
+  }
+
+  onSettled(() => {
+    if (cart.items.length > 0 && cart.validation().type === 'idle') void cart.validate()
+  })
+
+  return (
+    <Show
+      when={created()}
+      fallback={
+        <main
+          id="main-content"
+          tabindex="-1"
+          class="min-h-[70svh] bg-surface px-[clamp(1rem,4vw,4rem)] py-[clamp(3rem,7vw,6rem)]"
+        >
+          <div class="mx-auto max-w-6xl">
+            <header class="max-w-3xl">
+              <p class="font-bold text-cobalt">CHECKOUT / УЛААНБААТАР</p>
+              <h1 class="mt-3 text-[clamp(2.75rem,8vw,6rem)] leading-none font-extrabold">
+                Захиалга
+              </h1>
+              <p class="mt-5 max-w-2xl text-lg leading-relaxed">
+                Хүргэлт зөвхөн Улаанбаатар хотод хийгдэнэ. Үнэ, үлдэгдэл, хүргэлтийн дүнг сервер
+                захиалга үүсгэхийн өмнө дахин баталгаажуулна.
+              </p>
+            </header>
+
+            <Show
+              when={cart.items.length > 0}
+              fallback={
+                <section class="mt-8 border-3 border-ink bg-white p-6">
+                  <h2 class="text-3xl font-extrabold">Сагс хоосон байна</h2>
+                  <a
+                    class="mt-4 inline-flex min-h-11 items-center font-bold text-cobalt"
+                    href="/products"
+                  >
+                    Бараа сонгох →
+                  </a>
+                </section>
+              }
+            >
+              <Show when={failure()}>
+                {current => (
+                  <FailureNotice
+                    failure={current()}
+                    retry={() => void submit()}
+                    useBankTransfer={useBankTransfer}
+                    openCart={() => cart.setOpen(true)}
+                  />
+                )}
+              </Show>
+
+              <form
+                class="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]"
+                novalidate
+                aria-busy={pending() ? 'true' : undefined}
+                onSubmit={event => {
+                  event.preventDefault()
+                  void submit()
+                }}
+              >
+                <div class="grid gap-8">
+                  <fieldset class="border-3 border-ink bg-white p-[clamp(1rem,4vw,2rem)]">
+                    <legend class="px-2 text-2xl font-extrabold">1. Холбоо барих</legend>
+                    <div class="mt-4 grid gap-5 sm:grid-cols-2">
+                      <label class="grid gap-2 font-bold" for="customer-name">
+                        Нэр <span aria-hidden="true">*</span>
+                        <input
+                          ref={element => registerField('customer.name', element)}
+                          id="customer-name"
+                          name="customer.name"
+                          class="min-h-12 border-2 border-ink px-3 font-normal outline-offset-2 focus:outline-3 focus:outline-cobalt"
+                          value={details.customer.name}
+                          required
+                          autocomplete="name"
+                          aria-invalid={fieldError('/customer/name') ? 'true' : undefined}
+                          aria-describedby={
+                            fieldError('/customer/name') ? 'customer-name-error' : undefined
+                          }
+                          onInput={event =>
+                            setDetails(draft => {
+                              draft.customer.name = event.currentTarget.value
+                            })
+                          }
+                        />
+                        <Show when={fieldMessage('/customer/name')}>
+                          {message => (
+                            <small id="customer-name-error" class="text-alert">
+                              {message()}
+                            </small>
+                          )}
+                        </Show>
+                      </label>
+                      <label class="grid gap-2 font-bold" for="customer-phone">
+                        Утас <span aria-hidden="true">*</span>
+                        <input
+                          ref={element => registerField('customer.phone', element)}
+                          id="customer-phone"
+                          name="customer.phone"
+                          class="min-h-12 border-2 border-ink px-3 font-normal outline-offset-2 focus:outline-3 focus:outline-cobalt"
+                          value={details.customer.phone}
+                          inputmode="tel"
+                          required
+                          autocomplete="tel"
+                          placeholder="9911 2233"
+                          aria-invalid={fieldError('/customer/phone') ? 'true' : undefined}
+                          aria-describedby={
+                            fieldError('/customer/phone')
+                              ? 'customer-phone-error'
+                              : 'customer-phone-help'
+                          }
+                          onInput={event =>
+                            setDetails(draft => {
+                              draft.customer.phone = event.currentTarget.value
+                            })
+                          }
+                        />
+                        <small id="customer-phone-help" class="font-normal text-ink/60">
+                          +976, зай, зураастай бичиж болно.
+                        </small>
+                        <Show when={fieldMessage('/customer/phone')}>
+                          {message => (
+                            <small id="customer-phone-error" class="text-alert">
+                              {message()}
+                            </small>
+                          )}
+                        </Show>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <fieldset class="border-3 border-ink bg-white p-[clamp(1rem,4vw,2rem)]">
+                    <legend class="px-2 text-2xl font-extrabold">2. Хүргэлт</legend>
+                    <div class="mt-4 grid gap-5 sm:grid-cols-2">
+                      <label class="grid gap-2 font-bold" for="delivery-district">
+                        Дүүрэг <span aria-hidden="true">*</span>
+                        <select
+                          ref={element => registerField('delivery.district', element)}
+                          id="delivery-district"
+                          name="delivery.district"
+                          class="min-h-12 border-2 border-ink bg-white px-3 font-normal outline-offset-2 focus:outline-3 focus:outline-cobalt"
+                          value={details.delivery.district}
+                          required
+                          aria-invalid={fieldError('/delivery/district') ? 'true' : undefined}
+                          onChange={event =>
+                            setDetails(draft => {
+                              draft.delivery.district = event.currentTarget
+                                .value as UlaanbaatarDistrict
+                            })
+                          }
+                        >
+                          <For each={districts}>
+                            {district => <option value={district}>{district}</option>}
+                          </For>
+                        </select>
+                      </label>
+                      <label class="grid gap-2 font-bold" for="delivery-khoroo">
+                        Хороо <span aria-hidden="true">*</span>
+                        <input
+                          ref={element => registerField('delivery.khoroo', element)}
+                          id="delivery-khoroo"
+                          name="delivery.khoroo"
+                          class="min-h-12 border-2 border-ink px-3 font-normal outline-offset-2 focus:outline-3 focus:outline-cobalt"
+                          value={details.delivery.khoroo}
+                          required
+                          placeholder="1-р хороо"
+                          aria-invalid={fieldError('/delivery/khoroo') ? 'true' : undefined}
+                          aria-describedby={
+                            fieldError('/delivery/khoroo') ? 'delivery-khoroo-error' : undefined
+                          }
+                          onInput={event =>
+                            setDetails(draft => {
+                              draft.delivery.khoroo = event.currentTarget.value
+                            })
+                          }
+                        />
+                        <Show when={fieldMessage('/delivery/khoroo')}>
+                          {message => (
+                            <small id="delivery-khoroo-error" class="text-alert">
+                              {message()}
+                            </small>
+                          )}
+                        </Show>
+                      </label>
+                      <label class="grid gap-2 font-bold sm:col-span-2" for="delivery-address">
+                        Дэлгэрэнгүй хаяг <span aria-hidden="true">*</span>
+                        <textarea
+                          ref={element => registerField('delivery.address', element)}
+                          id="delivery-address"
+                          name="delivery.address"
+                          class="min-h-28 resize-y border-2 border-ink p-3 font-normal outline-offset-2 focus:outline-3 focus:outline-cobalt"
+                          value={details.delivery.address}
+                          required
+                          autocomplete="street-address"
+                          aria-invalid={fieldError('/delivery/address') ? 'true' : undefined}
+                          aria-describedby={
+                            fieldError('/delivery/address') ? 'delivery-address-error' : undefined
+                          }
+                          onInput={event =>
+                            setDetails(draft => {
+                              draft.delivery.address = event.currentTarget.value
+                            })
+                          }
+                        />
+                        <Show when={fieldMessage('/delivery/address')}>
+                          {message => (
+                            <small id="delivery-address-error" class="text-alert">
+                              {message()}
+                            </small>
+                          )}
+                        </Show>
+                      </label>
+                      <label class="grid gap-2 font-bold sm:col-span-2" for="delivery-notes">
+                        Нэмэлт тайлбар <span class="font-normal text-ink/55">(заавал биш)</span>
+                        <textarea
+                          ref={element => registerField('delivery.notes', element)}
+                          id="delivery-notes"
+                          name="delivery.notes"
+                          class="min-h-24 resize-y border-2 border-ink p-3 font-normal outline-offset-2 focus:outline-3 focus:outline-cobalt"
+                          value={details.delivery.notes ?? ''}
+                          maxlength="500"
+                          aria-invalid={fieldError('/delivery/notes') ? 'true' : undefined}
+                          aria-describedby={
+                            fieldError('/delivery/notes') ? 'delivery-notes-error' : undefined
+                          }
+                          onInput={event =>
+                            setDetails(draft => {
+                              draft.delivery.notes = event.currentTarget.value
+                            })
+                          }
+                        />
+                        <Show when={fieldMessage('/delivery/notes')}>
+                          {message => (
+                            <small id="delivery-notes-error" class="text-alert">
+                              {message()}
+                            </small>
+                          )}
+                        </Show>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <fieldset
+                    ref={element => registerField('paymentMethod', element)}
+                    class="border-3 border-ink bg-white p-[clamp(1rem,4vw,2rem)]"
+                    aria-invalid={fieldError('/paymentMethod') ? 'true' : undefined}
+                    aria-describedby={
+                      fieldError('/paymentMethod') ? 'payment-method-error' : undefined
+                    }
+                  >
+                    <legend class="px-2 text-2xl font-extrabold">3. Төлбөрийн арга</legend>
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                      <label class="flex min-h-24 cursor-pointer items-center gap-3 border-2 border-ink p-4 font-bold has-checked:bg-amber">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="qpay"
+                          checked={details.paymentMethod === 'qpay'}
+                          onChange={() =>
+                            setDetails(draft => {
+                              draft.paymentMethod = 'qpay'
+                            })
+                          }
+                        />
+                        <span>
+                          QPay <small class="mt-1 block font-normal">QR болон банкны апп</small>
+                        </span>
+                      </label>
+                      <label class="flex min-h-24 cursor-pointer items-center gap-3 border-2 border-ink p-4 font-bold has-checked:bg-amber">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="bank_transfer"
+                          checked={details.paymentMethod === 'bank_transfer'}
+                          onChange={() =>
+                            setDetails(draft => {
+                              draft.paymentMethod = 'bank_transfer'
+                            })
+                          }
+                        />
+                        <span>
+                          Дансаар шилжүүлэх{' '}
+                          <small class="mt-1 block font-normal">Ажилтан баталгаажуулна</small>
+                        </span>
+                      </label>
+                    </div>
+                    <Show when={fieldMessage('/paymentMethod')}>
+                      {message => (
+                        <small id="payment-method-error" class="mt-2 block text-alert">
+                          {message()}
+                        </small>
+                      )}
+                    </Show>
+                  </fieldset>
+                </div>
+
+                <aside class="border-3 border-ink bg-amber p-5 lg:sticky lg:top-24">
+                  <p class="font-bold text-cobalt">ORDER SUMMARY</p>
+                  <h2 class="mt-2 text-3xl font-extrabold">Захиалгын дүн</h2>
+                  <div class="mt-4 divide-y divide-ink/30 border-y border-ink/30">
+                    <For each={cart.validatedCart()?.lines ?? cart.items}>
+                      {line => (
+                        <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 py-4 text-sm">
+                          <span>
+                            <strong class="block">{line.productName}</strong>
+                            <small>
+                              {'requestedQuantity' in line ? line.requestedQuantity : line.quantity}{' '}
+                              ш
+                            </small>
+                          </span>
+                          <strong>
+                            {formatMnt(
+                              'lineTotalMnt' in line
+                                ? line.lineTotalMnt
+                                : line.unitPriceMnt * line.quantity,
+                            )}
+                          </strong>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                  <p class="mt-4 flex justify-between gap-3 text-xl">
+                    <span>Барааны дүн</span>
+                    <strong>
+                      {formatMnt(
+                        cart.validatedCart()?.subtotalMnt ??
+                          cart.items.reduce(
+                            (sum, item) => sum + item.unitPriceMnt * item.quantity,
+                            0,
+                          ),
+                      )}
+                    </strong>
+                  </p>
+                  <p class="mt-3 text-sm leading-relaxed">
+                    Хүргэлтийн төлбөр болон нийт дүнг сервер захиалга үүсгэх үед нэмнэ.
+                  </p>
+                  <button
+                    class="mt-5 min-h-14 w-full bg-cobalt px-5 font-bold text-white disabled:cursor-not-allowed disabled:opacity-55"
+                    type="submit"
+                    disabled={pending()}
+                    aria-busy={pending() ? 'true' : undefined}
+                  >
+                    {pending() ? 'Баталгаажуулж байна…' : 'Захиалга үүсгэх →'}
+                  </button>
+                </aside>
+              </form>
+            </Show>
+          </div>
+        </main>
+      }
+    >
+      {order => <CheckoutSuccess order={order()} />}
+    </Show>
   )
 }

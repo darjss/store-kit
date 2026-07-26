@@ -8,7 +8,7 @@ import {
   paymentRefreshErrorSchema,
   paymentConfirmationSchema,
 } from './payments'
-import { privateOrderErrorSchema } from './private-orders'
+import { privateOrderAccessSchema, privateOrderErrorSchema } from './private-orders'
 
 const publicOrder = {
   id: 'ord_01arz3ndektsv4rrffq69g5fav',
@@ -69,6 +69,21 @@ test('public order status accepts the customer view and rejects persistence secr
     Value.Check(publicOrderSchema, {
       ...publicOrder,
       lines: [{ ...publicOrder.lines[0], imageR2Key: 'catalog/private-key.webp' }],
+    }),
+  ).toBe(false)
+})
+
+test('private order access requires a TypeID and a nontrivial status token', () => {
+  expect(
+    Value.Check(privateOrderAccessSchema, {
+      orderId: publicOrder.id,
+      statusToken: 'private-status-token-that-is-long-enough',
+    }),
+  ).toBe(true)
+  expect(
+    Value.Check(privateOrderAccessSchema, {
+      orderId: 'order-1',
+      statusToken: 'short',
     }),
   ).toBe(false)
 })

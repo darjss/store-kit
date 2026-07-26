@@ -52,6 +52,7 @@ interface CartContextValue {
   validatedCart: () => ValidatedCart | undefined
   setOpen: (open: boolean) => void
   add: (product: PurchaseProduct, variant: PurchaseVariant, quantity: number) => void
+  clear: () => void
   remove: (variantId: string) => void
   setQuantity: (variantId: string, quantity: number) => void
   correctionsFor: (variantId: string) => CartCorrection[]
@@ -274,6 +275,12 @@ export function CartProvider(props: ParentProps) {
       })
       invalidateValidation()
       setOpen(true)
+    },
+    clear() {
+      setItems(draft => {
+        draft.splice(0)
+      })
+      invalidateValidation()
     },
     remove,
     setQuantity,
