@@ -1,3 +1,4 @@
+import type { ProductUseCase } from '@store-kit/contracts/catalog'
 import { sql } from 'drizzle-orm'
 import {
   check,
@@ -16,7 +17,6 @@ import { typeIdCheck } from './typeid-check.ts'
 export type ProductDetailValue = string | number | boolean | string[]
 export type ProductDetails = Record<string, ProductDetailValue>
 export type VariantOptions = Record<string, string>
-export type ProductUseCase = 'first-iem' | 'bass' | 'vocals' | 'gaming' | 'daily-carry'
 
 export const brand = sqliteTable(
   'brand',

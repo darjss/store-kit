@@ -29,6 +29,7 @@
   "checkoutSettings": {
     "id": "cfg_00000000000000000000000001",
     "deliveryFeeMnt": 5000,
+    "orderPrefix": "PLG",
     "bankName": "Хаан банк",
     "bankAccountName": "Plugged",
     "bankAccountNumber": "5000000000",

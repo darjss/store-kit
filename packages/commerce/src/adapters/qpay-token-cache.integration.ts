@@ -1,36 +1,29 @@
-import { env } from 'cloudflare:workers'
-import { beforeEach, describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it } from 'vite-plus/test'
 
-import { createQPayTokenCache, qpayAccessTokenCacheKey } from './qpay-token-cache'
+import { createQPayTokenCache } from './qpay-token-cache'
 
 describe.sequential('QPay token cache', () => {
-  beforeEach(async () => {
-    await env.CACHE.delete(qpayAccessTokenCacheKey)
-  })
-
-  it('shares only the skewed token and expiry through KV', async () => {
+  it('keeps bearer tokens inside one isolate cache', async () => {
     let now = 1_000
     let refreshCount = 0
     const refresh = async () => ({
       value: `access-token-${++refreshCount}`,
       expiresInSeconds: 120,
     })
-    const firstIsolate = createQPayTokenCache(refresh, env.CACHE, () => now)
+    const firstIsolate = createQPayTokenCache(refresh, () => now)
 
     expect(await firstIsolate.get()).toBe('access-token-1')
-    const stored: unknown = await env.CACHE.get(qpayAccessTokenCacheKey, 'json')
-    expect(stored).toEqual({ value: 'access-token-1', expiresAt: 91_000 })
+    expect(await firstIsolate.get()).toBe('access-token-1')
 
-    const secondIsolate = createQPayTokenCache(refresh, env.CACHE, () => now)
-    expect(await secondIsolate.get()).toBe('access-token-1')
-    expect(refreshCount).toBe(1)
+    const secondIsolate = createQPayTokenCache(refresh, () => now)
+    expect(await secondIsolate.get()).toBe('access-token-2')
 
     now = 90_999
     expect(await firstIsolate.get()).toBe('access-token-1')
-    expect(refreshCount).toBe(1)
+    expect(refreshCount).toBe(2)
   })
 
-  it('deduplicates refresh and bypasses a rejected token that KV can still return', async () => {
+  it('deduplicates refresh and bypasses a rejected token', async () => {
     let resolveRefresh: ((token: { value: string; expiresInSeconds: number }) => void) | undefined
     let firstRefreshStarted: (() => void) | undefined
     let secondRefreshStarted: (() => void) | undefined
@@ -48,7 +41,7 @@ describe.sequential('QPay token cache', () => {
       return new Promise(resolve => {
         resolveRefresh = resolve
       })
-    }, env.CACHE)
+    })
 
     const first = cache.get()
     const second = cache.get()

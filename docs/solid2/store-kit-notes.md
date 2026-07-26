@@ -4,7 +4,7 @@ These rules override project-specific choices copied from the Roast Your Taste h
 
 ## Baseline
 
-The first demo app is `apps/demo-solid-plugged`. Keep `apps/plugged` unchanged until the demo passes its full proof matrix.
+The first demo app is `apps/demo-solid-store`. It implements the selected ДУНД wardrobe direction side by side with `apps/plugged`. Keep `apps/plugged` deployable until the demo passes its full proof matrix.
 
 Use the exact package group recorded in [README](README.md). The workspace catalog still selects Solid 1 for existing applications, so the demo app must pin Solid 2 directly.
 
@@ -54,4 +54,4 @@ Do not copy the example's `any` types or Node adapter. The Cloudflare adapter ca
 
 ## Plan
 
-The implementation plan is [plans/004-demo-solid-plugged.md](../../plans/004-demo-solid-plugged.md).
+The implementation plan is [plans/004-solid2-fashion-store.md](../../plans/004-solid2-fashion-store.md).

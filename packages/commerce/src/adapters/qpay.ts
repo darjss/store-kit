@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers'
 import ky from 'ky'
 import type { KyInstance } from 'ky'
 
-import { qpayError } from '~/errors/qpay'
+import { qpayError } from '#commerce/errors/qpay'
 
 import { createQPayCallbackUrl, qpayPaymentCheckBody } from './qpay-callback'
 import {
@@ -35,7 +35,7 @@ const fetchAccessToken = async () => {
   return { value: token.access_token, expiresInSeconds: token.expires_in }
 }
 
-const tokenCache = createQPayTokenCache(fetchAccessToken, env.CACHE)
+const tokenCache = createQPayTokenCache(fetchAccessToken)
 
 qpayClient = ky.create({
   prefix: env.QPAY_BASE_URL || 'https://merchant.qpay.mn',

@@ -16,7 +16,7 @@ import {
   inactiveVariant,
   insufficientStock,
   missingVariant,
-} from '~/errors/cart'
+} from '#commerce/errors/cart'
 
 const stockStatus = (quantity: number): StockStatus =>
   match(

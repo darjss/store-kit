@@ -1,6 +1,6 @@
 # Solid 2 project handbook
 
-This handbook is a reviewed snapshot of the Solid 2 documentation created for Roast Your Taste. Store Kit uses the same pinned prerelease baseline for `apps/demo-solid-plugged`, with the overrides in [Store Kit notes](store-kit-notes.md). Use it before general search results, which usually describe Solid 1 or Router 0.x.
+This handbook is a reviewed snapshot of the Solid 2 documentation created for Roast Your Taste. Store Kit uses the same pinned prerelease baseline for `apps/demo-solid-store`, with the overrides in [Store Kit notes](store-kit-notes.md). Use it before general search results, which usually describe Solid 1 or Router 0.x.
 
 ## Installed baseline
 

@@ -3,19 +3,17 @@ import type { Static } from 'typebox'
 
 import { nonNegativeIntegerSchema } from './common.ts'
 
-const slugSchema = Type.String({ pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' })
+export const catalogSlugSchema = Type.String({
+  minLength: 1,
+  maxLength: 40,
+  pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+})
 
-export const productUseCaseSchema = Type.Union([
-  Type.Literal('first-iem'),
-  Type.Literal('bass'),
-  Type.Literal('vocals'),
-  Type.Literal('gaming'),
-  Type.Literal('daily-carry'),
-])
+export const productUseCaseSchema = catalogSlugSchema
 
 export const productListFiltersSchema = Type.Object({
-  category: Type.Optional(slugSchema),
-  brand: Type.Optional(slugSchema),
+  category: Type.Optional(catalogSlugSchema),
+  brand: Type.Optional(catalogSlugSchema),
   useCase: Type.Optional(productUseCaseSchema),
   featured: Type.Optional(Type.Boolean()),
   query: Type.Optional(Type.String()),

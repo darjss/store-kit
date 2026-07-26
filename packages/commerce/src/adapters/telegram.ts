@@ -3,8 +3,8 @@ import { env } from 'cloudflare:workers'
 import { match } from 'dismatch'
 import ky from 'ky'
 
-import { telegramRequestError, telegramResponseError } from '~/errors/telegram'
-import type { TelegramError } from '~/errors/telegram'
+import { telegramRequestError, telegramResponseError } from '#commerce/errors/telegram'
+import type { TelegramError } from '#commerce/errors/telegram'
 
 import { parseTelegramActionResponse, parseTelegramMessageResponse } from './telegram-responses'
 import type { ParsedTelegramResponse } from './telegram-responses'

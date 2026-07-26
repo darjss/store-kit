@@ -31,10 +31,21 @@ import { catalogSeedTarget, pluggedDevelopmentMediaBaseUrl } from './catalog-see
 import type { CatalogSeedEnvironment, CatalogSeedRemoteEnvironment } from './catalog-seed-target.ts'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-const pluggedDirectory = resolve(projectRoot, 'apps/plugged')
-const seedPath = resolve(pluggedDirectory, 'data/catalog.seed.json')
-const wranglerConfigPath = resolve(pluggedDirectory, 'wrangler.jsonc')
-const generatedSqlPath = resolve(pluggedDirectory, '.wrangler/catalog.seed.sql')
+const storeApp = process.env.STORE_KIT_APP?.trim() || 'plugged'
+if (storeApp !== 'plugged' && storeApp !== 'demo-solid-store') {
+  throw new Error('STORE_KIT_APP must be plugged or demo-solid-store.')
+}
+const storeDirectory = resolve(projectRoot, `apps/${storeApp}`)
+const storeName = storeApp === 'plugged' ? 'Plugged' : 'ДУНД'
+const seedPath = resolve(storeDirectory, 'data/catalog.seed.json')
+const wranglerConfigPath = resolve(storeDirectory, 'wrangler.jsonc')
+const generatedSqlPath = resolve(storeDirectory, '.wrangler/catalog.seed.sql')
+const persistTo = process.env.STORE_KIT_PERSIST_TO?.trim()
+const allowedUseCases = new Set(
+  storeApp === 'plugged'
+    ? ['first-iem', 'bass', 'vocals', 'gaming', 'daily-carry']
+    : ['workday', 'off-duty', 'layering', 'travel', 'cold-weather'],
+)
 
 const d1Binding = 'DB'
 const nonEmptyStringSchema = Type.String({ minLength: 1 })
@@ -111,6 +122,7 @@ const productSeedSchema = strictObject({
 const checkoutSettingsSeedSchema = strictObject({
   id: checkoutSettingsIdSchema,
   deliveryFeeMnt: nonNegativeIntegerSchema,
+  orderPrefix: Type.String({ minLength: 2, maxLength: 5, pattern: '^[A-Z]+$' }),
   bankName: nonEmptyStringSchema,
   bankAccountName: nonEmptyStringSchema,
   bankAccountNumber: nonEmptyStringSchema,
@@ -118,14 +130,14 @@ const checkoutSettingsSeedSchema = strictObject({
   orderConfirmationText: nullableStringSchema,
 })
 
-const pluggedCatalogSeedSchema = strictObject({
+const catalogSeedSchema = strictObject({
   checkoutSettings: Type.Optional(checkoutSettingsSeedSchema),
   brands: Type.Array(brandSeedSchema),
   categories: Type.Array(categorySeedSchema),
   products: Type.Array(productSeedSchema),
 })
 
-type CatalogSeed = Static<typeof pluggedCatalogSeedSchema>
+type CatalogSeed = Static<typeof catalogSeedSchema>
 type SeedWranglerConfig = {
   env?: Record<
     string,
@@ -198,6 +210,12 @@ const validateReferences = (seed: CatalogSeed) => {
   )
 
   for (const product of seed.products) {
+    const uncontrolledUseCase = product.useCases.find(useCase => !allowedUseCases.has(useCase))
+    if (uncontrolledUseCase) {
+      throw new Error(
+        `Invalid catalog seed: product "${product.slug}" uses uncontrolled ${storeName} tag "${uncontrolledUseCase}".`,
+      )
+    }
     if (product.brandSlug && !brands.has(product.brandSlug)) {
       throw new Error(
         `Invalid catalog seed: product "${product.slug}" references missing brand "${product.brandSlug}".`,
@@ -240,16 +258,17 @@ const parseSeed = async () => {
     )
   }
 
-  if (!Value.Check(pluggedCatalogSeedSchema, input)) {
-    const errors = Value.Errors(pluggedCatalogSeedSchema, input).map(
-      ({ instancePath, message }) => ({ path: instancePath, message }),
-    )
+  if (!Value.Check(catalogSeedSchema, input)) {
+    const errors = Value.Errors(catalogSeedSchema, input).map(({ instancePath, message }) => ({
+      path: instancePath,
+      message,
+    }))
     throw new Error(
       `Catalog seed does not match the required shape:\n${JSON.stringify(errors, null, 2)}`,
     )
   }
 
-  const seed = Value.Parse(pluggedCatalogSeedSchema, input)
+  const seed = Value.Parse(catalogSeedSchema, input)
   for (const product of seed.products) {
     for (const image of product.images) {
       if (isAbsolute(image.source) || image.source.split(/[\\/]/).includes('..')) {
@@ -278,10 +297,10 @@ const parseSeed = async () => {
 }
 
 const assetPath = (source: string) => {
-  const path = resolve(pluggedDirectory, source)
-  const fromPlugged = relative(pluggedDirectory, path)
-  if (fromPlugged === '..' || fromPlugged.startsWith(`..${sep}`) || isAbsolute(fromPlugged)) {
-    throw new Error(`Image source escapes apps/plugged: ${source}`)
+  const path = resolve(storeDirectory, source)
+  const fromStore = relative(storeDirectory, path)
+  if (fromStore === '..' || fromStore.startsWith(`..${sep}`) || isAbsolute(fromStore)) {
+    throw new Error(`Image source escapes apps/${storeApp}: ${source}`)
   }
   return path
 }
@@ -302,7 +321,7 @@ const validateAssets = async (seed: CatalogSeed) => {
 const runWrangler = (args: string[]) =>
   new Promise<void>((resolvePromise, reject) => {
     const child = spawn('vp', ['exec', 'wrangler', ...args], {
-      cwd: pluggedDirectory,
+      cwd: storeDirectory,
       stdio: 'inherit',
     })
     child.once('error', reject)
@@ -412,6 +431,7 @@ const buildSql = (seed: CatalogSeed) => {
         [
           'id',
           'delivery_fee_mnt',
+          'order_prefix',
           'bank_name',
           'bank_account_name',
           'bank_account_number',
@@ -422,6 +442,7 @@ const buildSql = (seed: CatalogSeed) => {
         [
           sqlText(seed.checkoutSettings.id),
           String(seed.checkoutSettings.deliveryFeeMnt),
+          sqlText(seed.checkoutSettings.orderPrefix),
           sqlText(seed.checkoutSettings.bankName),
           sqlText(seed.checkoutSettings.bankAccountName),
           sqlText(seed.checkoutSettings.bankAccountNumber),
@@ -431,6 +452,7 @@ const buildSql = (seed: CatalogSeed) => {
         ],
         [
           'delivery_fee_mnt',
+          'order_prefix',
           'bank_name',
           'bank_account_name',
           'bank_account_number',
@@ -628,7 +650,10 @@ const importRows = async (seed: CatalogSeed, environment: CatalogSeedEnvironment
   await mkdir(dirname(generatedSqlPath), { recursive: true })
   await writeFile(generatedSqlPath, buildSql(seed), { mode: 0o600 })
   try {
-    const target = environment === 'local' ? ['--local'] : ['--remote', '--env', environment]
+    const target =
+      environment === 'local'
+        ? ['--local', ...(persistTo ? ['--persist-to', persistTo] : [])]
+        : ['--remote', '--env', environment]
     await runWrangler([
       'd1',
       'execute',
@@ -679,10 +704,14 @@ const main = async () => {
   await validateAssets(seed)
 
   if (target.environment === 'local') {
-    process.stdout.write('Preparing local Plugged data seed. Catalog media remains remote.\n')
+    process.stdout.write(`Preparing local ${storeName} data seed. Catalog media remains remote.\n`)
     await importRows(seed, target.environment)
     printCounts(seed, target.scope)
     return
+  }
+
+  if (storeApp !== 'plugged') {
+    throw new Error('Remote ДУНД seeding requires dedicated media resources before use.')
   }
 
   if (target.environment === 'development' && target.scope === 'media') {

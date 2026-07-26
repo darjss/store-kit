@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
-import { createCheckoutOrder } from '~/checkout/operations'
-import { commerce } from '~/index'
-import { confirmOrderPayment } from '~/payments/operations'
+import { createCheckoutOrder } from './checkout/operations'
+import { commerce } from './index'
+import { confirmOrderPayment } from './payments/operations'
 
 const entityId = (prefix: string, value: number) =>
   `${prefix}_${value.toString().padStart(26, '0')}`
@@ -81,8 +81,8 @@ const insertPaymentOrder = async (suffix: number, stock: number, quantity: numbe
 const insertCheckoutSettings = async () => {
   await env.DB.prepare(
     `insert or replace into checkout_settings
-      (id, delivery_fee_mnt, bank_name, bank_account_name, bank_account_number, updated_at)
-     values ('cfg_00000000000000000000000001', 5000, 'Test Bank', 'Store', '1234', ?)`,
+      (id, delivery_fee_mnt, order_prefix, bank_name, bank_account_name, bank_account_number, updated_at)
+     values ('cfg_00000000000000000000000001', 5000, 'DND', 'Test Bank', 'Store', '1234', ?)`,
   )
     .bind(Date.now())
     .run()
@@ -119,13 +119,14 @@ describe('commerce operations with local D1', () => {
     if (result.status === 'error') return
 
     const persisted = await env.DB.prepare(
-      `select customer_name, customer_phone, khoroo, address, delivery_notes
+      `select number as order_number, customer_name, customer_phone, khoroo, address, delivery_notes
        from customer_order where id = ?`,
     )
       .bind(result.value.orderId)
       .first()
 
     expect(persisted).toEqual({
+      order_number: expect.stringMatching(/^DND-/),
       customer_name: 'Test Customer',
       customer_phone: '99112233',
       khoroo: '1-р хороо',

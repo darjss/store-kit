@@ -1,0 +1,46 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "demo-solid-store",
+  "main": "worker.js",
+  "compatibility_date": "2026-07-24",
+  "compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
+  "cache": {
+    "enabled": true,
+  },
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "demo-solid-store",
+      "migrations_dir": "../../packages/db/migrations",
+      "migrations_pattern": "../../packages/db/migrations/*/migration.sql",
+    },
+  ],
+  "kv_namespaces": [{ "binding": "CACHE" }],
+  "vars": {
+    "DEPLOYMENT_ENV": "development",
+    "PUBLIC_APP_URL": "https://demo-solid-store.storekit.darjs.dev",
+    "PUBLIC_MEDIA_BASE_URL": "https://demo-solid-store-media.storekitcdn.darjs.dev/",
+    "QPAY_BASE_URL": "https://merchant.qpay.mn",
+  },
+  "secrets": {
+    "required": [
+      "QPAY_USERNAME",
+      "QPAY_PASSWORD",
+      "QPAY_INVOICE_CODE",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_CHAT_ID",
+      "TELEGRAM_WEBHOOK_SECRET",
+      "TELEGRAM_ADMIN_USER_ID",
+    ],
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 },
+  },
+}

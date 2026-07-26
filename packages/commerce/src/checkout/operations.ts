@@ -12,16 +12,16 @@ import { database } from '@store-kit/db'
 import { createId } from '@store-kit/db/ids'
 import { Result } from 'better-result'
 
-import { createQPayInvoice } from '~/adapters/qpay'
-import { inactiveVariant, insufficientStock, missingVariant } from '~/errors/cart'
+import { createQPayInvoice } from '#commerce/adapters/qpay'
+import { inactiveVariant, insufficientStock, missingVariant } from '#commerce/errors/cart'
 import {
   changedCart,
   deliveryUnavailable,
   emptyCheckoutCart,
   invalidCheckoutDetails,
   paymentSetupFailed,
-} from '~/errors/checkout'
-import { hashStatusToken } from '~/orders/status-token'
+} from '#commerce/errors/checkout'
+import { hashStatusToken } from '#commerce/orders/status-token'
 
 export const normalizeCheckoutInput = (input: CheckoutInput): CheckoutInput => {
   const notes = input.delivery.notes?.trim()
@@ -119,7 +119,7 @@ export const createCheckoutOrder = async (checkoutInput: CheckoutInput) => {
 
   const orderId = createId('order')
   const paymentId = createId('payment')
-  const orderNumber = `PLG-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
+  const orderNumber = `${settings.orderPrefix}-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
   const statusToken = `${crypto.randomUUID()}${crypto.randomUUID()}`
   const subtotalMnt = input.items.reduce(
     (sum, item) => sum + byId.get(item.variantId)!.unitPriceMnt * item.quantity,

@@ -2,7 +2,7 @@ import type { ProductListFilters, ProductNotFound } from '@store-kit/contracts/c
 import { database } from '@store-kit/db'
 import { Result } from 'better-result'
 
-import { createProductNotFound } from '~/errors/catalog'
+import { createProductNotFound } from '#commerce/errors/catalog'
 
 export type ProductDetail = NonNullable<
   Awaited<ReturnType<typeof database.query.catalog.findPublishedProductBySlug>>

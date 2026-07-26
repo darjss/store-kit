@@ -13,13 +13,13 @@ import { Result } from 'better-result'
 import { match } from 'dismatch'
 import { matchAsync } from 'dismatch/async'
 
-import { verifyQPayPayment } from '~/adapters/qpay'
+import { verifyQPayPayment } from '#commerce/adapters/qpay'
 import {
   answerTelegramCallback,
   editTelegramMessage,
   sendBankClaimMessage,
   sendPaidOrderMessage,
-} from '~/adapters/telegram'
+} from '#commerce/adapters/telegram'
 import {
   bankTransferClaimNotAllowed,
   paymentInsufficientStock,
@@ -27,8 +27,8 @@ import {
   paymentVerificationFailed,
   qpayInvoiceMissing,
   staffNotificationFailed,
-} from '~/errors/payments'
-import { orderOperations } from '~/orders/operations'
+} from '#commerce/errors/payments'
+import { orderOperations } from '#commerce/orders/operations'
 
 export const confirmOrderPayment = async (
   orderId: string,

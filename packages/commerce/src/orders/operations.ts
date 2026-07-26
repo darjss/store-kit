@@ -2,7 +2,7 @@ import type { PrivateOrderError } from '@store-kit/contracts/private-orders'
 import { database } from '@store-kit/db'
 import { Result } from 'better-result'
 
-import { invalidStatusToken } from '~/errors/orders'
+import { invalidStatusToken } from '#commerce/errors/orders'
 
 import { hashStatusToken } from './status-token'
 

@@ -1,0 +1,387 @@
+{
+  "brands": [
+    {
+      "id": "brd_01kyfqxb0he06sxpmsx2p6xwb1",
+      "slug": "dund",
+      "name": "ДУНД",
+      "description": "Улаанбаатарын өдөр тутмын давхаргын жижиг капсул."
+    }
+  ],
+  "checkoutSettings": {
+    "id": "cfg_00000000000000000000000001",
+    "deliveryFeeMnt": 7000,
+    "orderPrefix": "DND",
+    "bankName": "Хаан банк",
+    "bankAccountName": "ДУНД",
+    "bankAccountNumber": "5000000000",
+    "checkoutHelpText": "Төлбөрийн утгад захиалгын дугаараа бичнэ үү.",
+    "orderConfirmationText": "Төлбөр батлагдсаны дараа захиалгыг бэлтгэнэ."
+  },
+  "categories": [
+    {
+      "id": "cat_01kyfqxb0ke06sxpn21wa31mcy",
+      "slug": "outerwear",
+      "name": "Гадуур хувцас",
+      "description": "Салдаг дотор давхаргатай гадуур хувцас.",
+      "sortOrder": 10,
+      "active": true
+    },
+    {
+      "id": "cat_01kyfqxb0ke06sxpnd1y3wms23",
+      "slug": "shirts",
+      "name": "Цамц",
+      "description": "Дангаар болон давхарлаж өмсөх бүтэцтэй цамц.",
+      "sortOrder": 20,
+      "active": true
+    },
+    {
+      "id": "cat_01kyfqxb0ke06sxpnmfthrjpsm",
+      "slug": "knitwear",
+      "name": "Ноосон давхарга",
+      "description": "Дотор орчинд тохирох нимгэн ноосон давхарга.",
+      "sortOrder": 30,
+      "active": true
+    },
+    {
+      "id": "cat_01kyfqxb0ke06sxpntbjby2fj7",
+      "slug": "base-layers",
+      "name": "Суурь давхарга",
+      "description": "Амьсгалдаг өдөр тутмын суурь хувцас.",
+      "sortOrder": 40,
+      "active": true
+    },
+    {
+      "id": "cat_01kyfqxb0ke06sxpp1fmdd0syd",
+      "slug": "trousers",
+      "name": "Өмд",
+      "description": "Шулуун эсгүүртэй өдөр тутмын өмд.",
+      "sortOrder": 50,
+      "active": true
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_01kyfqxb0ke06sxpperp23qz7p",
+      "slug": "shiljilt-bridge-coat",
+      "brandSlug": "dund",
+      "categorySlug": "outerwear",
+      "name": "Шилжилт хүрэм",
+      "shortDescription": "Салдаг хөх дотор давхаргатай, өвлөөс дотор орчин руу шилжих урт хүрэм.",
+      "description": "Гадуур бүрхүүл, салдаг хөнгөн дотор давхаргыг хамтад нь эсвэл тусад нь өмсөнө.",
+      "status": "active",
+      "featured": true,
+      "useCases": ["cold-weather", "layering", "workday"],
+      "details": {
+        "fabric": "Усны цацлага тогтоох матт гадарга",
+        "fit": "Шулуун, давхарга багтах сул",
+        "care": "30°C зөөлөн угаалга",
+        "origin": "Улаанбаатарт зохион бүтээсэн",
+        "season": "Намар · Өвөл · Хавар"
+      },
+      "images": [
+        {
+          "id": "img_01kyfqxb0me06sxpqps6szdesw",
+          "source": "design/assets/bridge-coat-system.webp",
+          "r2Key": "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp",
+          "contentType": "image/webp",
+          "width": 1448,
+          "height": 1086,
+          "alt": "Хар урт хүрэм ба салдаг хөх дотор давхаргыг зэрэгцүүлэн өлгөсөн нь.",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01kyfqxb0me06sxpr1vkrdy49j",
+          "sku": "DND-COAT-S-ASPHALT",
+          "name": "S / Асфальт",
+          "options": { "size": "S", "color": "Асфальт" },
+          "priceMnt": 479000,
+          "compareAtPriceMnt": 529000,
+          "stockQuantity": 3,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": [
+            "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp"
+          ]
+        },
+        {
+          "id": "var_01kyfqxb0me06sxprf7r235s1w",
+          "sku": "DND-COAT-M-ASPHALT",
+          "name": "M / Асфальт",
+          "options": { "size": "M", "color": "Асфальт" },
+          "priceMnt": 479000,
+          "stockQuantity": 8,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": [
+            "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp"
+          ]
+        },
+        {
+          "id": "var_01kyfqxb0me06sxprgvp3qshxz",
+          "sku": "DND-COAT-L-COBALT",
+          "name": "L / Кобальт",
+          "options": { "size": "L", "color": "Кобальт" },
+          "priceMnt": 479000,
+          "stockQuantity": 4,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": [
+            "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp"
+          ]
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxprtfkaq6843",
+          "sku": "DND-COAT-XL-COBALT",
+          "name": "XL / Кобальт",
+          "options": { "size": "XL", "color": "Кобальт" },
+          "priceMnt": 479000,
+          "stockQuantity": 0,
+          "active": true,
+          "sortOrder": 40,
+          "imageKeys": [
+            "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyfqxb0me06sxppgwjy3983c",
+      "slug": "udur-overshirt",
+      "brandSlug": "dund",
+      "categorySlug": "shirts",
+      "name": "Өдөр цамц",
+      "shortDescription": "Ажил, өдөр тутмын явдалд дангаар эсвэл нимгэн хүрэм болгон өмсөх цамц.",
+      "description": "Мөр, ханцуйд хөдөлгөөн өгсөн шулуун эсгүүртэй.",
+      "status": "active",
+      "featured": true,
+      "useCases": ["workday", "off-duty", "layering"],
+      "details": {
+        "fabric": "Хөвөн хольцтой нягт нэхээс",
+        "fit": "Шулуун",
+        "care": "30°C угаалга",
+        "origin": "Улаанбаатарт зохион бүтээсэн",
+        "season": "Дөрвөн улирал"
+      },
+      "images": [],
+      "variants": [
+        {
+          "id": "var_01kyfqxb0ne06sxps3k3b4pway",
+          "sku": "DND-SHIRT-M-WHITE",
+          "name": "M / Цагаан",
+          "options": { "size": "M", "color": "Цагаан" },
+          "priceMnt": 189000,
+          "stockQuantity": 9,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxpsbydssr0g4",
+          "sku": "DND-SHIRT-L-COBALT",
+          "name": "L / Кобальт",
+          "options": { "size": "L", "color": "Кобальт" },
+          "priceMnt": 189000,
+          "stockQuantity": 5,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": []
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxpskv95m9h9z",
+          "sku": "DND-SHIRT-XL-ASPHALT",
+          "name": "XL / Асфальт",
+          "options": { "size": "XL", "color": "Асфальт" },
+          "priceMnt": 189000,
+          "stockQuantity": 2,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": []
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyfqxb0me06sxppv15hdhs1n",
+      "slug": "dund-wool-mid-layer",
+      "brandSlug": "dund",
+      "categorySlug": "knitwear",
+      "name": "Дунд ноосон цамц",
+      "shortDescription": "Халуун дотор орчинд хэт зузаарахгүй, нарийн ноосон дунд давхарга.",
+      "description": "Хүзүү, бугуйд зөөлөн хүрэх нам захтай.",
+      "status": "active",
+      "featured": true,
+      "useCases": ["workday", "layering", "travel"],
+      "details": {
+        "fabric": "Нарийн ноосон хольц",
+        "fit": "Биед ойр",
+        "care": "Гараар хүйтэн угаалга",
+        "origin": "Улаанбаатарт зохион бүтээсэн",
+        "season": "Намар · Өвөл · Хавар"
+      },
+      "images": [],
+      "variants": [
+        {
+          "id": "var_01kyfqxb0ne06sxpszes2y04gv",
+          "sku": "DND-KNIT-S-ASPHALT",
+          "name": "S / Асфальт",
+          "options": { "size": "S", "color": "Асфальт" },
+          "priceMnt": 159000,
+          "stockQuantity": 6,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxpt4vka1rt5a",
+          "sku": "DND-KNIT-M-CORAL",
+          "name": "M / Шүрэн",
+          "options": { "size": "M", "color": "Шүрэн" },
+          "priceMnt": 159000,
+          "stockQuantity": 3,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": []
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxptfcvqb0qg2",
+          "sku": "DND-KNIT-L-COBALT",
+          "name": "L / Кобальт",
+          "options": { "size": "L", "color": "Кобальт" },
+          "priceMnt": 159000,
+          "stockQuantity": 7,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": []
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyfqxb0me06sxpq1pyqa6m90",
+      "slug": "suuri-base-tshirt",
+      "brandSlug": "dund",
+      "categorySlug": "base-layers",
+      "name": "Суурь футболк",
+      "shortDescription": "Хөдөлгөөн, дулаан орчинд амьсгалдаг зөөлөн суурь футболк.",
+      "description": "Хүрэм, цамцны доор үрчийлт бага үүсгэх тэгш оёдолтой.",
+      "status": "active",
+      "featured": false,
+      "useCases": ["off-duty", "layering", "travel"],
+      "details": {
+        "fabric": "Хөвөн ба лиоцелл",
+        "fit": "Энгийн",
+        "care": "30°C угаалга",
+        "origin": "Улаанбаатарт зохион бүтээсэн",
+        "season": "Дөрвөн улирал"
+      },
+      "images": [],
+      "variants": [
+        {
+          "id": "var_01kyfqxb0ne06sxptky81mmjs1",
+          "sku": "DND-TEE-S-WHITE",
+          "name": "S / Цагаан",
+          "options": { "size": "S", "color": "Цагаан" },
+          "priceMnt": 69000,
+          "stockQuantity": 10,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": []
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxptv4j9mxnw3",
+          "sku": "DND-TEE-M-COBALT",
+          "name": "M / Кобальт",
+          "options": { "size": "M", "color": "Кобальт" },
+          "priceMnt": 69000,
+          "stockQuantity": 10,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": []
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxpv2xzbf6ygw",
+          "sku": "DND-TEE-L-ASPHALT",
+          "name": "L / Асфальт",
+          "options": { "size": "L", "color": "Асфальт" },
+          "priceMnt": 69000,
+          "stockQuantity": 8,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": []
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyfqxb0me06sxpqfnvs0t514",
+      "slug": "shuluun-everyday-trousers",
+      "brandSlug": "dund",
+      "categorySlug": "trousers",
+      "name": "Шулуун өмд",
+      "shortDescription": "Гутал дээр цэвэр буух, ажлын болон өдөр тутмын шулуун өмд.",
+      "description": "Суудал, өвдөгт хөдөлгөөний нөөцтэй боловч өргөн харагдахгүй.",
+      "status": "active",
+      "featured": true,
+      "useCases": ["workday", "off-duty", "travel"],
+      "details": {
+        "fabric": "Ноосон хольцтой суналттай даавуу",
+        "fit": "Шулуун",
+        "care": "Хими цэвэрлэгээ эсвэл хүйтэн угаалга",
+        "origin": "Улаанбаатарт зохион бүтээсэн",
+        "season": "Дөрвөн улирал"
+      },
+      "images": [
+        {
+          "id": "img_01kyfqxb0me06sxpqzs8x3ptt8",
+          "source": "design/assets/hero-threshold.webp",
+          "r2Key": "products/shuluun-everyday-trousers/44a3ba9d9077d8f06e8d9446c41733a5bf7f0bd5c951657035b7eb206c6fd791.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Шулуун хар өмдийг өвлийн гэрэлтэй үүдэнд өмссөн хүн.",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01kyfqxb0ne06sxpvdqr9mzjy1",
+          "sku": "DND-TROUSER-30-ASPHALT",
+          "name": "30 / Асфальт",
+          "options": { "size": "30", "color": "Асфальт" },
+          "priceMnt": 219000,
+          "stockQuantity": 5,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": [
+            "products/shuluun-everyday-trousers/44a3ba9d9077d8f06e8d9446c41733a5bf7f0bd5c951657035b7eb206c6fd791.webp"
+          ]
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxpvjygpkpv7v",
+          "sku": "DND-TROUSER-32-BLACK",
+          "name": "32 / Хар",
+          "options": { "size": "32", "color": "Хар" },
+          "priceMnt": 219000,
+          "stockQuantity": 7,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": [
+            "products/shuluun-everyday-trousers/44a3ba9d9077d8f06e8d9446c41733a5bf7f0bd5c951657035b7eb206c6fd791.webp"
+          ]
+        },
+        {
+          "id": "var_01kyfqxb0ne06sxpvwgf6b37re",
+          "sku": "DND-TROUSER-34-COBALT",
+          "name": "34 / Кобальт",
+          "options": { "size": "34", "color": "Кобальт" },
+          "priceMnt": 219000,
+          "stockQuantity": 2,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": [
+            "products/shuluun-everyday-trousers/44a3ba9d9077d8f06e8d9446c41733a5bf7f0bd5c951657035b7eb206c6fd791.webp"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,7 @@ export const checkoutSettings = sqliteTable(
       .notNull()
       .$defaultFn(() => defaultCheckoutSettingsId),
     deliveryFeeMnt: integer('delivery_fee_mnt').notNull(),
+    orderPrefix: text('order_prefix').notNull().default('PLG'),
     bankName: text('bank_name').notNull(),
     bankAccountName: text('bank_account_name').notNull(),
     bankAccountNumber: text('bank_account_number').notNull(),
@@ -36,6 +37,10 @@ export const checkoutSettings = sqliteTable(
       sql`${table.id} = ${sql.raw(`'${defaultCheckoutSettingsId}'`)}`,
     ),
     check('checkout_settings_delivery_fee_mnt_check', sql`${table.deliveryFeeMnt} >= 0`),
+    check(
+      'checkout_settings_order_prefix_check',
+      sql`length(${table.orderPrefix}) between 2 and 5 and ${table.orderPrefix} not glob '*[^A-Z]*'`,
+    ),
   ],
 )
 

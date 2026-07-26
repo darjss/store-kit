@@ -18,6 +18,7 @@ import { nonNegativeIntegerSchema, variantOptionsSchema } from './catalog'
 const settingsRefinements = {
   id: () => checkoutSettingsIdSchema,
   deliveryFeeMnt: () => nonNegativeIntegerSchema,
+  orderPrefix: () => Type.String({ minLength: 2, maxLength: 5, pattern: '^[A-Z]+$' }),
 }
 const orderRefinements = {
   id: () => orderIdSchema,

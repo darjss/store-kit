@@ -15,9 +15,24 @@ export default defineConfig({
       miniflare: {
         bindings: {
           DEPLOYMENT_ENV: 'production',
-          TEST_MIGRATIONS: await readD1Migrations(
-            path.join(root, 'packages/db/migrations/20260723180551_old_karnak'),
-          ),
+          TEST_MIGRATIONS: [
+            ...(
+              await readD1Migrations(
+                path.join(root, 'packages/db/migrations/20260723180551_old_karnak'),
+              )
+            ).map(migration => ({
+              ...migration,
+              name: `20260723180551_old_karnak/${migration.name}`,
+            })),
+            ...(
+              await readD1Migrations(
+                path.join(root, 'packages/db/migrations/20260726173427_nice_archangel'),
+              )
+            ).map(migration => ({
+              ...migration,
+              name: `20260726173427_nice_archangel/${migration.name}`,
+            })),
+          ],
           PUBLIC_APP_URL: 'https://plugged.mn',
           PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
           QPAY_USERNAME: 'integration-test',
