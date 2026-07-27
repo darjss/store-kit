@@ -1,0 +1,3 @@
+@import '@store-kit/ui/styles.css';
+
+@source './src/**/*.{ts,tsx}';

@@ -4,6 +4,18 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./styles.css": "./styles.css"
+  },
+  "dependencies": {
+    "@elysiajs/eden": "^1.4.9",
+    "@solar-icons/solid": "^1.0.1",
+    "@store-kit/api": "workspace:*",
+    "@store-kit/contracts": "workspace:*",
+    "@store-kit/ui": "workspace:*",
+    "@tanstack/solid-query": "catalog:",
+    "@tanstack/solid-router": "^1.170.18",
+    "better-auth": "^1.6.25",
+    "solid-js": "catalog:"
   }
 }
