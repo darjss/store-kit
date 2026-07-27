@@ -6,6 +6,7 @@ import {
   Refresh,
   ShieldCheck,
 } from '@solar-icons/solid/Linear'
+import type { AdminSession } from '@store-kit/contracts/admin'
 import { Button, Spinner } from '@store-kit/ui'
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/solid-query'
 import { Match, Switch } from 'solid-js'
@@ -13,8 +14,7 @@ import type { JSX } from 'solid-js'
 
 import { authCommand } from './auth-client'
 import { adminMutation, adminQuery } from './query-options/session'
-import type { AdminSession } from './query-options/session'
-import { AdminRouter } from './router'
+import { AdminRouter, adminNavigation } from './router'
 
 const pageClass = 'min-h-dvh bg-background text-foreground'
 
@@ -94,14 +94,21 @@ function ApprovalRequired() {
   )
 }
 
-function Approved(props: { session: Extract<AdminSession, { _tag: 'AdminSession' }> }) {
+function Approved(props: { session: AdminSession }) {
   const signOut = useMutation(() => adminMutation.signOut())
 
   return (
     <div class={`${pageClass} lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]`}>
       <aside class="border-b bg-sidebar text-sidebar-foreground lg:min-h-dvh lg:border-r lg:border-b-0">
         <div class="flex min-h-16 items-center justify-between gap-4 px-5 lg:min-h-20 lg:px-6">
-          <a class="font-semibold tracking-tight" href="/admin">
+          <a
+            class="font-semibold tracking-tight"
+            href="/admin"
+            onClick={event => {
+              event.preventDefault()
+              void adminNavigation.dashboard()
+            }}
+          >
             Store Kit
           </a>
           <span class="rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -113,6 +120,10 @@ function Approved(props: { session: Extract<AdminSession, { _tag: 'AdminSession'
             aria-current="page"
             class="flex min-h-10 items-center gap-3 rounded-md bg-sidebar-accent px-3 text-sm font-medium text-sidebar-accent-foreground"
             href="/admin"
+            onClick={event => {
+              event.preventDefault()
+              void adminNavigation.dashboard()
+            }}
           >
             <Home2 size={16} />
             Dashboard

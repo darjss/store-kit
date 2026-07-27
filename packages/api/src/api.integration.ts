@@ -1,10 +1,11 @@
 import type { CartValidationError, ValidatedCart } from '@store-kit/contracts/cart'
 import type { CheckoutCreated, CheckoutError } from '@store-kit/contracts/checkout'
+import { makeSignature } from 'better-auth/crypto'
 import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
-import { app } from './index'
+import { app, auth } from './index'
 
 const entityId = (prefix: string, value: number) =>
   `${prefix}_${value.toString().padStart(26, '0')}`
@@ -74,6 +75,23 @@ const postJson = (
     }),
   )
 
+const createAdminCookie = async (approved: boolean) => {
+  const userId = entityId('usr', approved ? 2 : 1)
+  const now = Date.now()
+  await env.DB.prepare(
+    `insert into user
+      (id, name, email, email_verified, approved, created_at, updated_at)
+     values (?, 'Admin User', ?, true, ?, ?, ?)`,
+  )
+    .bind(userId, `${userId}@example.com`, approved, now, now)
+    .run()
+
+  const context = await auth.$context
+  const session = await context.internalAdapter.createSession(userId)
+  const signature = await makeSignature(session.token, context.secret)
+  return `${context.authCookies.sessionToken.name}=${session.token}.${signature}`
+}
+
 describe('admin authentication', () => {
   it('mounts the Google social sign-in handler at the default Better Auth path', async () => {
     const response = await postJson(
@@ -99,6 +117,27 @@ describe('admin authentication', () => {
     expect(response.status).toBe(401)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
     expect(await response.json()).toEqual({ _tag: 'Unauthenticated' })
+  })
+
+  it('checks the current D1 approval value for a real Better Auth session', async () => {
+    const unapprovedResponse = await app.handle(
+      new Request('https://plugged.mn/api/admin/session', {
+        headers: { cookie: await createAdminCookie(false), origin: 'https://plugged.mn' },
+      }),
+    )
+    const approvedResponse = await app.handle(
+      new Request('https://plugged.mn/api/admin/session', {
+        headers: { cookie: await createAdminCookie(true), origin: 'https://plugged.mn' },
+      }),
+    )
+
+    expect(unapprovedResponse.status).toBe(403)
+    expect(await unapprovedResponse.json()).toEqual({ _tag: 'ApprovalRequired' })
+    expect(approvedResponse.status).toBe(200)
+    expect(await approvedResponse.json()).toMatchObject({
+      _tag: 'AdminSession',
+      user: { name: 'Admin User' },
+    })
   })
 })
 

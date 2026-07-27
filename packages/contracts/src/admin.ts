@@ -1,5 +1,6 @@
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
+import { Value } from 'typebox/value'
 
 export const unauthenticatedSchema = Type.Object({
   _tag: Type.Literal('Unauthenticated'),
@@ -30,3 +31,6 @@ export type Unauthenticated = Static<typeof unauthenticatedSchema>
 export type ApprovalRequired = Static<typeof approvalRequiredSchema>
 export type AdminSession = Static<typeof adminSessionSchema>
 export type AdminSessionResponse = Static<typeof adminSessionResponseSchema>
+
+export const parseAdminSessionResponse = (value: unknown) =>
+  Value.Parse(adminSessionResponseSchema, value)

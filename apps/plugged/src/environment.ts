@@ -77,7 +77,7 @@ export const validatePluggedEnvironment = (
 
   const environment = createEnv({
     server: {
-      BETTER_AUTH_SECRET: toStandardSchema(Type.String({ minLength: 1 })),
+      BETTER_AUTH_SECRET: toStandardSchema(Type.String({ minLength: 32 })),
       DEPLOYMENT_ENV: deploymentEnvironment,
       GOOGLE_CLIENT_ID: toStandardSchema(Type.String({ minLength: 1 })),
       GOOGLE_CLIENT_SECRET: toStandardSchema(Type.String({ minLength: 1 })),

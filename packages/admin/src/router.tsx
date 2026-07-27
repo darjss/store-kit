@@ -18,6 +18,10 @@ const dashboardRoute = createRoute({
 const routeTree = rootRoute.addChildren([dashboardRoute])
 const router = createRouter({ routeTree, basepath: '/admin' })
 
+export const adminNavigation = {
+  dashboard: () => router.navigate({ to: '/' }),
+}
+
 function Dashboard() {
   return (
     <section

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./admin": "./src/admin.ts",
     "./cart": "./src/cart.ts",
     "./catalog": "./src/catalog.ts",
     "./checkout": "./src/checkout.ts",
