@@ -6,7 +6,7 @@ export default function NotFoundPage() {
       class="grid min-h-[70svh] place-content-center bg-amber px-5 text-center"
     >
       <p class="font-bold text-cobalt">404 / ХААЛГА ОЛДСОНГҮЙ</p>
-      <h1 class="mt-3 text-[clamp(3rem,10vw,7rem)] leading-none font-extrabold">
+      <h1 class="mt-3 text-[clamp(3rem,10vw,6rem)] leading-none font-extrabold">
         Энд давхарга алга.
       </h1>
       <a

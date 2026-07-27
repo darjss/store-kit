@@ -102,6 +102,7 @@ export function CatalogSearchDialog(props: {
           action="/products"
           method="get"
           role="search"
+          onSubmit={close}
         >
           <label class="sr-only" for="shell-search">
             Бараа хайх

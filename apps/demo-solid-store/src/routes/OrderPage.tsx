@@ -5,7 +5,7 @@ import type {
   PaymentRefreshError,
   PaymentStatus,
 } from '@store-kit/contracts/payments'
-import { For, Show, createSignal, onSettled } from 'solid-js'
+import { For, Show, createEffect, createSignal, onSettled } from 'solid-js'
 
 import { paths } from '~/app/router'
 import { formatMnt } from '~/catalog/format'
@@ -60,8 +60,12 @@ const shouldPoll = (order: PublicOrder) =>
   (order.payment?.status === 'pending' || order.payment?.status === 'claimed')
 
 const dateTime = new Intl.DateTimeFormat('mn-MN', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
 })
 
 const formatDateTime = (value: number) => dateTime.format(new Date(value))
@@ -135,7 +139,7 @@ export default function OrderPage() {
   const [claiming, setClaiming] = createSignal(false)
   const [refreshingQPay, setRefreshingQPay] = createSignal(false)
   let pollTimer: ReturnType<typeof setTimeout> | undefined
-  let statusInFlight = false
+  let statusRequest = 0
   let claimInFlight = false
   let qpayInFlight = false
 
@@ -149,32 +153,31 @@ export default function OrderPage() {
     pollTimer = undefined
   }
 
-  const schedulePoll = (order: PublicOrder, accessToken: string) => {
+  const schedulePoll = (order: PublicOrder, accessToken: string, orderId: string) => {
     clearPoll()
     if (!shouldPoll(order) || document.hidden) return
-    pollTimer = setTimeout(() => void loadOrder(accessToken, false), pollDelay)
+    pollTimer = setTimeout(() => void loadOrder(accessToken, false, orderId), pollDelay)
   }
 
-  async function loadOrder(accessToken: string, showPending: boolean) {
-    if (statusInFlight) return
-    statusInFlight = true
+  async function loadOrder(accessToken: string, showPending: boolean, orderId = params.id) {
+    const request = ++statusRequest
     clearPoll()
     if (showPending) setRefreshingStatus(true)
     if (state().type !== 'ready') setState({ type: 'loading' })
 
     try {
-      const result = await getPrivateOrder({ orderId: params.id, statusToken: accessToken })
+      const result = await getPrivateOrder({ orderId, statusToken: accessToken })
+      if (request !== statusRequest) return
       if (!result.ok) {
         setState({ type: 'invalid-token' })
         return
       }
       setState({ type: 'ready', order: result.order })
-      schedulePoll(result.order, accessToken)
+      schedulePoll(result.order, accessToken, orderId)
     } catch {
-      setState({ type: 'transport-error' })
+      if (request === statusRequest) setState({ type: 'transport-error' })
     } finally {
-      statusInFlight = false
-      if (showPending) setRefreshingStatus(false)
+      if (request === statusRequest && showPending) setRefreshingStatus(false)
     }
   }
 
@@ -262,8 +265,13 @@ export default function OrderPage() {
     }
   }
 
-  onSettled(() => {
-    const storageKey = `dund:order-token:${params.id}`
+  const initializeOrderRoute = (orderId: string) => {
+    statusRequest += 1
+    clearPoll()
+    setNotice()
+    setState({ type: 'hydrating' })
+
+    const storageKey = `dund:order-token:${orderId}`
     const fragment = new URLSearchParams(location.hash.slice(1))
     const fragmentToken = fragment.get('token')
     if (fragmentToken) sessionStorage.setItem(storageKey, fragmentToken)
@@ -271,18 +279,32 @@ export default function OrderPage() {
 
     const accessToken = fragmentToken ?? sessionStorage.getItem(storageKey) ?? ''
     setToken(accessToken)
-    if (accessToken) void loadOrder(accessToken, false)
+    if (accessToken) void loadOrder(accessToken, false, orderId)
     else setState({ type: 'missing-token' })
+  }
 
+  createEffect(
+    () => params.id,
+    orderId => queueMicrotask(() => initializeOrderRoute(orderId)),
+  )
+
+  onSettled(() => {
+    const onHashChange = () => initializeOrderRoute(params.id)
     const onVisibilityChange = () => {
       clearPoll()
       const order = readyOrder()
-      if (!document.hidden && order && shouldPoll(order)) void loadOrder(accessToken, false)
+      const accessToken = token()
+      if (!document.hidden && order && accessToken && shouldPoll(order)) {
+        void loadOrder(accessToken, false)
+      }
     }
+    window.addEventListener('hashchange', onHashChange)
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     return () => {
+      statusRequest += 1
       clearPoll()
+      window.removeEventListener('hashchange', onHashChange)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   })
@@ -298,7 +320,7 @@ export default function OrderPage() {
           class="mx-auto grid min-h-[55svh] max-w-2xl place-content-center text-center"
           role="status"
         >
-          <p class="font-bold text-cobalt">PRIVATE ORDER</p>
+          <p class="font-bold text-cobalt">ХУВИЙН ЗАХИАЛГА</p>
           <h1 class="mt-3 text-[clamp(2.5rem,8vw,5rem)] leading-none font-extrabold">
             Захиалгыг шалгаж байна…
           </h1>
@@ -307,7 +329,7 @@ export default function OrderPage() {
 
       <Show when={state().type === 'missing-token'}>
         <div class="mx-auto grid min-h-[55svh] max-w-2xl place-content-center text-center">
-          <p class="font-bold text-alert">PRIVATE LINK / MISSING</p>
+          <p class="font-bold text-alert">ХУВИЙН ХОЛБООС / ДУТУУ</p>
           <h1 class="mt-3 text-[clamp(2.5rem,8vw,5rem)] leading-none font-extrabold">
             Хувийн холбоос дутуу байна
           </h1>
@@ -320,7 +342,7 @@ export default function OrderPage() {
 
       <Show when={state().type === 'invalid-token'}>
         <div class="mx-auto grid min-h-[55svh] max-w-2xl place-content-center text-center">
-          <p class="font-bold text-alert">PRIVATE LINK / INVALID</p>
+          <p class="font-bold text-alert">ХУВИЙН ХОЛБООС / БУРУУ</p>
           <h1 class="mt-3 text-[clamp(2.5rem,8vw,5rem)] leading-none font-extrabold">
             Захиалга олдсонгүй
           </h1>
@@ -333,7 +355,7 @@ export default function OrderPage() {
 
       <Show when={state().type === 'transport-error'}>
         <div class="mx-auto grid min-h-[55svh] max-w-2xl place-content-center border-3 border-ink bg-white p-6 text-center">
-          <p class="font-bold text-alert">CONNECTION / RETRY</p>
+          <p class="font-bold text-alert">ХОЛБОЛТ / ДАХИН ОРОЛДОХ</p>
           <h1 class="mt-3 text-[clamp(2.25rem,7vw,4rem)] leading-none font-extrabold">
             Төлөв татаж чадсангүй
           </h1>
@@ -356,7 +378,7 @@ export default function OrderPage() {
             <header class="border-3 border-ink bg-amber p-[clamp(1.25rem,4vw,3rem)]">
               <div class="flex flex-wrap items-start justify-between gap-5">
                 <div>
-                  <p class="font-bold text-cobalt">PRIVATE ORDER / STATUS</p>
+                  <p class="font-bold text-cobalt">ЗАХИАЛГЫН ТӨЛӨВ</p>
                   <h1 class="mt-3 text-[clamp(2.5rem,8vw,5rem)] leading-none font-extrabold wrap-break-word">
                     {order().number}
                   </h1>
@@ -385,7 +407,7 @@ export default function OrderPage() {
                             class={
                               reached()
                                 ? 'min-h-20 border-t-4 border-cobalt pt-2 font-bold text-cobalt'
-                                : 'min-h-20 border-t-4 border-ink/25 pt-2 text-ink/45'
+                                : 'min-h-20 border-t-4 border-ink/25 pt-2 text-ink/60'
                             }
                             aria-current={
                               index() === orderStageIndex(order().status) ? 'step' : undefined
@@ -419,7 +441,7 @@ export default function OrderPage() {
                 >
                   <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <p class="font-bold text-cobalt">PAYMENT TIMELINE</p>
+                      <p class="font-bold text-cobalt">ТӨЛБӨРИЙН ЯВЦ</p>
                       <h2 id="payment-title" class="mt-2 text-3xl font-extrabold">
                         Төлбөр
                       </h2>
@@ -448,7 +470,7 @@ export default function OrderPage() {
                                   class={
                                     reached()
                                       ? 'min-h-18 border-t-4 border-coral pt-2 font-bold text-alert'
-                                      : 'min-h-18 border-t-4 border-ink/25 pt-2 text-ink/45'
+                                      : 'min-h-18 border-t-4 border-ink/25 pt-2 text-ink/60'
                                   }
                                   aria-current={
                                     index() === paymentStageIndex(payment().status)
@@ -544,7 +566,7 @@ export default function OrderPage() {
                   class="border-3 border-ink bg-white p-[clamp(1rem,4vw,2rem)]"
                   aria-labelledby="items-title"
                 >
-                  <p class="font-bold text-cobalt">ITEM SNAPSHOTS</p>
+                  <p class="font-bold text-cobalt">БАРААНЫ МЭДЭЭЛЭЛ</p>
                   <h2 id="items-title" class="mt-2 text-3xl font-extrabold">
                     Бараа
                   </h2>
@@ -572,7 +594,7 @@ export default function OrderPage() {
                             <p class="mt-1 text-sm text-ink/65">
                               {line.variantName} · {line.quantity} ш
                             </p>
-                            <p class="mt-1 text-xs wrap-break-word text-ink/55">{line.sku}</p>
+                            <p class="mt-1 text-xs wrap-break-word text-muted">{line.sku}</p>
                           </div>
                           <strong class="col-start-2 sm:col-auto">
                             {formatMnt(line.lineTotalMnt)}
@@ -600,7 +622,7 @@ export default function OrderPage() {
 
               <aside class="grid gap-6 lg:sticky lg:top-24">
                 <section class="border-3 border-ink bg-white p-5" aria-labelledby="delivery-title">
-                  <p class="font-bold text-cobalt">DELIVERY</p>
+                  <p class="font-bold text-cobalt">ХҮРГЭЛТ</p>
                   <h2 id="delivery-title" class="mt-2 text-2xl font-extrabold">
                     Хүргэлт
                   </h2>
@@ -609,11 +631,13 @@ export default function OrderPage() {
                   </p>
                   <p class="mt-2">{order().address}</p>
                   <Show when={order().deliveryNotes}>
-                    {notes => <p class="mt-3 border-l-4 border-amber pl-3 text-sm">{notes()}</p>}
+                    {notes => (
+                      <p class="mt-3 border-2 border-amber bg-surface p-3 text-sm">{notes()}</p>
+                    )}
                   </Show>
                 </section>
                 <section class="border-3 border-ink bg-white p-5" aria-labelledby="customer-title">
-                  <p class="font-bold text-cobalt">CUSTOMER</p>
+                  <p class="font-bold text-cobalt">ХОЛБОО БАРИХ</p>
                   <h2 id="customer-title" class="mt-2 text-2xl font-extrabold">
                     Холбоо барих
                   </h2>

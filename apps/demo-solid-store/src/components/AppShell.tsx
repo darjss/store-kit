@@ -23,6 +23,9 @@ export function AppShell(props: ParentProps) {
       <a
         class="fixed top-2 left-2 z-60 translate-y-[-150%] bg-white px-4 py-3 font-bold text-ink outline-3 outline-cobalt focus:translate-y-0"
         href="#main-content"
+        onClick={() =>
+          queueMicrotask(() => document.querySelector<HTMLElement>('#main-content')?.focus())
+        }
       >
         Үндсэн хэсэг рүү очих
       </a>
@@ -72,7 +75,7 @@ export function AppShell(props: ParentProps) {
             >
               Сагс
               <Show when={cart.count() > 0}>
-                <span class="absolute top-0 right-0 grid min-h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-xs text-white">
+                <span class="absolute top-0 right-0 grid min-h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-xs text-ink">
                   {cart.count()}
                 </span>
               </Show>
@@ -133,7 +136,7 @@ export function AppShell(props: ParentProps) {
         >
           Сагс
           <Show when={cart.count() > 0}>
-            <span class="absolute top-1 right-[calc(50%-1.5rem)] grid min-h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-xs text-white">
+            <span class="absolute top-1 right-[calc(50%-1.5rem)] grid min-h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-xs text-ink">
               {cart.count()}
             </span>
           </Show>

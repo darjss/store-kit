@@ -66,11 +66,14 @@ const normalizeDetails = (details: CheckoutDetails): CheckoutDetails => {
   }
 }
 
-const validationIssues = (details: CheckoutDetails): ValidationIssue[] =>
-  Value.Errors(checkoutDetailsSchema, details).map(error => ({
-    path: error.instancePath || '/',
-    code: 'invalid',
-  }))
+const validationIssues = (details: CheckoutDetails): ValidationIssue[] => [
+  ...new Map(
+    Value.Errors(checkoutDetailsSchema, details).map(error => {
+      const issue = { path: error.instancePath || '/', code: 'invalid' as const }
+      return [issue.path, issue] as const
+    }),
+  ).values(),
+]
 
 type CheckoutDomainFailure = CheckoutError | CartValidationError
 
@@ -206,7 +209,7 @@ function CheckoutSuccess(props: { order: CheckoutCreated }) {
       class="min-h-[70svh] bg-surface px-[clamp(1rem,4vw,4rem)] py-[clamp(3rem,7vw,6rem)]"
     >
       <article class="mx-auto max-w-3xl border-3 border-ink bg-white p-[clamp(1.25rem,4vw,3.5rem)]">
-        <p class="font-bold text-cobalt">ORDER / CREATED</p>
+        <p class="font-bold text-cobalt">ЗАХИАЛГА / ҮҮССЭН</p>
         <h1 class="mt-3 text-[clamp(2.5rem,8vw,5rem)] leading-none font-extrabold wrap-break-word">
           {props.order.orderNumber}
         </h1>
@@ -266,7 +269,7 @@ function CheckoutSuccess(props: { order: CheckoutCreated }) {
                 </div>
               </dl>
             )}
-            <p class="mt-5 border-l-4 border-coral pl-4 font-bold">
+            <p class="mt-5 border-2 border-coral bg-surface p-4 font-bold">
               Гүйлгээний утгад {props.order.orderNumber} гэж бичнэ үү.
             </p>
           </section>
@@ -292,6 +295,7 @@ export default function CheckoutPage() {
     paymentMethod: 'qpay',
   })
   const [failure, setFailure] = createSignal<CheckoutFailure>()
+  const [blurIssues, setBlurIssues] = createSignal<ValidationIssue[]>([])
   const [pending, setPending] = createSignal(false)
   const [created, setCreated] = createSignal<CheckoutCreated>()
   const fieldElements = new Map<string, { focus: () => void }>()
@@ -299,7 +303,8 @@ export default function CheckoutPage() {
 
   const fieldIssues = () => {
     const current = failure()
-    return current?.type === 'field' ? current.fields : []
+    const submitted = current?.type === 'field' ? current.fields : []
+    return [...new Map([...blurIssues(), ...submitted].map(issue => [issue.path, issue])).values()]
   }
   const fieldError = (path: string) => fieldIssues().some(issue => issue.path === path)
   const fieldMessage = (path: string) => (fieldError(path) ? fieldMessages[path] : undefined)
@@ -313,6 +318,13 @@ export default function CheckoutPage() {
   const setFieldFailure = (fields: ValidationIssue[]) => {
     setFailure({ type: 'field', fields })
     focusFirstInvalid(fields)
+  }
+
+  const validateField = (path: string) => {
+    const issues = validationIssues(normalizeDetails(snapshot(details))).filter(
+      issue => issue.path === path,
+    )
+    setBlurIssues(current => [...current.filter(issue => issue.path !== path), ...issues])
   }
 
   const submit = async () => {
@@ -409,7 +421,7 @@ export default function CheckoutPage() {
         >
           <div class="mx-auto max-w-6xl">
             <header class="max-w-3xl">
-              <p class="font-bold text-cobalt">CHECKOUT / УЛААНБААТАР</p>
+              <p class="font-bold text-cobalt">ЗАХИАЛГА / УЛААНБААТАР</p>
               <h1 class="mt-3 text-[clamp(2.75rem,8vw,6rem)] leading-none font-extrabold">
                 Захиалга
               </h1>
@@ -471,6 +483,7 @@ export default function CheckoutPage() {
                           aria-describedby={
                             fieldError('/customer/name') ? 'customer-name-error' : undefined
                           }
+                          onBlur={() => validateField('/customer/name')}
                           onInput={event =>
                             setDetails(draft => {
                               draft.customer.name = event.currentTarget.value
@@ -500,9 +513,10 @@ export default function CheckoutPage() {
                           aria-invalid={fieldError('/customer/phone') ? 'true' : undefined}
                           aria-describedby={
                             fieldError('/customer/phone')
-                              ? 'customer-phone-error'
+                              ? 'customer-phone-error customer-phone-help'
                               : 'customer-phone-help'
                           }
+                          onBlur={() => validateField('/customer/phone')}
                           onInput={event =>
                             setDetails(draft => {
                               draft.customer.phone = event.currentTarget.value
@@ -536,6 +550,7 @@ export default function CheckoutPage() {
                           value={details.delivery.district}
                           required
                           aria-invalid={fieldError('/delivery/district') ? 'true' : undefined}
+                          onBlur={() => validateField('/delivery/district')}
                           onChange={event =>
                             setDetails(draft => {
                               draft.delivery.district = event.currentTarget
@@ -562,6 +577,7 @@ export default function CheckoutPage() {
                           aria-describedby={
                             fieldError('/delivery/khoroo') ? 'delivery-khoroo-error' : undefined
                           }
+                          onBlur={() => validateField('/delivery/khoroo')}
                           onInput={event =>
                             setDetails(draft => {
                               draft.delivery.khoroo = event.currentTarget.value
@@ -590,6 +606,7 @@ export default function CheckoutPage() {
                           aria-describedby={
                             fieldError('/delivery/address') ? 'delivery-address-error' : undefined
                           }
+                          onBlur={() => validateField('/delivery/address')}
                           onInput={event =>
                             setDetails(draft => {
                               draft.delivery.address = event.currentTarget.value
@@ -605,7 +622,7 @@ export default function CheckoutPage() {
                         </Show>
                       </label>
                       <label class="grid gap-2 font-bold sm:col-span-2" for="delivery-notes">
-                        Нэмэлт тайлбар <span class="font-normal text-ink/55">(заавал биш)</span>
+                        Нэмэлт тайлбар <span class="font-normal text-muted">(заавал биш)</span>
                         <textarea
                           ref={element => registerField('delivery.notes', element)}
                           id="delivery-notes"
@@ -617,6 +634,7 @@ export default function CheckoutPage() {
                           aria-describedby={
                             fieldError('/delivery/notes') ? 'delivery-notes-error' : undefined
                           }
+                          onBlur={() => validateField('/delivery/notes')}
                           onInput={event =>
                             setDetails(draft => {
                               draft.delivery.notes = event.currentTarget.value
@@ -689,7 +707,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <aside class="border-3 border-ink bg-amber p-5 lg:sticky lg:top-24">
-                  <p class="font-bold text-cobalt">ORDER SUMMARY</p>
+                  <p class="font-bold text-cobalt">ЗАХИАЛГЫН ДҮН</p>
                   <h2 class="mt-2 text-3xl font-extrabold">Захиалгын дүн</h2>
                   <div class="mt-4 divide-y divide-ink/30 border-y border-ink/30">
                     <For each={cart.validatedCart()?.lines ?? cart.items}>

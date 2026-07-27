@@ -3,38 +3,63 @@ import type { ProductListFilters } from '@store-kit/contracts/catalog'
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import { Type } from 'typebox'
 import type { Static } from 'typebox'
+import { Value } from 'typebox/value'
 
 export const dundUseCases = ['workday', 'off-duty', 'layering', 'travel', 'cold-weather'] as const
+
+const dundUseCaseSchema = Type.Union([
+  Type.Literal('workday'),
+  Type.Literal('off-duty'),
+  Type.Literal('layering'),
+  Type.Literal('travel'),
+  Type.Literal('cold-weather'),
+])
+const catalogSortSchema = Type.Union([
+  Type.Literal('featured'),
+  Type.Literal('recent'),
+  Type.Literal('price-asc'),
+  Type.Literal('price-desc'),
+])
 
 export const catalogSearchSchema = Type.Object(
   {
     category: Type.Optional(catalogSlugSchema),
     brand: Type.Optional(catalogSlugSchema),
-    useCase: Type.Optional(
-      Type.Union([
-        Type.Literal('workday'),
-        Type.Literal('off-duty'),
-        Type.Literal('layering'),
-        Type.Literal('travel'),
-        Type.Literal('cold-weather'),
-      ]),
-    ),
+    useCase: Type.Optional(dundUseCaseSchema),
     featured: Type.Optional(Type.Literal('true')),
     query: Type.Optional(Type.String({ maxLength: 100 })),
-    sort: Type.Optional(
-      Type.Union([
-        Type.Literal('featured'),
-        Type.Literal('recent'),
-        Type.Literal('price-asc'),
-        Type.Literal('price-desc'),
-      ]),
-    ),
+    sort: Type.Optional(catalogSortSchema),
   },
   { additionalProperties: false },
 )
 
-export const catalogSearchStandardSchema = toStandardSchema(catalogSearchSchema)
+const catalogRouteSearchSchema = Type.Object(
+  {
+    category: Type.Optional(Type.String()),
+    brand: Type.Optional(Type.String()),
+    useCase: Type.Optional(Type.String()),
+    featured: Type.Optional(Type.String()),
+    query: Type.Optional(Type.String()),
+    sort: Type.Optional(Type.String()),
+  },
+  { additionalProperties: true },
+)
+
+export const catalogSearchStandardSchema = toStandardSchema(catalogRouteSearchSchema)
 export type CatalogSearch = Static<typeof catalogSearchSchema>
+type CatalogRouteSearch = Static<typeof catalogRouteSearchSchema>
+
+export const toCatalogSearch = (search: CatalogRouteSearch): CatalogSearch => {
+  const query = search.query?.trim()
+  return {
+    ...(Value.Check(catalogSlugSchema, search.category) ? { category: search.category } : {}),
+    ...(Value.Check(catalogSlugSchema, search.brand) ? { brand: search.brand } : {}),
+    ...(Value.Check(dundUseCaseSchema, search.useCase) ? { useCase: search.useCase } : {}),
+    ...(search.featured === 'true' ? { featured: search.featured } : {}),
+    ...(query && query.length <= 100 ? { query } : {}),
+    ...(Value.Check(catalogSortSchema, search.sort) ? { sort: search.sort } : {}),
+  }
+}
 
 export const toCatalogFilters = (search: CatalogSearch): ProductListFilters => ({
   ...(search.category ? { category: search.category } : {}),

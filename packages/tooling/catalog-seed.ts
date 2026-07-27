@@ -139,6 +139,8 @@ const catalogSeedSchema = strictObject({
 
 type CatalogSeed = Static<typeof catalogSeedSchema>
 type SeedWranglerConfig = {
+  d1_databases?: { binding?: string; database_name?: string; database_id?: string }[]
+  vars?: Record<string, string>
   env?: Record<
     string,
     {
@@ -646,14 +648,18 @@ const buildSql = (seed: CatalogSeed) => {
   return `${statements.join('\n')}\n`
 }
 
-const importRows = async (seed: CatalogSeed, environment: CatalogSeedEnvironment) => {
+const importRows = async (
+  seed: CatalogSeed,
+  environment: CatalogSeedEnvironment,
+  useNamedEnvironment = true,
+) => {
   await mkdir(dirname(generatedSqlPath), { recursive: true })
   await writeFile(generatedSqlPath, buildSql(seed), { mode: 0o600 })
   try {
     const target =
       environment === 'local'
         ? ['--local', ...(persistTo ? ['--persist-to', persistTo] : [])]
-        : ['--remote', '--env', environment]
+        : ['--remote', ...(useNamedEnvironment ? ['--env', environment] : [])]
     await runWrangler([
       'd1',
       'execute',
@@ -699,7 +705,7 @@ const printCounts = (seed: CatalogSeed, scope: 'data' | 'media') => {
 }
 
 const main = async () => {
-  const target = catalogSeedTarget(process.argv.slice(2), process.env)
+  const target = catalogSeedTarget(process.argv.slice(2), process.env, storeApp)
   const seed = await parseSeed()
   await validateAssets(seed)
 
@@ -710,9 +716,29 @@ const main = async () => {
     return
   }
 
-  if (storeApp !== 'plugged') {
-    throw new Error('Remote ДУНД seeding requires dedicated media resources before use.')
+  if (storeApp === 'demo-solid-store') {
+    if (target.scope !== 'data') throw new Error('Remote ДУНД seeding writes D1 data only.')
+
+    const config = parse(await readFile(wranglerConfigPath, 'utf8')) as SeedWranglerConfig
+    const d1 = config.d1_databases?.find(database => database.binding === d1Binding)
+    if (!d1?.database_name || !d1.database_id) {
+      throw new Error('ДУНД DB must name a dedicated remote database and database ID.')
+    }
+    if (config.vars?.DEPLOYMENT_ENV !== target.environment) {
+      throw new Error(`ДУНД DEPLOYMENT_ENV must be ${target.environment} before remote seeding.`)
+    }
+    if (process.env.DUND_REMOTE_CONFIRMATION !== d1.database_name) {
+      throw new Error(`Remote ДУНД data requires DUND_REMOTE_CONFIRMATION=${d1.database_name}`)
+    }
+
+    process.stdout.write(`Preparing remote ДУНД data seed for ${target.environment}.\n`)
+    await runWrangler(['d1', 'info', d1Binding, '--config', wranglerConfigPath])
+    await importRows(seed, target.environment, false)
+    printCounts(seed, target.scope)
+    return
   }
+
+  if (!target.bucket) throw new Error('Plugged remote seeding requires a media bucket.')
 
   if (target.environment === 'development' && target.scope === 'media') {
     process.stdout.write(

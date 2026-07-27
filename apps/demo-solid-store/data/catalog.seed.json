@@ -82,12 +82,22 @@
         {
           "id": "img_01kyfqxb0me06sxpqps6szdesw",
           "source": "design/assets/bridge-coat-system.webp",
-          "r2Key": "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp",
+          "r2Key": "products/shiljilt-bridge-coat/3b7a8d32a753e2ecdb06411208e6c5b0ac908f2ca42657de614fdda834fb9474.webp",
           "contentType": "image/webp",
           "width": 1448,
           "height": 1086,
           "alt": "Хар урт хүрэм ба салдаг хөх дотор давхаргыг зэрэгцүүлэн өлгөсөн нь.",
           "sortOrder": 10
+        },
+        {
+          "id": "img_01kyg1b8e0f20tp0wytcqtwhev",
+          "source": "design/assets/hero-threshold.webp",
+          "r2Key": "products/shiljilt-bridge-coat/077cfa25b08b4f689bfdd6f2deccbadd42dd7d8e46b9a4b6406ddf65405c582e.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Хар шилжилт хүрэм, хөх дотор давхаргатай загварыг өвлийн гэрэлтэй үүдэнд өмссөн хүн.",
+          "sortOrder": 20
         }
       ],
       "variants": [
@@ -102,7 +112,8 @@
           "active": true,
           "sortOrder": 10,
           "imageKeys": [
-            "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp"
+            "products/shiljilt-bridge-coat/3b7a8d32a753e2ecdb06411208e6c5b0ac908f2ca42657de614fdda834fb9474.webp",
+            "products/shiljilt-bridge-coat/077cfa25b08b4f689bfdd6f2deccbadd42dd7d8e46b9a4b6406ddf65405c582e.webp"
           ]
         },
         {
@@ -115,7 +126,8 @@
           "active": true,
           "sortOrder": 20,
           "imageKeys": [
-            "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp"
+            "products/shiljilt-bridge-coat/3b7a8d32a753e2ecdb06411208e6c5b0ac908f2ca42657de614fdda834fb9474.webp",
+            "products/shiljilt-bridge-coat/077cfa25b08b4f689bfdd6f2deccbadd42dd7d8e46b9a4b6406ddf65405c582e.webp"
           ]
         },
         {
@@ -128,7 +140,8 @@
           "active": true,
           "sortOrder": 30,
           "imageKeys": [
-            "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp"
+            "products/shiljilt-bridge-coat/3b7a8d32a753e2ecdb06411208e6c5b0ac908f2ca42657de614fdda834fb9474.webp",
+            "products/shiljilt-bridge-coat/077cfa25b08b4f689bfdd6f2deccbadd42dd7d8e46b9a4b6406ddf65405c582e.webp"
           ]
         },
         {
@@ -141,7 +154,8 @@
           "active": true,
           "sortOrder": 40,
           "imageKeys": [
-            "products/shiljilt-bridge-coat/3152aa15966c559df0bc977dbd1d3ccc2b226938da7c173ee7c5b01b495a88a0.webp"
+            "products/shiljilt-bridge-coat/3b7a8d32a753e2ecdb06411208e6c5b0ac908f2ca42657de614fdda834fb9474.webp",
+            "products/shiljilt-bridge-coat/077cfa25b08b4f689bfdd6f2deccbadd42dd7d8e46b9a4b6406ddf65405c582e.webp"
           ]
         }
       ]
@@ -164,7 +178,18 @@
         "origin": "Улаанбаатарт зохион бүтээсэн",
         "season": "Дөрвөн улирал"
       },
-      "images": [],
+      "images": [
+        {
+          "id": "img_01kyg1b8e2f20tp0x5gb28wsp8",
+          "source": "design/assets/udur-overshirt.webp",
+          "r2Key": "products/udur-overshirt/78f0cdd2886b7a9f8d27b40e52a0d2ce9973dc2ec25fccd1ec9cc352d7c4d0ba.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Цагаан Өдөр цамц ба хөх өнгийн хувилбарыг зөгийн шар ханатай өлгүүрт өлгөсөн нь.",
+          "sortOrder": 10
+        }
+      ],
       "variants": [
         {
           "id": "var_01kyfqxb0ne06sxps3k3b4pway",
@@ -175,7 +200,9 @@
           "stockQuantity": 9,
           "active": true,
           "sortOrder": 10,
-          "imageKeys": []
+          "imageKeys": [
+            "products/udur-overshirt/78f0cdd2886b7a9f8d27b40e52a0d2ce9973dc2ec25fccd1ec9cc352d7c4d0ba.webp"
+          ]
         },
         {
           "id": "var_01kyfqxb0ne06sxpsbydssr0g4",
@@ -186,7 +213,9 @@
           "stockQuantity": 5,
           "active": true,
           "sortOrder": 20,
-          "imageKeys": []
+          "imageKeys": [
+            "products/udur-overshirt/78f0cdd2886b7a9f8d27b40e52a0d2ce9973dc2ec25fccd1ec9cc352d7c4d0ba.webp"
+          ]
         },
         {
           "id": "var_01kyfqxb0ne06sxpskv95m9h9z",
@@ -197,7 +226,9 @@
           "stockQuantity": 2,
           "active": true,
           "sortOrder": 30,
-          "imageKeys": []
+          "imageKeys": [
+            "products/udur-overshirt/78f0cdd2886b7a9f8d27b40e52a0d2ce9973dc2ec25fccd1ec9cc352d7c4d0ba.webp"
+          ]
         }
       ]
     },
@@ -219,7 +250,18 @@
         "origin": "Улаанбаатарт зохион бүтээсэн",
         "season": "Намар · Өвөл · Хавар"
       },
-      "images": [],
+      "images": [
+        {
+          "id": "img_01kyg1b8e2f20tp0x9w2h0hy8f",
+          "source": "design/assets/dund-wool-mid-layer.webp",
+          "r2Key": "products/dund-wool-mid-layer/7e4564c3bf999b14adff5ebdfed924698a3df8c8b59cd4d93103582b5e225071.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Асфальт өнгийн нарийн ноосон цамц ба эвхсэн шүрэн хувилбар.",
+          "sortOrder": 10
+        }
+      ],
       "variants": [
         {
           "id": "var_01kyfqxb0ne06sxpszes2y04gv",
@@ -230,7 +272,9 @@
           "stockQuantity": 6,
           "active": true,
           "sortOrder": 10,
-          "imageKeys": []
+          "imageKeys": [
+            "products/dund-wool-mid-layer/7e4564c3bf999b14adff5ebdfed924698a3df8c8b59cd4d93103582b5e225071.webp"
+          ]
         },
         {
           "id": "var_01kyfqxb0ne06sxpt4vka1rt5a",
@@ -241,7 +285,9 @@
           "stockQuantity": 3,
           "active": true,
           "sortOrder": 20,
-          "imageKeys": []
+          "imageKeys": [
+            "products/dund-wool-mid-layer/7e4564c3bf999b14adff5ebdfed924698a3df8c8b59cd4d93103582b5e225071.webp"
+          ]
         },
         {
           "id": "var_01kyfqxb0ne06sxptfcvqb0qg2",
@@ -252,7 +298,9 @@
           "stockQuantity": 7,
           "active": true,
           "sortOrder": 30,
-          "imageKeys": []
+          "imageKeys": [
+            "products/dund-wool-mid-layer/7e4564c3bf999b14adff5ebdfed924698a3df8c8b59cd4d93103582b5e225071.webp"
+          ]
         }
       ]
     },
@@ -274,7 +322,18 @@
         "origin": "Улаанбаатарт зохион бүтээсэн",
         "season": "Дөрвөн улирал"
       },
-      "images": [],
+      "images": [
+        {
+          "id": "img_01kyg1b8e3f20tp0xqbqpktvfn",
+          "source": "design/assets/suuri-base-tshirt.webp",
+          "r2Key": "products/suuri-base-tshirt/15091c5147580276173a10d4751b845a4a478400aa6df55b17ea20e20f0c6405.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Цагаан суурь футболк ба хөх өнгийн хувилбарыг зөгийн шар, цагаан тавцан дээр дэлгэсэн нь.",
+          "sortOrder": 10
+        }
+      ],
       "variants": [
         {
           "id": "var_01kyfqxb0ne06sxptky81mmjs1",
@@ -285,7 +344,9 @@
           "stockQuantity": 10,
           "active": true,
           "sortOrder": 10,
-          "imageKeys": []
+          "imageKeys": [
+            "products/suuri-base-tshirt/15091c5147580276173a10d4751b845a4a478400aa6df55b17ea20e20f0c6405.webp"
+          ]
         },
         {
           "id": "var_01kyfqxb0ne06sxptv4j9mxnw3",
@@ -296,7 +357,9 @@
           "stockQuantity": 10,
           "active": true,
           "sortOrder": 20,
-          "imageKeys": []
+          "imageKeys": [
+            "products/suuri-base-tshirt/15091c5147580276173a10d4751b845a4a478400aa6df55b17ea20e20f0c6405.webp"
+          ]
         },
         {
           "id": "var_01kyfqxb0ne06sxpv2xzbf6ygw",
@@ -307,7 +370,9 @@
           "stockQuantity": 8,
           "active": true,
           "sortOrder": 30,
-          "imageKeys": []
+          "imageKeys": [
+            "products/suuri-base-tshirt/15091c5147580276173a10d4751b845a4a478400aa6df55b17ea20e20f0c6405.webp"
+          ]
         }
       ]
     },
@@ -332,12 +397,12 @@
       "images": [
         {
           "id": "img_01kyfqxb0me06sxpqzs8x3ptt8",
-          "source": "design/assets/hero-threshold.webp",
-          "r2Key": "products/shuluun-everyday-trousers/44a3ba9d9077d8f06e8d9446c41733a5bf7f0bd5c951657035b7eb206c6fd791.webp",
+          "source": "design/assets/shuluun-everyday-trousers.webp",
+          "r2Key": "products/shuluun-everyday-trousers/d9858538893fa6ed6876e1ad598d9cdca8fce25a564c6cba49de836172b45351.webp",
           "contentType": "image/webp",
           "width": 1122,
           "height": 1402,
-          "alt": "Шулуун хар өмдийг өвлийн гэрэлтэй үүдэнд өмссөн хүн.",
+          "alt": "Асфальт шулуун өмд ба хар хувилбарыг зөгийн шар ханатай өлгүүрт өлгөсөн нь.",
           "sortOrder": 10
         }
       ],
@@ -352,7 +417,7 @@
           "active": true,
           "sortOrder": 10,
           "imageKeys": [
-            "products/shuluun-everyday-trousers/44a3ba9d9077d8f06e8d9446c41733a5bf7f0bd5c951657035b7eb206c6fd791.webp"
+            "products/shuluun-everyday-trousers/d9858538893fa6ed6876e1ad598d9cdca8fce25a564c6cba49de836172b45351.webp"
           ]
         },
         {
@@ -365,7 +430,7 @@
           "active": true,
           "sortOrder": 20,
           "imageKeys": [
-            "products/shuluun-everyday-trousers/44a3ba9d9077d8f06e8d9446c41733a5bf7f0bd5c951657035b7eb206c6fd791.webp"
+            "products/shuluun-everyday-trousers/d9858538893fa6ed6876e1ad598d9cdca8fce25a564c6cba49de836172b45351.webp"
           ]
         },
         {
@@ -378,7 +443,7 @@
           "active": true,
           "sortOrder": 30,
           "imageKeys": [
-            "products/shuluun-everyday-trousers/44a3ba9d9077d8f06e8d9446c41733a5bf7f0bd5c951657035b7eb206c6fd791.webp"
+            "products/shuluun-everyday-trousers/d9858538893fa6ed6876e1ad598d9cdca8fce25a564c6cba49de836172b45351.webp"
           ]
         }
       ]

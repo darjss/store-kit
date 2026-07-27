@@ -1,6 +1,5 @@
 import { respond } from '@solidjs/web'
 import { commerce } from '@store-kit/commerce'
-import { remoteMediaUrl } from '@store-kit/contracts/media'
 import { publicOrderSchema } from '@store-kit/contracts/orders'
 import type { PublicOrder } from '@store-kit/contracts/orders'
 import {
@@ -16,7 +15,7 @@ import {
 import type { PrivateOrderAccess, PrivateOrderError } from '@store-kit/contracts/private-orders'
 import { Value } from 'typebox/value'
 
-import { getStoreEnvironment } from '~/server/environment'
+import { mediaUrl } from '~/catalog/media'
 
 const invalidStatusToken = (): PrivateOrderError => ({
   _tag: 'InvalidStatusToken',
@@ -28,18 +27,15 @@ const invalidAccessResult = () => ({
   failure: { type: 'domain' as const, error: invalidStatusToken() },
 })
 
-const publicImage = (
-  line: {
-    imageR2Key: string | null
-    imageWidth: number | null
-    imageHeight: number | null
-    imageAlt: string | null
-  },
-  mediaBaseUrl: string,
-) =>
+const publicImage = (line: {
+  imageR2Key: string | null
+  imageWidth: number | null
+  imageHeight: number | null
+  imageAlt: string | null
+}) =>
   line.imageR2Key && line.imageWidth && line.imageHeight && line.imageAlt
     ? {
-        url: remoteMediaUrl(mediaBaseUrl, line.imageR2Key),
+        url: mediaUrl(line.imageR2Key),
         width: line.imageWidth,
         height: line.imageHeight,
         alt: line.imageAlt,
@@ -63,7 +59,6 @@ export async function getPrivateOrder(input: unknown) {
     return { ok: false as const, failure: { type: 'domain' as const, error: result.error } }
   }
 
-  const mediaBaseUrl = getStoreEnvironment().PUBLIC_MEDIA_BASE_URL
   const order: PublicOrder = {
     id: result.value.id,
     number: result.value.number,
@@ -84,7 +79,7 @@ export async function getPrivateOrder(input: unknown) {
       variantName: line.variantName,
       sku: line.sku,
       options: line.options,
-      image: publicImage(line, mediaBaseUrl),
+      image: publicImage(line),
       unitPriceMnt: line.unitPriceMnt,
       quantity: line.quantity,
       lineTotalMnt: line.lineTotalMnt,

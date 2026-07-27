@@ -119,6 +119,11 @@ try {
     assert.equal(seed.products.length, 5)
     assert.equal(seed.checkoutSettings.orderPrefix, 'DND')
     assert.ok(seed.products.every(product => product.variants.length > 0))
+    assert.ok(seed.products.every(product => product.images.length > 0))
+    assert.equal(
+      seed.products.find(product => product.slug === 'shiljilt-bridge-coat')?.images.length,
+      2,
+    )
     assert.ok(
       seed.products
         .flatMap(product => product.variants)
@@ -128,8 +133,8 @@ try {
     assert.ok(seed.products.flatMap(product => product.useCases).every(tag => allowed.has(tag)))
   })
   record('Wrangler names only isolated ДУНД data and cache resources', () => {
-    assert.match(wranglerConfig, /"database_name": "demo-solid-store"/)
-    assert.match(wranglerConfig, /"kv_namespaces": \[\{ "binding": "CACHE" \}\]/)
+    assert.match(wranglerConfig, /"database_name": "dund-demo-solid-store-\d+-db"/)
+    assert.match(wranglerConfig, /"kv_namespaces": \[\{ "binding": "CACHE", "id":/)
     assert.doesNotMatch(wranglerConfig, /plugged/i)
   })
 
@@ -191,6 +196,7 @@ try {
 
   const catalog = await fetchHtml('/products?useCase=cold-weather')
   const sortedCatalog = await fetchHtml('/products?sort=price-asc')
+  const sanitizedCatalog = await fetchHtml('/products?useCase=first-iem&unknown=value')
   record('Router search filters and sorting render from D1 with no JavaScript requirement', () => {
     assert.equal(catalog.response.status, 200)
     assert.match(catalog.html, /Шилжилт хүрэм/)
@@ -200,6 +206,9 @@ try {
     assert.ok(
       sortedCatalog.html.indexOf('Суурь футболк') < sortedCatalog.html.indexOf('Шилжилт хүрэм'),
     )
+    assert.equal(sanitizedCatalog.response.status, 200)
+    assert.match(sanitizedCatalog.html, /Бүх давхарга/)
+    assert.doesNotMatch(sanitizedCatalog.html, /first-iem|TRUTHEAR/)
   })
 
   const product = await fetchHtml('/products/shiljilt-bridge-coat')
@@ -210,6 +219,8 @@ try {
     assert.match(product.html, /DND-COAT-M-ASPHALT/)
     assert.match(product.html, />Хэмжээ<\/legend>/)
     assert.match(product.html, />Өнгө<\/legend>/)
+    assert.match(product.html, /2-р зураг:/)
+    assert.match(product.html, /\/media\/products\/shiljilt-bridge-coat\//)
     assert.match(product.html, /disabled aria-pressed="false">XL<\/button>/)
     assert.doesNotMatch(product.html, /stockQuantity/)
     assert.equal(
@@ -223,6 +234,7 @@ try {
 
   const checkout = await fetchHtml('/checkout')
   const order = await fetchHtml('/orders/ord_01kyfqxb0ne06sxpvwgf6b37re')
+  const missingProduct = await fetchHtml('/products/does-not-exist')
   const missing = await fetchHtml('/not-a-route')
   record('direct checkout, private order shell, and not-found routes resolve', () => {
     assert.equal(checkout.response.status, 200)
@@ -231,6 +243,8 @@ try {
     assert.equal(order.response.status, 200)
     assert.equal(order.response.headers.get('cache-control'), 'private, no-store')
     assert.doesNotMatch(order.html, /9911\d{4}/)
+    assert.equal(missingProduct.response.status, 200)
+    assert.match(missingProduct.html, /Энэ бараа байхгүй байна/)
     assert.equal(missing.response.status, 404)
     assert.match(missing.html, /Энд давхарга алга/)
   })
@@ -445,6 +459,9 @@ try {
   const assetPath = /<script type="module" src="([^"]+)" async>/.exec(home.html)?.[1]
   assert.ok(assetPath, 'The SSR document must include the generated client entry.')
   const assetResponse = await fetch(`${origin}${assetPath}`)
+  const mediaResponse = await fetch(
+    `${origin}/media/products/udur-overshirt/78f0cdd2886b7a9f8d27b40e52a0d2ce9973dc2ec25fccd1ec9cc352d7c4d0ba.webp`,
+  )
   const broadApi = await fetch(`${origin}/api/system/status`, { headers: { accept: 'text/html' } })
   const webhookGet = await fetch(`${origin}/api/webhooks/qpay`)
   const qpayMissingQuery = await fetch(`${origin}/api/webhooks/qpay`, { method: 'POST' })
@@ -467,6 +484,9 @@ try {
   record('assets are immutable and Elysia is limited to exact validated webhook paths', () => {
     assert.equal(assetResponse.status, 200)
     assert.equal(assetResponse.headers.get('cache-control'), 'public, max-age=31536000, immutable')
+    assert.equal(mediaResponse.status, 200)
+    assert.match(mediaResponse.headers.get('content-type') ?? '', /image\/webp/)
+    assert.equal(mediaResponse.headers.get('cache-control'), 'public, max-age=31536000, immutable')
     assert.equal(broadApi.status, 404)
     assert.equal(webhookGet.status, 404)
     assert.equal(webhookGet.headers.get('cache-control'), 'no-store')
@@ -488,7 +508,7 @@ try {
     'kv',
     'key',
     'get',
-    'dund:document:v1:/',
+    'dund:document:v2:/',
     '--binding',
     'CACHE',
     '--local',
@@ -502,7 +522,7 @@ try {
     'kv',
     'key',
     'get',
-    `dund:data:v1:catalog-search:${encodeURIComponent('хүрэм'.toLocaleLowerCase('mn-MN'))}`,
+    `dund:data:v2:catalog-search:${encodeURIComponent('хүрэм'.toLocaleLowerCase('mn-MN'))}`,
     '--binding',
     'CACHE',
     '--local',

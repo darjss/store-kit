@@ -21,11 +21,12 @@ const withHeaders = (response, values, status = response.status) => {
   })
 }
 
-const publicCachePolicy = response =>
+const publicCachePolicy = (response, useCdnCache) =>
   withHeaders(response, {
     'cache-control': 'public, max-age=0, must-revalidate',
-    'cloudflare-cdn-cache-control':
-      'public, max-age=60, stale-while-revalidate=300, stale-if-error=86400',
+    'cloudflare-cdn-cache-control': useCdnCache
+      ? 'public, max-age=60, stale-while-revalidate=300, stale-if-error=86400'
+      : undefined,
   })
 
 const privateCachePolicy = response =>
@@ -40,7 +41,7 @@ const noStoreCachePolicy = response =>
     'cloudflare-cdn-cache-control': undefined,
   })
 
-const documentCacheKey = url => `dund:document:v1:${url.pathname}${url.search}`
+const documentCacheKey = url => `dund:document:v2:${url.pathname}${url.search}`
 
 const cachedDocument = async (request, env, url) => {
   if (request.method !== 'GET' && request.method !== 'HEAD') return undefined
@@ -49,10 +50,14 @@ const cachedDocument = async (request, env, url) => {
   const html = await env.CACHE.get(documentCacheKey(url))
   if (html === null) return undefined
 
-  return publicCachePolicy(
-    new Response(request.method === 'HEAD' ? null : html, {
-      headers: { 'content-type': 'text/html; charset=utf-8' },
-    }),
+  return withHeaders(
+    publicCachePolicy(
+      new Response(request.method === 'HEAD' ? null : html, {
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      }),
+      !url.hostname.endsWith('.workers.dev'),
+    ),
+    { 'x-dund-document-cache': 'HIT' },
   )
 }
 
@@ -75,12 +80,18 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url)
 
-    const isStaticAsset = url.pathname.startsWith('/assets/') || url.pathname.startsWith('/images/')
-    if (isStaticAsset && (request.method === 'GET' || request.method === 'HEAD')) {
+    const isBuildAsset = url.pathname.startsWith('/assets/')
+    const isCatalogMedia = url.pathname.startsWith('/media/')
+    const isCampaignImage = url.pathname.startsWith('/images/')
+    if (
+      (isBuildAsset || isCatalogMedia || isCampaignImage) &&
+      (request.method === 'GET' || request.method === 'HEAD')
+    ) {
       const asset = await env.ASSETS.fetch(request)
-      return url.pathname.startsWith('/assets/')
-        ? withHeaders(asset, { 'cache-control': 'public, max-age=31536000, immutable' })
-        : asset
+      if (isBuildAsset || isCatalogMedia) {
+        return withHeaders(asset, { 'cache-control': 'public, max-age=31536000, immutable' })
+      }
+      return withHeaders(asset, { 'cache-control': 'public, max-age=3600' })
     }
 
     if (webhookPaths.has(url.pathname)) {
@@ -100,7 +111,12 @@ export default {
       return privateCachePolicy(response)
     }
     if (publicDocument.test(url.pathname)) {
-      const publicResponse = publicCachePolicy(response)
+      const publicResponse = withHeaders(
+        publicCachePolicy(response, !url.hostname.endsWith('.workers.dev')),
+        {
+          'x-dund-document-cache': 'MISS',
+        },
+      )
       if (request.method === 'GET') storeDocument(publicResponse, env, ctx, url)
       return publicResponse
     }

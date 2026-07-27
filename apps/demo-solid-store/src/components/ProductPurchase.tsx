@@ -151,14 +151,14 @@ export function ProductPurchase(props: { product: PurchaseProduct }) {
                   >
                     {stockLabel(variant().stockStatus)}
                   </p>
-                  <p class="m-0 font-mono text-xs text-ink/55">{variant().sku}</p>
+                  <p class="m-0 text-xs font-semibold tracking-wide text-ink/60">{variant().sku}</p>
                 </div>
                 <div class="mt-2 flex flex-wrap items-end gap-3">
                   <strong class="text-[clamp(2.25rem,5vw,4rem)] leading-none font-extrabold">
                     {formatMnt(variant().priceMnt)}
                   </strong>
                   <Show when={variant().compareAtPriceMnt}>
-                    {price => <del class="text-ink/55">{formatMnt(price())}</del>}
+                    {price => <del class="text-muted">{formatMnt(price())}</del>}
                   </Show>
                 </div>
               </div>

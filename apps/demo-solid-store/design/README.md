@@ -26,8 +26,12 @@ Only the selected mock was copied into the project. The rejected mock and the pa
 | `mockups/homepage-doorway-sequence.png` | 1586 × 992 | Selected desktop north-star composition |
 | `assets/hero-threshold.webp` | 1122 × 1402 | Portrait campaign image for the hero and mobile art direction |
 | `assets/bridge-coat-system.webp` | 1448 × 1086 | Feature image for the modular coat and removable liner |
+| `assets/udur-overshirt.webp` | 1122 × 1402 | White and cobalt structured overshirts |
+| `assets/dund-wool-mid-layer.webp` | 1122 × 1402 | Asphalt and coral fine-wool mid-layers |
+| `assets/suuri-base-tshirt.webp` | 1122 × 1402 | White and cobalt base T-shirts |
+| `assets/shuluun-everyday-trousers.webp` | 1122 × 1402 | Asphalt and black straight trousers |
 
-All three files are original generated assets for this fictional project. The Pi `codex_generate_image` tool used `gpt-image-2` through the Codex backend. No stock image or existing clothing-brand asset was used.
+All seven files are original generated assets for this fictional project. The Pi `codex_generate_image` tool used `gpt-image-2` through the Codex backend. No stock image or existing clothing-brand asset was used. The six delivered WebP assets were stripped and re-encoded at quality 82 for the storefront; each is 46–128 KB.
 
 ## Mock limits
 
@@ -58,6 +62,12 @@ Suggested alt text:
 `Хар урт хүрэм ба салдаг хөх дотор давхаргыг зэрэгцүүлэн өлгөсөн нь.`
 
 Inspect the small neck area before production delivery. Crop or retouch it if it reads as generated text at the final rendered size.
+
+### Capsule product assets
+
+The four catalog assets use the hero and coat images only as visual references for the honey-amber set, hard winter light, cobalt accent, and practical product-photography language. Their prompts requested the named original garment and color variants in a portrait 4:5, square-crop-safe composition. Every prompt prohibited people, logos, labels, readable text, watermarks, beige styling, grunge, editorial fashion layouts, Uniqlo products, and Uniqlo visual styling.
+
+The demo publishes content-addressed copies under `public/media/` because this phase was authorized to create only D1, KV, and Worker resources. Move the same immutable keys to a dedicated DUND R2 media domain before production launch.
 
 ## Final image prompts
 

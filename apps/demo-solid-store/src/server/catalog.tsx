@@ -8,41 +8,39 @@ import {
   catalogSlugSchema,
 } from '@store-kit/contracts/catalog'
 import type { CatalogSearchResult, ProductListFilters } from '@store-kit/contracts/catalog'
-import { remoteMediaUrl } from '@store-kit/contracts/media'
 import type { Element } from 'solid-js'
 import { Value } from 'typebox/value'
 
 import { catalogSearchSchema, toCatalogFilters } from '~/app/catalog-search'
 import type { CatalogSearch } from '~/app/catalog-search'
 import { formatMnt } from '~/catalog/format'
+import { mediaUrl } from '~/catalog/media'
 import type { PurchaseProduct, StoreImage } from '~/catalog/model'
 import { getStoreEnvironment } from '~/server/environment'
 
-const imageWidths = [360, 720, 1080] as const
-const useCaseLabels = {
+const useCaseLabels: Record<string, string> = {
   'workday': 'Ажлын өдөр',
   'off-duty': 'Чөлөөт өдөр',
   'layering': 'Давхарлах',
   'travel': 'Аялал',
   'cold-weather': 'Хүйтэн өдөр',
-} as const
+}
 const sortLabels = {
   'featured': 'Онцлох дараалал',
   'recent': 'Шинэ эхэнд',
   'price-asc': 'Үнэ: багаас их',
   'price-desc': 'Үнэ: ихээс бага',
 } as const
-
-const imageUrl = (r2Key: string, width: number) => {
-  const base = new URL(getStoreEnvironment().PUBLIC_MEDIA_BASE_URL)
-  return new URL(
-    `cdn-cgi/image/width=${width},fit=scale-down,format=auto,quality=85/${r2Key}`,
-    base,
-  ).toString()
+const productDetailLabels: Record<string, string> = {
+  fabric: 'Материал',
+  fit: 'Эсгүүр',
+  care: 'Арчилгаа',
+  origin: 'Гарал',
+  season: 'Улирал',
 }
 
 const toPublicImage = (image: { r2Key: string; width: number; height: number; alt: string }) => ({
-  url: remoteMediaUrl(getStoreEnvironment().PUBLIC_MEDIA_BASE_URL, image.r2Key),
+  url: mediaUrl(image.r2Key),
   width: image.width,
   height: image.height,
   alt: image.alt,
@@ -57,7 +55,6 @@ const toStoreImage = (image: {
 }): StoreImage => ({
   id: image.id,
   ...toPublicImage(image),
-  srcset: imageWidths.map(width => `${imageUrl(image.r2Key, width)} ${width}w`).join(', '),
 })
 
 const StockLabel = (props: { quantity: number }) => (
@@ -126,7 +123,7 @@ export async function searchCatalog(input: unknown) {
 
   const query = input.query.trim()
   const cache = getStoreEnvironment().CACHE
-  const cacheKey = `dund:data:v1:catalog-search:${encodeURIComponent(query.toLocaleLowerCase('mn-MN'))}`
+  const cacheKey = `dund:data:v2:catalog-search:${encodeURIComponent(query.toLocaleLowerCase('mn-MN'))}`
   const cached: unknown = await cache.get(cacheKey, 'json')
   if (Value.Check(catalogSearchResultSchema, cached)) {
     return respond(cached, {
@@ -178,11 +175,11 @@ export async function searchCatalog(input: unknown) {
 }
 
 export async function getHomeFrame() {
-  const result = await commerce.catalog.listProducts({ featured: true, limit: 5 })
+  const result = await commerce.catalog.listProducts({ limit: 5 })
   const products = result.value.items
   return () => (
     <main id="main-content" tabindex="-1">
-      <section class="grid min-h-[calc(100svh-5rem)] overflow-hidden border-b border-ink/20 bg-white lg:grid-cols-[35%_65%]">
+      <section class="grid min-h-[calc(100svh-5rem)] overflow-hidden border-b border-ink/20 bg-white md:grid-cols-[42%_58%] lg:grid-cols-[35%_65%]">
         <div class="relative z-2 flex min-w-0 flex-col justify-center gap-7 px-[clamp(1rem,4vw,4rem)] py-12 lg:py-20">
           <div class="flex items-center gap-4 text-sm font-bold tracking-wide">
             <span>−24°</span>
@@ -211,7 +208,7 @@ export async function getHomeFrame() {
             </a>
           </div>
         </div>
-        <div class="relative min-h-[58svh] bg-amber lg:min-h-full">
+        <div class="relative min-h-[58svh] bg-amber md:min-h-full">
           <div
             class="absolute inset-[clamp(1rem,4vw,3.5rem)] translate-x-3 translate-y-3 border-3 border-ink"
             aria-hidden="true"
@@ -356,7 +353,7 @@ export async function getCatalogFrame(input: unknown) {
       <header class="bg-cobalt px-[clamp(1rem,4vw,4rem)] py-[clamp(3rem,7vw,6rem)] text-white">
         <div class="mx-auto max-w-360">
           <p class="font-bold text-amber">ДУНД / 5 ХЭСГИЙН СИСТЕМ</p>
-          <h1 class="mt-3 text-[clamp(3rem,8vw,6.5rem)] leading-[0.9] font-extrabold tracking-[-0.035em]">
+          <h1 class="mt-3 text-[clamp(3rem,8vw,5.75rem)] leading-[0.9] font-extrabold tracking-[-0.035em]">
             Бүх давхарга
           </h1>
           <form
@@ -496,7 +493,7 @@ export async function getCatalogFrame(input: unknown) {
                   class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
                   href={catalogHref(filters, { useCase: undefined })}
                 >
-                  {useCaseLabels[filters.useCase as keyof typeof useCaseLabels]} ×
+                  {useCaseLabels[filters.useCase] ?? filters.useCase} ×
                 </a>
               )}
               {(filters.query || filters.category || filters.brand || filters.useCase) && (
@@ -620,9 +617,24 @@ export async function getProductFrame(input: unknown) {
   const slug = validateSlug(input)
   const result = await commerce.catalog.getProduct(slug)
   if (result.status === 'error') {
-    throw respond(
-      { ok: false as const, code: 'product_not_found' },
-      { status: 404, headers: { 'cache-control': 'public, max-age=0, must-revalidate' } },
+    return (_props: ProductFrameProps) => (
+      <main
+        id="main-content"
+        tabindex="-1"
+        class="grid min-h-[70svh] place-content-center bg-amber px-5 text-center"
+      >
+        <p class="font-bold text-cobalt">404 / БАРАА ОЛДСОНГҮЙ</p>
+        <h1 class="mt-3 text-[clamp(2.75rem,9vw,6rem)] leading-none font-extrabold">
+          Энэ бараа байхгүй байна.
+        </h1>
+        <p class="mt-4 text-lg">Холбоосоо шалгаад капсул руу буцна уу.</p>
+        <a
+          class="mx-auto mt-7 inline-flex min-h-12 items-center bg-cobalt px-5 font-bold text-white no-underline"
+          href="/products"
+        >
+          Бүх бараа →
+        </a>
+      </main>
     )
   }
 
@@ -662,9 +674,13 @@ export async function getProductFrame(input: unknown) {
             ← {product.category?.name ?? 'Бүх бараа'}
           </a>
           <p class="mt-6 font-bold text-cobalt">
-            {product.brand?.name ?? 'ДУНД'} / {product.useCases.join(' · ')}
+            {product.brand?.name ?? 'ДУНД'} /{' '}
+            {product.useCases
+              .map(useCase => useCaseLabels[useCase])
+              .filter((label): label is string => Boolean(label))
+              .join(' · ') || 'Өдөр тутам'}
           </p>
-          <h1 class="mt-3 max-w-[14ch] text-[clamp(3rem,8vw,6.5rem)] leading-[0.9] font-extrabold tracking-[-0.035em] text-balance">
+          <h1 class="mt-3 max-w-[14ch] text-[clamp(3rem,8vw,5.75rem)] leading-[0.9] font-extrabold tracking-[-0.035em] text-balance">
             {product.name}
           </h1>
           <p class="mt-6 max-w-[58ch] text-xl leading-relaxed text-ink/70">
@@ -722,7 +738,7 @@ export async function getProductFrame(input: unknown) {
             <dl class="mt-8 grid border-t-3 border-ink md:grid-cols-2">
               {Object.entries(details).map(([key, value]) => (
                 <div class="grid grid-cols-[8rem_minmax(0,1fr)] gap-4 border-b border-ink/30 py-5 odd:md:border-r odd:md:pr-6 even:md:pl-6">
-                  <dt class="font-bold text-cobalt">{key}</dt>
+                  <dt class="font-bold text-cobalt">{productDetailLabels[key] ?? 'Нэмэлт'}</dt>
                   <dd class="m-0 font-semibold">
                     {Array.isArray(value) ? value.join(' · ') : String(value)}
                   </dd>

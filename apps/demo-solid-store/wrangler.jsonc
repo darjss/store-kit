@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "demo-solid-store",
+  "name": "dund-demo-solid-store-20260726201612",
   "main": "worker.js",
   "compatibility_date": "2026-07-24",
   "compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
@@ -15,16 +15,17 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "demo-solid-store",
+      "database_name": "dund-demo-solid-store-20260726201612-db",
+      "database_id": "82e7e266-841e-4d02-b587-ed4383fa6dfa",
       "migrations_dir": "../../packages/db/migrations",
       "migrations_pattern": "../../packages/db/migrations/*/migration.sql",
     },
   ],
-  "kv_namespaces": [{ "binding": "CACHE" }],
+  "kv_namespaces": [{ "binding": "CACHE", "id": "8d61a3d608ff4841ae27f1a69155efc6" }],
   "vars": {
-    "DEPLOYMENT_ENV": "development",
-    "PUBLIC_APP_URL": "https://demo-solid-store.storekit.darjs.dev",
-    "PUBLIC_MEDIA_BASE_URL": "https://demo-solid-store-media.storekitcdn.darjs.dev/",
+    "DEPLOYMENT_ENV": "production",
+    "PUBLIC_APP_URL": "https://dund-demo-solid-store-20260726201612.darjs.workers.dev",
+    "PUBLIC_MEDIA_BASE_URL": "https://dund-demo-solid-store-20260726201612.darjs.workers.dev/media/",
     "QPAY_BASE_URL": "https://merchant.qpay.mn",
   },
   "secrets": {

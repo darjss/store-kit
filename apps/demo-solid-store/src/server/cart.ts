@@ -4,10 +4,9 @@ import { respond } from '@solidjs/web'
 import { commerce } from '@store-kit/commerce'
 import { cartValidationInputsSchema, validatedCartSchema } from '@store-kit/contracts/cart'
 import type { ValidatedCart } from '@store-kit/contracts/cart'
-import { remoteMediaUrl } from '@store-kit/contracts/media'
 import { Value } from 'typebox/value'
 
-import { getStoreEnvironment } from '~/server/environment'
+import { mediaUrl } from '~/catalog/media'
 
 export async function validateCart(input: unknown) {
   if (!Value.Check(cartValidationInputsSchema, input)) {
@@ -29,7 +28,7 @@ export async function validateCart(input: unknown) {
         image:
           imageR2Key && imageWidth && imageHeight && imageAlt
             ? {
-                url: remoteMediaUrl(getStoreEnvironment().PUBLIC_MEDIA_BASE_URL, imageR2Key),
+                url: mediaUrl(imageR2Key),
                 width: imageWidth,
                 height: imageHeight,
                 alt: imageAlt,

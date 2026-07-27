@@ -2,19 +2,13 @@ import { useSearchParams } from '@solidjs/router'
 import { dynamic } from '@solidjs/web'
 import { Errored, Loading } from 'solid-js'
 
+import { toCatalogSearch } from '~/app/catalog-search'
 import { paths } from '~/app/router'
 import { getCatalogFrame } from '~/server/catalog'
 
 export default function CatalogPage() {
   const [search] = useSearchParams(paths.products)
-  const input = () => ({
-    ...(search.category ? { category: search.category } : {}),
-    ...(search.brand ? { brand: search.brand } : {}),
-    ...(search.useCase ? { useCase: search.useCase } : {}),
-    ...(search.featured ? { featured: search.featured } : {}),
-    ...(search.query ? { query: search.query } : {}),
-    ...(search.sort ? { sort: search.sort } : {}),
-  })
+  const input = () => toCatalogSearch(search)
   const Catalog = dynamic(() => getCatalogFrame(input()))
 
   return (

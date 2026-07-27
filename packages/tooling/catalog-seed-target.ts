@@ -7,11 +7,10 @@ export type CatalogSeedScope = 'data' | 'media'
 
 export type CatalogSeedTarget =
   | { environment: 'local'; scope: 'data' }
-  | {
-      environment: CatalogSeedRemoteEnvironment
-      scope: CatalogSeedScope
-      bucket: string
-    }
+  | { environment: CatalogSeedRemoteEnvironment; scope: 'data'; bucket?: string }
+  | { environment: CatalogSeedRemoteEnvironment; scope: 'media'; bucket: string }
+
+export type CatalogSeedStore = 'plugged' | 'demo-solid-store'
 
 const argumentValue = (args: string[], name: string) => {
   const index = args.indexOf(name)
@@ -28,6 +27,7 @@ const argumentValue = (args: string[], name: string) => {
 export const catalogSeedTarget = (
   args: string[],
   environment: Record<string, string | undefined>,
+  store: CatalogSeedStore = 'plugged',
 ): CatalogSeedTarget => {
   const selectedEnvironment = argumentValue(args, '--environment')
   const scope = argumentValue(args, '--only')
@@ -50,6 +50,11 @@ export const catalogSeedTarget = (
 
   if (selectedEnvironment === 'local') {
     if (scope !== 'data') throw new Error('Local catalog seeding writes D1 data only.')
+    return { environment: selectedEnvironment, scope }
+  }
+
+  if (store === 'demo-solid-store') {
+    if (scope !== 'data') throw new Error('Remote ДУНД seeding writes D1 data only.')
     return { environment: selectedEnvironment, scope }
   }
 

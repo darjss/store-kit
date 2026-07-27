@@ -146,6 +146,11 @@ export function CartProvider(props: ParentProps) {
       }
 
       const lines = new Map(response.cart.lines.map(line => [line.variantId, line]))
+      const changedPrices = new Set(
+        response.cart.corrections.flatMap(correction =>
+          correction._tag === 'PriceChanged' ? [correction.variantId] : [],
+        ),
+      )
       setItems(draft => {
         for (const item of draft) {
           const line = lines.get(item.variantId)
@@ -155,7 +160,7 @@ export function CartProvider(props: ParentProps) {
           item.variantName = line.variantName
           item.options = line.options
           item.image = line.image
-          item.unitPriceMnt = line.unitPriceMnt
+          if (!changedPrices.has(item.variantId)) item.unitPriceMnt = line.unitPriceMnt
         }
       })
       setValidation(
@@ -193,9 +198,14 @@ export function CartProvider(props: ParentProps) {
         else setQuantity(correction.variantId, correction.availableQuantity)
         break
       case 'PriceChanged':
-        void validate()
+        setItems(draft => {
+          const item = draft.find(candidate => candidate.variantId === correction.variantId)
+          if (item) item.unitPriceMnt = correction.currentUnitPriceMnt
+        })
+        invalidateValidation()
         break
     }
+    queueMicrotask(() => void validate())
   }
 
   const gateCheckout = async () => {
@@ -361,7 +371,7 @@ export function CartDialog() {
     >
       <header class="flex min-h-20 items-center justify-between gap-4 border-b-3 border-ink bg-amber px-5">
         <div>
-          <p class="m-0 text-xs font-bold text-cobalt">ДУНД / CART</p>
+          <p class="m-0 text-xs font-bold text-cobalt">ДУНД / САГС</p>
           <h2 id="cart-title" class="m-0 text-3xl font-extrabold">
             Сагс
           </h2>

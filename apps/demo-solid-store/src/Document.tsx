@@ -12,6 +12,7 @@ export default function Document(props: ParentProps) {
           content="ДУНД — Улаанбаатарын өдөр тутмын давхаргын таван хэсгийн капсул."
         />
         <meta name="theme-color" content="#f5ac00" />
+        <link rel="icon" href="data:," />
         <title>ДУНД · Гаднаас дотогш</title>
         <HydrationScript />
       </head>
