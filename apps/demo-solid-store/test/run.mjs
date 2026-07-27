@@ -413,11 +413,117 @@ const runBrowserViewport = async (browser, name, viewport) => {
   }
 }
 
+const runReviewViewport = async (browser, name, viewport) => {
+  const context = await browser.newContext({ viewport })
+  const page = await context.newPage()
+  const runtimeErrors = []
+  const serverRequests = []
+  page.on('pageerror', error => runtimeErrors.push(error.stack ?? error.message))
+  page.on('console', message => {
+    if (message.type() === 'error') runtimeErrors.push(`console.error: ${message.text()}`)
+  })
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/_server') serverRequests.push(request.url())
+  })
+
+  try {
+    const response = await page.goto(`${origin}/review/solid2`, { waitUntil: 'domcontentloaded' })
+    await page
+      .getByRole('heading', { level: 1, name: 'Two storefronts. Two ownership models.' })
+      .waitFor()
+    await page.waitForTimeout(150)
+    const overflow = await page.evaluate(() => ({
+      present: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      widths: `${document.documentElement.clientWidth}/${document.documentElement.scrollWidth}`,
+      candidates: [...document.querySelectorAll('body *')]
+        .filter(element => {
+          const bounds = element.getBoundingClientRect()
+          return bounds.left < -1 || bounds.right > document.documentElement.clientWidth + 1
+        })
+        .slice(0, 12)
+        .map(element => `${element.tagName.toLowerCase()}.${element.className}`),
+    }))
+    record(`${name}: review direct load adopts with no boot frame request or overflow`, () => {
+      assert.equal(response?.status(), 200)
+      assert.equal(serverRequests.length, 0)
+      assert.equal(overflow.present, false, `${overflow.widths}: ${overflow.candidates.join('\n')}`)
+      assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+    })
+    assert.equal(await page.title(), 'Astro vs Solid 2 architecture review · ДУНД')
+
+    const externalLinks = await page
+      .locator('a[target="_blank"]')
+      .evaluateAll(links => links.map(link => ({ href: link.href, rel: link.rel })))
+    record(`${name}: review launch links and 404 probe are explicit new-tab destinations`, () => {
+      assert.ok(externalLinks.some(link => link.href === 'https://dund.darjs.dev/'))
+      assert.ok(externalLinks.some(link => link.href === 'https://storekit.plugged.darjs.dev/'))
+      assert.ok(externalLinks.some(link => link.href === `${origin}/review/solid2/not-found`))
+      assert.ok(
+        externalLinks
+          .filter(link => link.href.startsWith('https://'))
+          .every(link => link.rel.includes('noreferrer')),
+      )
+    })
+
+    const clientNavigation = page.getByRole('button', { name: 'Client navigation' })
+    await clientNavigation.focus()
+    await page.keyboard.press('Enter')
+    assert.equal(await clientNavigation.getAttribute('aria-pressed'), 'true')
+    const nextPhase = page.getByRole('button', { name: 'Next request phase' })
+    await nextPhase.click()
+    await page.getByText('The next route asks for authority.').waitFor()
+    const persistToggle = page.getByRole('button', { name: 'Highlight persistent regions' })
+    await persistToggle.click()
+    record(`${name}: review learning controls work by keyboard and expose pressed state`, () => {
+      assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+    })
+    assert.equal(
+      await page.getByRole('button', { name: 'Show every region' }).getAttribute('aria-pressed'),
+      'true',
+    )
+
+    if (name === 'desktop review') {
+      const previewToggle = page.getByRole('button', { name: 'Load live panes' })
+      assert.equal(await page.locator('#live-preview-panes iframe').count(), 0)
+      await previewToggle.click()
+      const closePreviews = page.getByRole('button', { name: 'Close live panes' })
+      assert.equal(await closePreviews.getAttribute('aria-expanded'), 'true')
+      assert.equal(await page.locator('#live-preview-panes iframe').count(), 2)
+      await closePreviews.click()
+      assert.equal(await page.locator('#live-preview-panes iframe').count(), 0)
+    }
+
+    serverRequests.length = 0
+    await page.getByRole('link', { name: 'Back to DUND capsule' }).click()
+    await page.getByRole('heading', { level: 1, name: 'Бүх давхарга' }).waitFor()
+    await page.waitForFunction(() => document.activeElement?.id === 'main-content')
+    record(
+      `${name}: review-to-store client navigation uses frame transport and restores focus`,
+      () => {
+        assert.ok(serverRequests.some(url => new URL(url).pathname === '/_server'))
+        assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+      },
+    )
+
+    await page.goBack({ waitUntil: 'domcontentloaded' })
+    await page
+      .getByRole('heading', { level: 1, name: 'Two storefronts. Two ownership models.' })
+      .waitFor()
+    await page.waitForFunction(() => document.activeElement?.id === 'main-content')
+    assert.equal(await page.title(), 'Astro vs Solid 2 architecture review · ДУНД')
+  } finally {
+    await context.close()
+  }
+}
+
 const runBrowserProof = async privateOrder => {
   const browser = await chromium.launch({ headless: true })
   try {
     await runBrowserViewport(browser, 'desktop browser', { width: 1440, height: 900 })
     await runBrowserViewport(browser, '320px mobile browser', { width: 320, height: 720 })
+    await runReviewViewport(browser, 'desktop review', { width: 1440, height: 900 })
+    await runReviewViewport(browser, 'tablet review', { width: 768, height: 1024 })
+    await runReviewViewport(browser, '320px review', { width: 320, height: 720 })
 
     const reducedMotionContext = await browser.newContext({
       reducedMotion: 'reduce',
@@ -436,6 +542,13 @@ const runBrowserProof = async privateOrder => {
       .evaluate(element => getComputedStyle(element).animationName)
     record('reduced motion removes the carousel movement animation', () => {
       assert.equal(reducedAnimationName, 'none')
+    })
+    await reducedMotionPage.goto(`${origin}/review/solid2`, { waitUntil: 'domcontentloaded' })
+    const reducedTransition = await reducedMotionPage
+      .getByRole('button', { name: 'Client navigation' })
+      .evaluate(element => getComputedStyle(element).transitionProperty)
+    record('reduced motion removes review control transitions', () => {
+      assert.equal(reducedTransition, 'none')
     })
     await reducedMotionContext.close()
 
@@ -734,6 +847,22 @@ try {
   record('frame-bearing documents cannot enter the shared CDN cache', () => {
     assert.equal(home.response.headers.get('cache-control'), 'public, max-age=0, must-revalidate')
     assert.equal(home.response.headers.get('cloudflare-cdn-cache-control'), 'no-store')
+  })
+
+  const review = await fetchHtml('/review/solid2')
+  const missingReview = await fetchHtml('/review/solid2/not-found')
+  record('the engineering review SSRs at its isolated route with no-store policy', () => {
+    assert.equal(review.response.status, 200)
+    assert.match(review.html, /Two storefronts\. Two ownership models\./)
+    assert.match(review.html, /Why ProductPurchase sits outside the details frame/)
+    assert.match(review.html, /<dx-frame\b/)
+    assert.equal(review.response.headers.get('cache-control'), 'no-store')
+    assert.equal(review.response.headers.get('cloudflare-cdn-cache-control'), null)
+  })
+  record('paths below the review route keep the real DUND 404 interaction', () => {
+    assert.equal(missingReview.response.status, 404)
+    assert.equal(missingReview.response.headers.get('cache-control'), 'no-store')
+    assert.match(missingReview.html, /Энд давхарга алга/)
   })
 
   const catalog = await fetchHtml('/products?useCase=cold-weather')

@@ -1,10 +1,17 @@
 import { useLocation, useNavigate } from '@solidjs/router'
-import { Show, createEffect, createSignal, untrack } from 'solid-js'
+import { Show, createEffect, createSignal, onSettled, untrack } from 'solid-js'
 import type { ParentProps } from 'solid-js'
 
 import { paths, routeTitle } from '~/app/router'
 import { CartDialog, useCart } from '~/cart/CartProvider'
 import { CatalogSearchDialog } from '~/components/CatalogSearchDialog'
+
+const focusMain = () => document.querySelector<HTMLElement>('#main-content')?.focus()
+const usesServerFrame = (pathname: string) =>
+  pathname === '/' ||
+  pathname === '/products' ||
+  pathname.startsWith('/products/') ||
+  pathname === '/review/solid2'
 
 export function AppShell(props: ParentProps) {
   const [searchOpen, setSearchOpen] = createSignal(false)
@@ -12,14 +19,26 @@ export function AppShell(props: ParentProps) {
   const navigate = useNavigate()
   const cart = useCart()
   let currentPathname = untrack(() => location.pathname)
+  let frameRouteNeedsFocus = false
   let searchTrigger: HTMLElement | undefined
+
+  onSettled(() => {
+    const focusAppliedFrame = () => {
+      if (!frameRouteNeedsFocus) return
+      frameRouteNeedsFocus = false
+      queueMicrotask(focusMain)
+    }
+    document.addEventListener('frame:applied', focusAppliedFrame)
+    return () => document.removeEventListener('frame:applied', focusAppliedFrame)
+  })
 
   createEffect(
     () => location.pathname,
     pathname => {
       document.title = routeTitle(pathname)
       if (pathname !== currentPathname) {
-        queueMicrotask(() => document.querySelector<HTMLElement>('#main-content')?.focus())
+        frameRouteNeedsFocus = usesServerFrame(pathname)
+        queueMicrotask(focusMain)
       }
       currentPathname = pathname
     },

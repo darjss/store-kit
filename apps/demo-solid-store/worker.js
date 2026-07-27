@@ -7,7 +7,7 @@ import { handleRequest } from './dist/server/server.js'
 
 const publicDocument = /^\/(?:$|products(?:\/[^/]+)?)\/?$/
 const privateRoute = /^\/(?:checkout(?:\/|$)|orders(?:\/|$))/
-const knownDocument = /^\/(?:$|products(?:\/[^/]+)?|checkout|orders\/[^/]+)\/?$/
+const knownDocument = /^\/(?:$|products(?:\/[^/]+)?|checkout|orders\/[^/]+|review\/solid2)\/?$/
 const webhookPaths = new Set(['/api/webhooks/qpay', '/api/webhooks/telegram'])
 
 const withHeaders = (response, values, status = response.status) => {
@@ -96,6 +96,7 @@ export default {
     if (url.pathname === '/_server' || privateRoute.test(url.pathname)) {
       return privateCachePolicy(response)
     }
+    if (/^\/review\/solid2\/?$/.test(url.pathname)) return noStoreCachePolicy(response)
     if (publicDocument.test(url.pathname)) return publicCachePolicy(response)
     return noStoreCachePolicy(response)
   },
