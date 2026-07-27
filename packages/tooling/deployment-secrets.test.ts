@@ -8,7 +8,7 @@ import { validateDevelopmentSecretsFile } from './deployment-secrets.ts'
 
 const directories: string[] = []
 const authSecrets = [
-  'BETTER_AUTH_SECRET=auth-secret-at-least-thirty-two-characters',
+  'BETTER_AUTH_SECRETS=1:auth-secret-at-least-thirty-two-characters',
   'GOOGLE_CLIENT_ID=google-client-id',
   'GOOGLE_CLIENT_SECRET=google-client-secret',
 ]

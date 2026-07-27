@@ -4,7 +4,14 @@ import { createId } from '@store-kit/db/ids'
 import { betterAuth } from 'better-auth'
 import { env } from 'cloudflare:workers'
 
-const keyPrefix = 'better-auth:'
+const rateLimitKeyPrefix = 'better-auth:rate-limit:'
+const authSecrets = env.BETTER_AUTH_SECRETS.split(',').map(entry => {
+  const separator = entry.indexOf(':')
+  return {
+    version: Number(entry.slice(0, separator)),
+    value: entry.slice(separator + 1),
+  }
+})
 const authIdEntities = {
   user: 'authUser',
   session: 'authSession',
@@ -15,13 +22,19 @@ const authIdEntities = {
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: 'sqlite', schema: authSchema }),
   baseURL: env.PUBLIC_APP_URL,
-  secret: env.BETTER_AUTH_SECRET,
+  secrets: authSecrets,
   trustedOrigins: [env.PUBLIC_APP_URL],
   socialProviders: {
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
+  },
+  account: {
+    encryptOAuthTokens: true,
+  },
+  session: {
+    storeSessionInDatabase: true,
   },
   user: {
     additionalFields: {
@@ -34,20 +47,20 @@ export const auth = betterAuth({
       },
     },
   },
-  secondaryStorage: {
-    get: key => env.AUTH_KV.get(`${keyPrefix}${key}`),
-    delete: key => env.AUTH_KV.delete(`${keyPrefix}${key}`),
-    set: (key, value, ttl) =>
-      env.AUTH_KV.put(
-        `${keyPrefix}${key}`,
-        value,
-        ttl === undefined ? undefined : { expirationTtl: Math.max(60, Math.ceil(ttl)) },
-      ),
-  },
   rateLimit: {
     enabled: true,
     window: 60,
-    storage: 'secondary-storage',
+    customStorage: {
+      get: key =>
+        env.AUTH_KV.get<{ count: number; key: string; lastRequest: number }>(
+          `${rateLimitKeyPrefix}${key}`,
+          'json',
+        ),
+      set: (key, value) =>
+        env.AUTH_KV.put(`${rateLimitKeyPrefix}${key}`, JSON.stringify(value), {
+          expirationTtl: 60,
+        }),
+    },
   },
   advanced: {
     database: {

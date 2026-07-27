@@ -29,7 +29,7 @@ const telegramCredentialNames = [
 
 export type PluggedRuntimeEnvironment = {
   AUTH_KV?: unknown
-  BETTER_AUTH_SECRET?: string
+  BETTER_AUTH_SECRETS?: string
   DB?: unknown
   DEPLOYMENT_ENV?: string
   GOOGLE_CLIENT_ID?: string
@@ -77,7 +77,9 @@ export const validatePluggedEnvironment = (
 
   const environment = createEnv({
     server: {
-      BETTER_AUTH_SECRET: toStandardSchema(Type.String({ minLength: 32 })),
+      BETTER_AUTH_SECRETS: toStandardSchema(
+        Type.String({ pattern: '^(?:\\d+:[^,]{32,})(?:,\\d+:[^,]{32,})*$' }),
+      ),
       DEPLOYMENT_ENV: deploymentEnvironment,
       GOOGLE_CLIENT_ID: toStandardSchema(Type.String({ minLength: 1 })),
       GOOGLE_CLIENT_SECRET: toStandardSchema(Type.String({ minLength: 1 })),

@@ -34,7 +34,7 @@ const productionMediaBaseUrl = 'https://plugged.storekitcdn.darjs.dev/'
 const developmentAppUrl = 'https://storekit.plugged.darjs.dev'
 const liveQpayBaseUrl = 'https://merchant.qpay.mn'
 const secretNames = [
-  'BETTER_AUTH_SECRET',
+  'BETTER_AUTH_SECRETS',
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
   'QPAY_USERNAME',

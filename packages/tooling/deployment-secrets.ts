@@ -2,7 +2,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { isAbsolute } from 'node:path'
 import { parseEnv } from 'node:util'
 
-const authSecretNames = ['BETTER_AUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const
+const authSecretNames = ['BETTER_AUTH_SECRETS', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const
 const qpaySecretNames = ['QPAY_USERNAME', 'QPAY_PASSWORD', 'QPAY_INVOICE_CODE'] as const
 const telegramSecretNames = [
   'TELEGRAM_BOT_TOKEN',

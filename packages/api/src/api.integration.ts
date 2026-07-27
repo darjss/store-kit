@@ -75,8 +75,8 @@ const postJson = (
     }),
   )
 
-const createAdminCookie = async (approved: boolean) => {
-  const userId = entityId('usr', approved ? 2 : 1)
+const createAdminSession = async (approved: boolean, suffix = approved ? 2 : 1) => {
+  const userId = entityId('usr', suffix)
   const now = Date.now()
   await env.DB.prepare(
     `insert into user
@@ -89,8 +89,13 @@ const createAdminCookie = async (approved: boolean) => {
   const context = await auth.$context
   const session = await context.internalAdapter.createSession(userId)
   const signature = await makeSignature(session.token, context.secret)
-  return `${context.authCookies.sessionToken.name}=${session.token}.${signature}`
+  return {
+    cookie: `${context.authCookies.sessionToken.name}=${session.token}.${signature}`,
+    session,
+  }
 }
+
+const createAdminCookie = async (approved: boolean) => (await createAdminSession(approved)).cookie
 
 describe('admin authentication', () => {
   it('mounts the Google social sign-in handler at the default Better Auth path', async () => {
@@ -138,6 +143,36 @@ describe('admin authentication', () => {
       _tag: 'AdminSession',
       user: { name: 'Admin User' },
     })
+  })
+
+  it('stores and revokes Better Auth sessions in D1', async () => {
+    const { cookie, session } = await createAdminSession(true, 3)
+    const persisted = await env.DB.prepare('select id, token from session where token = ?')
+      .bind(session.token)
+      .first<{ id: string; token: string }>()
+
+    expect(persisted).toEqual({ id: session.id, token: session.token })
+    expect(session.id).toMatch(/^ses_[0-7][0123456789abcdefghjkmnpqrstvwxyz]{25}$/u)
+
+    const signOutResponse = await postJson(
+      '/api/auth/sign-out',
+      {},
+      { cookie, origin: 'https://plugged.mn' },
+      'https://plugged.mn',
+    )
+    const revoked = await env.DB.prepare('select id from session where token = ?')
+      .bind(session.token)
+      .first()
+    const oldCookieResponse = await app.handle(
+      new Request('https://plugged.mn/api/admin/session', {
+        headers: { cookie, origin: 'https://plugged.mn' },
+      }),
+    )
+
+    expect(signOutResponse.status).toBe(200)
+    expect(revoked).toBeNull()
+    expect(oldCookieResponse.status).toBe(401)
+    expect(await oldCookieResponse.json()).toEqual({ _tag: 'Unauthenticated' })
   })
 })
 

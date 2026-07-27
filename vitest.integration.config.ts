@@ -28,7 +28,8 @@ export default defineConfig({
               ),
             )
           ).flat(),
-          BETTER_AUTH_SECRET: 'integration-test-auth-secret-at-least-thirty-two-characters',
+          BETTER_AUTH_SECRETS:
+            '2:integration-current-auth-secret-at-least-thirty-two-characters,1:integration-previous-auth-secret-at-least-thirty-two-characters',
           GOOGLE_CLIENT_ID: 'integration-test-google-client-id',
           GOOGLE_CLIENT_SECRET: 'integration-test-google-client-secret',
           PUBLIC_APP_URL: 'https://plugged.mn',

@@ -5,7 +5,7 @@ import type { PluggedRuntimeEnvironment } from './environment'
 
 const localEnvironment = {
   AUTH_KV: {},
-  BETTER_AUTH_SECRET: 'test-auth-secret-at-least-thirty-two-characters',
+  BETTER_AUTH_SECRETS: '1:test-auth-secret-at-least-thirty-two-characters',
   DB: {},
   DEPLOYMENT_ENV: 'development',
   GOOGLE_CLIENT_ID: 'google-client-id',
@@ -81,7 +81,7 @@ test('rejects the production environment during local development', () => {
 })
 
 test.each([
-  ['BETTER_AUTH_SECRET', { BETTER_AUTH_SECRET: 'too-short' }],
+  ['BETTER_AUTH_SECRETS', { BETTER_AUTH_SECRETS: '1:too-short' }],
   ['PUBLIC_APP_URL', { PUBLIC_APP_URL: 'not a URL' }],
   ['QPAY_BASE_URL', { QPAY_BASE_URL: '/relative' }],
   ['TELEGRAM_CHAT_ID', { TELEGRAM_BOT_TOKEN: 'token', TELEGRAM_CHAT_ID: 'chat' }],
