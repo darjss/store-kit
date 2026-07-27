@@ -63,10 +63,22 @@ function ProductNotFoundContent() {
   )
 }
 
-function ProductNotFound() {
+function ProductLoadError() {
   return (
-    <main id="main-content" tabindex="-1">
-      <ProductNotFoundContent />
+    <main
+      id="main-content"
+      tabindex="-1"
+      class="grid min-h-[60svh] place-content-center px-5 text-center"
+    >
+      <h1 class="text-4xl font-extrabold">Барааг ачаалж чадсангүй.</h1>
+      <p class="mt-3">Сүлжээгээ шалгаад дахин оролдоно уу.</p>
+      <button
+        class="mx-auto mt-5 min-h-11 border-2 border-ink px-4 font-bold"
+        type="button"
+        onClick={() => window.location.reload()}
+      >
+        Дахин ачаалах
+      </button>
     </main>
   )
 }
@@ -77,7 +89,7 @@ export default function ProductPage() {
   const ProductDetails = dynamic(() => getProductDetailsFrame(params.slug))
 
   return (
-    <Errored fallback={<ProductNotFound />}>
+    <Errored fallback={<ProductLoadError />}>
       <main id="main-content" tabindex="-1">
         <Loading
           on={params.slug}

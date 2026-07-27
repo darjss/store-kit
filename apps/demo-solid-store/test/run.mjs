@@ -316,6 +316,23 @@ const runBrowserProof = async privateOrder => {
     await runBrowserViewport(browser, 'desktop browser', { width: 1440, height: 900 })
     await runBrowserViewport(browser, 'mobile browser', { width: 390, height: 844 })
 
+    const offlineContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
+    const offlinePage = await offlineContext.newPage()
+    await offlinePage.goto(`${origin}/products`, { waitUntil: 'domcontentloaded' })
+    await offlineContext.setOffline(true)
+    await offlinePage.locator('section[aria-label="Барааны жагсаалт"] h2 a').first().click()
+    await offlinePage.getByRole('heading', { level: 1, name: 'Барааг ачаалж чадсангүй.' }).waitFor()
+    const offlineNotFoundCount = await offlinePage.getByText('Бараа олдсонгүй.').count()
+    const offlineRetryCount = await offlinePage
+      .getByRole('button', { name: 'Дахин ачаалах' })
+      .count()
+    record('offline product navigation renders a recoverable transport error', () => {
+      assert.equal(offlinePage.url().startsWith(`${origin}/products/`), true)
+      assert.equal(offlineNotFoundCount, 0)
+      assert.equal(offlineRetryCount, 1)
+    })
+    await offlineContext.close()
+
     const noJsContext = await browser.newContext({
       javaScriptEnabled: false,
       viewport: { width: 390, height: 844 },
