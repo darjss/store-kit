@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -102,20 +103,107 @@ const runBrowserViewport = async (browser, name, viewport) => {
       assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
     })
 
-    const secondImage = page.getByRole('button', { name: /^2-р зураг:/ })
-    await secondImage.click()
+    const gallery = page.getByRole('region', { name: 'Барааны зургийн цомог' })
+    const galleryBox = await gallery.boundingBox()
+    const previousControlBox = await page.getByRole('button', { name: 'Өмнөх зураг' }).boundingBox()
+    const nextControlBox = await page.getByRole('button', { name: 'Дараах зураг' }).boundingBox()
+    await gallery.locator('img[alt]').evaluate(async image => {
+      if (image.complete && image.naturalWidth > 0) return
+      await new Promise((resolve, reject) => {
+        image.addEventListener('load', resolve, { once: true })
+        image.addEventListener('error', () => reject(new Error('Product image failed to load.')), {
+          once: true,
+        })
+      })
+    })
+    const initialImageUrl = await gallery.locator('img[alt]').getAttribute('src')
+    const pageOverflows = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    )
+    record(`${name}: carousel has stable responsive geometry and usable controls`, () => {
+      assert.ok(galleryBox)
+      assert.ok(previousControlBox)
+      assert.ok(nextControlBox)
+      assert.ok(galleryBox.width <= viewport.width)
+      assert.ok(galleryBox.height > 0)
+      assert.ok(previousControlBox.width >= 44 && previousControlBox.height >= 44)
+      assert.ok(nextControlBox.width >= 44 && nextControlBox.height >= 44)
+      assert.equal(pageOverflows, false)
+      assert.match(initialImageUrl ?? '', new RegExp(`^${origin.replaceAll('.', '\\.')}/media/`))
+    })
+
+    await gallery.focus()
+    await page.keyboard.press('End')
+    await page.getByRole('button', { name: /^4-р зураг:/ }).waitFor()
+    assert.equal(
+      await page.getByRole('button', { name: /^4-р зураг:/ }).getAttribute('aria-current'),
+      'true',
+    )
+    await page.keyboard.press('Home')
+    assert.equal(
+      await page.getByRole('button', { name: /^1-р зураг:/ }).getAttribute('aria-current'),
+      'true',
+    )
+    await page.keyboard.press('ArrowRight')
+    assert.equal(
+      await page.getByRole('button', { name: /^2-р зураг:/ }).getAttribute('aria-current'),
+      'true',
+    )
+
+    assert.ok(galleryBox)
+    await gallery.dispatchEvent('pointerdown', {
+      pointerId: 7,
+      pointerType: 'touch',
+      button: 0,
+      clientX: galleryBox.width * 0.75,
+      clientY: galleryBox.height / 2,
+    })
+    await gallery.dispatchEvent('pointerup', {
+      pointerId: 7,
+      pointerType: 'touch',
+      button: 0,
+      clientX: galleryBox.width * 0.25,
+      clientY: galleryBox.height / 2,
+    })
     await page.waitForFunction(
       () =>
-        document.querySelector('button[aria-label^="2-р зураг:"]')?.getAttribute('aria-current') ===
+        document.querySelector('button[aria-label^="3-р зураг:"]')?.getAttribute('aria-current') ===
         'true',
     )
-    const imageCurrent = await secondImage.getAttribute('aria-current')
+
+    const asphaltAlternate = page.getByRole('button', { name: /^4-р зураг:/ })
+    await asphaltAlternate.click()
+    const alternateUrl = await gallery.locator('img[alt]').getAttribute('src')
     const mediumVariant = page.getByRole('button', { name: 'M', exact: true })
     await mediumVariant.click()
     await page.waitForFunction(
       () => document.querySelector('button[aria-pressed="true"]')?.textContent?.trim() === 'M',
     )
-    const variantSelected = await mediumVariant.getAttribute('aria-pressed')
+    const retainedSizeImageUrl = await gallery.locator('img[alt]').getAttribute('src')
+    const cobaltColor = page.getByRole('button', { name: 'Кобальт', exact: true })
+    await cobaltColor.click()
+    const cobaltImageUrl = await gallery.locator('img[alt]').getAttribute('src')
+    const selectedSize = await page
+      .locator('fieldset')
+      .filter({ hasText: 'Хэмжээ' })
+      .locator('button[aria-pressed="true"]')
+      .textContent()
+    const mediumDisabledForCobalt = await mediumVariant.isDisabled()
+    const soldOutExtraLargeDisabled = await page
+      .getByRole('button', { name: 'XL', exact: true })
+      .isDisabled()
+    await page.getByRole('button', { name: /Дараах зураг/ }).click()
+    await page.waitForFunction(
+      () =>
+        document.querySelector('button[aria-label^="3-р зураг:"]')?.getAttribute('aria-current') ===
+        'true',
+    )
+    await page.getByRole('button', { name: /Өмнөх зураг/ }).click()
+    await page.waitForFunction(
+      () =>
+        document.querySelector('button[aria-label^="2-р зураг:"]')?.getAttribute('aria-current') ===
+        'true',
+    )
     await page.getByRole('button', { name: 'Нэгээр нэмэх' }).click()
     await page.waitForFunction(
       () =>
@@ -123,17 +211,32 @@ const runBrowserViewport = async (browser, name, viewport) => {
     )
     const selectedQuantity = await page.locator('output[aria-label="Сонгосон тоо"]').textContent()
     await page.getByRole('button', { name: /Сагсанд нэмэх/ }).click()
-    await page.getByRole('dialog', { name: 'Сагс' }).waitFor()
+    const cartDialog = page.getByRole('dialog', { name: 'Сагс' })
+    await cartDialog.waitFor()
     const cartCount = await page
       .locator('button[aria-label^="Сагс,"]')
       .first()
       .getAttribute('aria-label')
-    record(`${name}: image, variant, quantity, and add-to-cart controls are interactive`, () => {
-      assert.equal(imageCurrent, 'true')
-      assert.equal(variantSelected, 'true')
+    const cartImageUrl = await cartDialog.locator('article img').getAttribute('src')
+    const cobaltPressed = await cobaltColor.getAttribute('aria-pressed')
+    record(`${name}: keyboard, pointer swipe, variant images, and cart selection work`, () => {
+      assert.equal(retainedSizeImageUrl, alternateUrl)
+      assert.match(
+        cobaltImageUrl ?? '',
+        /c15fd6142ad1556886d1008b68445ad4457e4eaeae4b49dbe3f92176f2530a62/,
+      )
+      assert.equal(selectedSize?.trim(), 'L')
+      assert.equal(mediumDisabledForCobalt, true)
+      assert.equal(soldOutExtraLargeDisabled, true)
+      assert.equal(cobaltPressed, 'true')
       assert.equal(selectedQuantity?.trim(), '2')
       assert.equal(cartCount, 'Сагс, 2 бараа')
+      assert.match(
+        cartImageUrl ?? '',
+        /c15fd6142ad1556886d1008b68445ad4457e4eaeae4b49dbe3f92176f2530a62/,
+      )
     })
+    await cartDialog.getByText('L / Кобальт', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'Сагс хаах' }).click()
 
     serverRequests.length = 0
@@ -314,7 +417,27 @@ const runBrowserProof = async privateOrder => {
   const browser = await chromium.launch({ headless: true })
   try {
     await runBrowserViewport(browser, 'desktop browser', { width: 1440, height: 900 })
-    await runBrowserViewport(browser, 'mobile browser', { width: 390, height: 844 })
+    await runBrowserViewport(browser, '320px mobile browser', { width: 320, height: 720 })
+
+    const reducedMotionContext = await browser.newContext({
+      reducedMotion: 'reduce',
+      viewport: { width: 390, height: 844 },
+    })
+    const reducedMotionPage = await reducedMotionContext.newPage()
+    await reducedMotionPage.goto(`${origin}/products/shiljilt-bridge-coat`, {
+      waitUntil: 'domcontentloaded',
+    })
+    const reducedGallery = reducedMotionPage.getByRole('region', {
+      name: 'Барааны зургийн цомог',
+    })
+    await reducedGallery.waitFor()
+    const reducedAnimationName = await reducedGallery
+      .locator('img[alt]')
+      .evaluate(element => getComputedStyle(element).animationName)
+    record('reduced motion removes the carousel movement animation', () => {
+      assert.equal(reducedAnimationName, 'none')
+    })
+    await reducedMotionContext.close()
 
     const offlineContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
     const offlinePage = await offlineContext.newPage()
@@ -419,6 +542,25 @@ const runBrowserProof = async privateOrder => {
 }
 
 try {
+  const seedEnvironment = {
+    ...process.env,
+    STORE_KIT_APP: 'demo-solid-store',
+    STORE_KIT_PERSIST_TO: persistenceDirectory,
+  }
+  for (let index = 0; index < 2; index += 1) {
+    run(
+      'node',
+      [
+        '--experimental-strip-types',
+        '../../packages/tooling/catalog-seed.ts',
+        '--environment',
+        'local',
+        '--only',
+        'media',
+      ],
+      { env: seedEnvironment },
+    )
+  }
   run('vp', ['build'])
   run('vp', [
     'exec',
@@ -431,11 +573,6 @@ try {
     '--persist-to',
     persistenceDirectory,
   ])
-  const seedEnvironment = {
-    ...process.env,
-    STORE_KIT_APP: 'demo-solid-store',
-    STORE_KIT_PERSIST_TO: persistenceDirectory,
-  }
   run(
     'node',
     [
@@ -463,6 +600,19 @@ try {
 
   const seed = JSON.parse(await readFile(path.join(appDirectory, 'data/catalog.seed.json'), 'utf8'))
   const wranglerConfig = await readFile(path.join(appDirectory, 'wrangler.jsonc'), 'utf8')
+  const mediaHashes = await Promise.all(
+    seed.products.flatMap(product =>
+      product.images.map(async image => {
+        const source = await readFile(path.join(appDirectory, image.source))
+        const published = await readFile(path.join(appDirectory, 'public/media', image.r2Key))
+        return {
+          sourceHash: createHash('sha256').update(source).digest('hex'),
+          publishedHash: createHash('sha256').update(published).digest('hex'),
+          keyHash: path.basename(image.r2Key, path.extname(image.r2Key)),
+        }
+      }),
+    ),
+  )
   record('the original ДУНД seed has five controlled clothing categories', () => {
     assert.deepEqual(
       seed.categories.map(category => category.slug),
@@ -474,7 +624,12 @@ try {
     assert.ok(seed.products.every(product => product.images.length > 0))
     assert.equal(
       seed.products.find(product => product.slug === 'shiljilt-bridge-coat')?.images.length,
-      2,
+      4,
+    )
+    assert.ok(
+      seed.products
+        .filter(product => product.featured)
+        .every(product => product.images.length >= 4),
     )
     assert.ok(
       seed.products
@@ -483,22 +638,47 @@ try {
     )
     const allowed = new Set(['workday', 'off-duty', 'layering', 'travel', 'cold-weather'])
     assert.ok(seed.products.flatMap(product => product.useCases).every(tag => allowed.has(tag)))
-  })
-  record('Wrangler names only isolated ДУНД data, cache, and abuse-control resources', () => {
-    assert.match(wranglerConfig, /"database_name": "dund-demo-solid-store-\d+-db"/)
-    assert.match(wranglerConfig, /"kv_namespaces": \[\{ "binding": "CACHE", "id":/)
-    for (const binding of [
-      'CHECKOUT_RATE_LIMITER',
-      'PRIVATE_STATUS_RATE_LIMITER',
-      'BANK_CLAIM_RATE_LIMITER',
-      'QPAY_REFRESH_RATE_LIMITER',
-      'SEARCH_RATE_LIMITER',
-      'CART_RATE_LIMITER',
-    ]) {
-      assert.match(wranglerConfig, new RegExp(`"name": "${binding}"`))
+    for (const product of seed.products) {
+      const colorKeys = new Map()
+      for (const variant of product.variants.filter(variant => variant.stockQuantity > 0)) {
+        const primaryKey = variant.imageKeys[0]
+        const image = product.images.find(candidate => candidate.r2Key === primaryKey)
+        assert.ok(image)
+        assert.match(image.alt, new RegExp(variant.options.color, 'i'))
+        const existing = colorKeys.get(variant.options.color)
+        if (existing) assert.equal(existing, primaryKey)
+        else colorKeys.set(variant.options.color, primaryKey)
+      }
+      assert.equal(new Set(colorKeys.values()).size, colorKeys.size)
     }
-    assert.doesNotMatch(wranglerConfig, /plugged/i)
+    assert.ok(mediaHashes.every(media => media.sourceHash === media.keyHash))
+    assert.ok(mediaHashes.every(media => media.publishedHash === media.sourceHash))
   })
+  record(
+    'Wrangler names only isolated ДУНД data, cache, domain, and abuse-control resources',
+    () => {
+      assert.match(wranglerConfig, /"database_name": "dund-demo-solid-store-\d+-db"/)
+      assert.match(wranglerConfig, /"kv_namespaces": \[\{ "binding": "CACHE", "id":/)
+      assert.match(wranglerConfig, /"workers_dev": true/)
+      assert.match(
+        wranglerConfig,
+        /"routes": \[\{ "pattern": "dund\.darjs\.dev", "custom_domain": true \}\]/,
+      )
+      assert.match(wranglerConfig, /"PUBLIC_APP_URL": "https:\/\/dund\.darjs\.dev"/)
+      assert.match(wranglerConfig, /"PUBLIC_MEDIA_BASE_URL": "https:\/\/dund\.darjs\.dev\/media\/"/)
+      for (const binding of [
+        'CHECKOUT_RATE_LIMITER',
+        'PRIVATE_STATUS_RATE_LIMITER',
+        'BANK_CLAIM_RATE_LIMITER',
+        'QPAY_REFRESH_RATE_LIMITER',
+        'SEARCH_RATE_LIMITER',
+        'CART_RATE_LIMITER',
+      ]) {
+        assert.match(wranglerConfig, new RegExp(`"name": "${binding}"`))
+      }
+      assert.doesNotMatch(wranglerConfig, /plugged/i)
+    },
+  )
 
   worker = spawn(
     'vp',
@@ -512,6 +692,10 @@ try {
       '127.0.0.1',
       '--persist-to',
       persistenceDirectory,
+      '--var',
+      `PUBLIC_APP_URL:${origin}`,
+      '--var',
+      `PUBLIC_MEDIA_BASE_URL:${origin}/media/`,
       '--show-interactive-dev-session=false',
     ],
     {
@@ -577,8 +761,11 @@ try {
     assert.match(product.html, /DND-COAT-M-ASPHALT/)
     assert.match(product.html, />Хэмжээ<\/legend>/)
     assert.match(product.html, />Өнгө<\/legend>/)
-    assert.match(product.html, /2-р зураг:/)
+    assert.match(product.html, /4-р зураг:/)
     assert.match(product.html, /\/media\/products\/shiljilt-bridge-coat\//)
+    assert.match(product.html, /aria-roledescription="carousel"/)
+    assert.match(product.html, /Өмнөх зураг/)
+    assert.match(product.html, /Дараах зураг/)
     assert.match(product.html, /disabled aria-pressed="false">XL<\/button>/)
     assert.doesNotMatch(product.html, /stockQuantity/)
     assert.equal(

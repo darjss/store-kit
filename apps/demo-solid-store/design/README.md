@@ -31,7 +31,19 @@ Only the selected mock was copied into the project. The rejected mock and the pa
 | `assets/suuri-base-tshirt.webp` | 1122 × 1402 | White and cobalt base T-shirts |
 | `assets/shuluun-everyday-trousers.webp` | 1122 × 1402 | Asphalt and black straight trousers |
 
-All seven files are original generated assets for this fictional project. The Pi `codex_generate_image` tool used `gpt-image-2` through the Codex backend. No stock image or existing clothing-brand asset was used. The six delivered WebP assets were stripped and re-encoded at quality 82 for the storefront; each is 46–128 KB.
+All initial files are original generated assets for this fictional project. The Pi `codex_generate_image` tool used `gpt-image-2` through the Codex backend. No stock image or existing clothing-brand asset was used. The WebP assets were stripped and re-encoded at quality 82 for the storefront.
+
+The product carousel expansion adds 14 original color-specific photographs:
+
+| Product | Color assets |
+| --- | --- |
+| Шилжилт хүрэм | `shiljilt-bridge-coat-asphalt.webp`, `shiljilt-bridge-coat-cobalt.webp` |
+| Өдөр цамц | `udur-overshirt-white.webp`, `udur-overshirt-cobalt.webp`, `udur-overshirt-asphalt.webp` |
+| Дунд ноосон цамц | `dund-wool-mid-layer-asphalt.webp`, `dund-wool-mid-layer-coral.webp`, `dund-wool-mid-layer-cobalt.webp` |
+| Суурь футболк | `suuri-base-tshirt-white.webp`, `suuri-base-tshirt-cobalt.webp`, `suuri-base-tshirt-asphalt.webp` |
+| Шулуун өмд | `shuluun-everyday-trousers-asphalt.webp`, `shuluun-everyday-trousers-black.webp`, `shuluun-everyday-trousers-cobalt.webp` |
+
+The color images use the same honey-amber threshold set, hard winter light, pure-white planes, and cool-silver rails. Product-specific views alternate between a clear front, back, worn fit, flat lay, and detail view. Optimized files are 25–167 KB. The catalog publishes byte-identical content-addressed copies under `public/media/`.
 
 ## Mock limits
 
@@ -67,7 +79,7 @@ Inspect the small neck area before production delivery. Crop or retouch it if it
 
 The four catalog assets use the hero and coat images only as visual references for the honey-amber set, hard winter light, cobalt accent, and practical product-photography language. Their prompts requested the named original garment and color variants in a portrait 4:5, square-crop-safe composition. Every prompt prohibited people, logos, labels, readable text, watermarks, beige styling, grunge, editorial fashion layouts, Uniqlo products, and Uniqlo visual styling.
 
-The demo publishes content-addressed copies under `public/media/` because this phase was authorized to create only D1, KV, and Worker resources. Move the same immutable keys to a dedicated DUND R2 media domain before production launch.
+The demo publishes content-addressed copies under `public/media/`. The DUND Worker serves those immutable assets on its application custom domain. The idempotent media-sync command verifies each key against the source SHA-256 hash before deployment.
 
 ## Final image prompts
 

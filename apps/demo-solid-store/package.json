@@ -8,6 +8,8 @@
     "check": "cd ../.. && vp check apps/demo-solid-store",
     "dev": "vp dev",
     "generate-types": "vp exec wrangler types",
+    "media:sync": "STORE_KIT_APP=demo-solid-store node --experimental-strip-types ../../packages/tooling/catalog-seed.ts --environment local --only media",
+    "media:sync:production": "STORE_KIT_APP=demo-solid-store node --experimental-strip-types ../../packages/tooling/catalog-seed.ts --environment production --only media",
     "migrate:local": "vp exec wrangler d1 migrations apply DB --local",
     "preview": "vp build && vp exec wrangler dev",
     "seed:local": "STORE_KIT_APP=demo-solid-store node --experimental-strip-types ../../packages/tooling/catalog-seed.ts --environment local --only data",

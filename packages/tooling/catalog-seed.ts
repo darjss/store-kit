@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
@@ -40,6 +40,7 @@ const storeName = storeApp === 'plugged' ? 'Plugged' : 'ДУНД'
 const seedPath = resolve(storeDirectory, 'data/catalog.seed.json')
 const wranglerConfigPath = resolve(storeDirectory, 'wrangler.jsonc')
 const generatedSqlPath = resolve(storeDirectory, '.wrangler/catalog.seed.sql')
+const staticMediaDirectory = resolve(storeDirectory, 'public/media')
 const persistTo = process.env.STORE_KIT_PERSIST_TO?.trim()
 const allowedUseCases = new Set(
   storeApp === 'plugged'
@@ -307,6 +308,11 @@ const assetPath = (source: string) => {
   return path
 }
 
+const fileHash = async (path: string) =>
+  createHash('sha256')
+    .update(await readFile(path))
+    .digest('hex')
+
 const validateAssets = async (seed: CatalogSeed) => {
   await Promise.all(
     seed.products
@@ -316,7 +322,44 @@ const validateAssets = async (seed: CatalogSeed) => {
         if (!(await stat(path)).isFile()) {
           throw new Error(`Image source is not a file: ${image.source}`)
         }
+        const expectedHash = basename(image.r2Key, extname(image.r2Key))
+        const actualHash = await fileHash(path)
+        if (actualHash !== expectedHash) {
+          throw new Error(
+            `Image key is not content-addressed: ${image.r2Key} must contain ${actualHash}.`,
+          )
+        }
       }),
+  )
+}
+
+const staticMediaPath = (key: string) => {
+  const path = resolve(staticMediaDirectory, key)
+  const fromMedia = relative(staticMediaDirectory, path)
+  if (fromMedia === '..' || fromMedia.startsWith(`..${sep}`) || isAbsolute(fromMedia)) {
+    throw new Error(`Static media key escapes public/media: ${key}`)
+  }
+  return path
+}
+
+const syncDundStaticMedia = async (seed: CatalogSeed) => {
+  const images = seed.products.flatMap(product => product.images)
+  await Promise.all(
+    images.map(async image => {
+      const source = assetPath(image.source)
+      const destination = staticMediaPath(image.r2Key)
+      const expectedHash = await fileHash(source)
+      let currentHash: string | undefined
+      try {
+        currentHash = await fileHash(destination)
+      } catch {}
+      if (currentHash === expectedHash) return
+      await mkdir(dirname(destination), { recursive: true })
+      await writeFile(destination, await readFile(source))
+      if ((await fileHash(destination)) !== expectedHash) {
+        throw new Error(`Static media verification failed for ${image.r2Key}.`)
+      }
+    }),
   )
 }
 
@@ -364,11 +407,6 @@ const uploadImages = async (
     ])
   }, Promise.resolve())
 }
-
-const fileHash = async (path: string) =>
-  createHash('sha256')
-    .update(await readFile(path))
-    .digest('hex')
 
 const verifyImages = async (
   seed: CatalogSeed,
@@ -418,7 +456,7 @@ const sqlJson = (value: Record<string, unknown>) =>
 const upsert = (table: string, columns: string[], values: string[], updates: string[]) =>
   `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${values.join(', ')}) ON CONFLICT(id) DO UPDATE SET ${updates.map(column => `${column} = excluded.${column}`).join(', ')};`
 
-const buildSql = (seed: CatalogSeed) => {
+const buildSql = (seed: CatalogSeed, preserveVariantStock = false) => {
   const statements = ['PRAGMA foreign_keys = ON;']
   const brandIds = new Map(seed.brands.map(brand => [brand.slug, brand.id]))
   const categoryIds = new Map(seed.categories.map(category => [category.slug, category.id]))
@@ -557,6 +595,11 @@ const buildSql = (seed: CatalogSeed) => {
   }
 
   for (const product of seed.products) {
+    if (product.images.length > 0) {
+      statements.push(
+        `UPDATE product_image SET sort_order = sort_order + 1000000 WHERE product_id = ${sqlText(product.id)} AND id IN (${product.images.map(image => sqlText(image.id)).join(', ')});`,
+      )
+    }
     for (const image of product.images) {
       statements.push(
         upsert(
@@ -620,7 +663,7 @@ const buildSql = (seed: CatalogSeed) => {
             'options',
             'price_mnt',
             'compare_at_price_mnt',
-            'stock_quantity',
+            ...(preserveVariantStock ? [] : ['stock_quantity']),
             'active',
             'sort_order',
             'updated_at',
@@ -654,7 +697,8 @@ const importRows = async (
   useNamedEnvironment = true,
 ) => {
   await mkdir(dirname(generatedSqlPath), { recursive: true })
-  await writeFile(generatedSqlPath, buildSql(seed), { mode: 0o600 })
+  const preserveVariantStock = environment !== 'local' && storeApp === 'demo-solid-store'
+  await writeFile(generatedSqlPath, buildSql(seed, preserveVariantStock), { mode: 0o600 })
   try {
     const target =
       environment === 'local'
@@ -709,6 +753,13 @@ const main = async () => {
   const seed = await parseSeed()
   await validateAssets(seed)
 
+  if (storeApp === 'demo-solid-store' && target.scope === 'media') {
+    process.stdout.write(`Preparing ${target.environment} ДУНД static media.\n`)
+    await syncDundStaticMedia(seed)
+    printCounts(seed, target.scope)
+    return
+  }
+
   if (target.environment === 'local') {
     process.stdout.write(`Preparing local ${storeName} data seed. Catalog media remains remote.\n`)
     await importRows(seed, target.environment)
@@ -717,8 +768,6 @@ const main = async () => {
   }
 
   if (storeApp === 'demo-solid-store') {
-    if (target.scope !== 'data') throw new Error('Remote ДУНД seeding writes D1 data only.')
-
     const config = parse(await readFile(wranglerConfigPath, 'utf8')) as SeedWranglerConfig
     const d1 = config.d1_databases?.find(database => database.binding === d1Binding)
     if (!d1?.database_name || !d1.database_id) {

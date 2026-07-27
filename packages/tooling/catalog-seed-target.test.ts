@@ -16,10 +16,13 @@ describe('catalog seed target selection', () => {
     ).toEqual({ environment: 'production', scope: 'data' })
   })
 
-  test('rejects remote ДУНД media without creating an R2 resource', () => {
-    expect(() =>
+  test('accepts local and remote ДУНД static media synchronization without an R2 bucket', () => {
+    expect(
+      catalogSeedTarget(['--environment', 'local', '--only', 'media'], {}, 'demo-solid-store'),
+    ).toEqual({ environment: 'local', scope: 'media' })
+    expect(
       catalogSeedTarget(['--environment', 'production', '--only', 'media'], {}, 'demo-solid-store'),
-    ).toThrow('Remote ДУНД seeding writes D1 data only')
+    ).toEqual({ environment: 'production', scope: 'media' })
   })
 
   test('requires an explicit development environment and bucket', () => {

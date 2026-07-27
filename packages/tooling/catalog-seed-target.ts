@@ -6,9 +6,9 @@ export const pluggedDevelopmentMediaBaseUrl = 'https://storekitcdn.plugged.darjs
 export type CatalogSeedScope = 'data' | 'media'
 
 export type CatalogSeedTarget =
-  | { environment: 'local'; scope: 'data' }
+  | { environment: 'local'; scope: CatalogSeedScope }
   | { environment: CatalogSeedRemoteEnvironment; scope: 'data'; bucket?: string }
-  | { environment: CatalogSeedRemoteEnvironment; scope: 'media'; bucket: string }
+  | { environment: CatalogSeedRemoteEnvironment; scope: 'media'; bucket?: string }
 
 export type CatalogSeedStore = 'plugged' | 'demo-solid-store'
 
@@ -49,12 +49,13 @@ export const catalogSeedTarget = (
   }
 
   if (selectedEnvironment === 'local') {
-    if (scope !== 'data') throw new Error('Local catalog seeding writes D1 data only.')
+    if (store === 'plugged' && scope !== 'data') {
+      throw new Error('Local Plugged catalog seeding writes D1 data only.')
+    }
     return { environment: selectedEnvironment, scope }
   }
 
   if (store === 'demo-solid-store') {
-    if (scope !== 'data') throw new Error('Remote ДУНД seeding writes D1 data only.')
     return { environment: selectedEnvironment, scope }
   }
 

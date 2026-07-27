@@ -3,6 +3,8 @@
   "name": "dund-demo-solid-store-20260726201612",
   "main": "worker.js",
   "compatibility_date": "2026-07-24",
+  "workers_dev": true,
+  "routes": [{ "pattern": "dund.darjs.dev", "custom_domain": true }],
   "compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
   "cache": {
     "enabled": true,
@@ -56,8 +58,8 @@
   ],
   "vars": {
     "DEPLOYMENT_ENV": "production",
-    "PUBLIC_APP_URL": "https://dund-demo-solid-store-20260726201612.darjs.workers.dev",
-    "PUBLIC_MEDIA_BASE_URL": "https://dund-demo-solid-store-20260726201612.darjs.workers.dev/media/",
+    "PUBLIC_APP_URL": "https://dund.darjs.dev",
+    "PUBLIC_MEDIA_BASE_URL": "https://dund.darjs.dev/media/",
     "QPAY_BASE_URL": "https://merchant.qpay.mn",
   },
   "secrets": {
