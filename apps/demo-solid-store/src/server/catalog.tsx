@@ -698,7 +698,7 @@ export async function getProductFrame(input: unknown) {
         </div>
       </header>
 
-      <props.purchase $key={product.id} product={purchaseProduct} />
+      {props.purchase({ $key: product.id, product: purchaseProduct })}
 
       <section
         class="grid border-y-3 border-ink bg-surface lg:grid-cols-2"
