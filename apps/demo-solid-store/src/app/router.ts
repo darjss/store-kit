@@ -9,6 +9,15 @@ import ProductPage from '~/routes/ProductPage'
 
 import { catalogSearchStandardSchema } from './catalog-search'
 
+export const routeTitle = (pathname: string) => {
+  if (pathname === '/') return 'Нүүр · ДУНД'
+  if (pathname === '/products') return 'Капсул · ДУНД'
+  if (pathname.startsWith('/products/')) return 'Бараа · ДУНД'
+  if (pathname === '/checkout') return 'Захиалга · ДУНД'
+  if (pathname.startsWith('/orders/')) return 'Захиалгын төлөв · ДУНД'
+  return '404 · ДУНД'
+}
+
 export const Router = createRouter({
   routes: [
     { path: '/', component: HomePage },

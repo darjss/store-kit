@@ -28,3 +28,11 @@ export interface PurchaseProduct {
   images: StoreImage[]
   variants: PurchaseVariant[]
 }
+
+export interface ProductPageData {
+  product: PurchaseProduct
+  category: { name: string; href: string }
+  brandName: string
+  useCaseText: string
+  shortDescription: string
+}

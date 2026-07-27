@@ -1,14 +1,39 @@
-import { Show, createSignal } from 'solid-js'
+import { useLocation, useNavigate } from '@solidjs/router'
+import { Show, createEffect, createSignal, untrack } from 'solid-js'
 import type { ParentProps } from 'solid-js'
 
-import { paths } from '~/app/router'
+import { paths, routeTitle } from '~/app/router'
 import { CartDialog, useCart } from '~/cart/CartProvider'
 import { CatalogSearchDialog } from '~/components/CatalogSearchDialog'
 
 export function AppShell(props: ParentProps) {
   const [searchOpen, setSearchOpen] = createSignal(false)
+  const location = useLocation()
+  const navigate = useNavigate()
   const cart = useCart()
+  let currentPathname = untrack(() => location.pathname)
   let searchTrigger: HTMLElement | undefined
+
+  createEffect(
+    () => location.pathname,
+    pathname => {
+      document.title = routeTitle(pathname)
+      if (pathname !== currentPathname) {
+        queueMicrotask(() => document.querySelector<HTMLElement>('#main-content')?.focus())
+      }
+      currentPathname = pathname
+    },
+  )
+
+  const openCatalog = (href: string, event: MouseEvent) => {
+    event.preventDefault()
+    navigate(href)
+  }
+
+  const catalogViewIsCurrent = (name: string, value: string) =>
+    location.pathname === '/products' && new URLSearchParams(location.search).get(name) === value
+      ? 'page'
+      : undefined
 
   const setSearchVisibility = (open: boolean) => {
     if (open && document.activeElement instanceof HTMLElement) {
@@ -23,6 +48,7 @@ export function AppShell(props: ParentProps) {
       <a
         class="fixed top-2 left-2 z-60 translate-y-[-150%] bg-white px-4 py-3 font-bold text-ink outline-3 outline-cobalt focus:translate-y-0"
         href="#main-content"
+        target="_self"
         onClick={() =>
           queueMicrotask(() => document.querySelector<HTMLElement>('#main-content')?.focus())
         }
@@ -48,12 +74,18 @@ export function AppShell(props: ParentProps) {
             <a
               class="flex min-h-11 items-center border-l border-ink/20 px-5 font-semibold text-ink no-underline"
               href="/products?category=outerwear"
+              target="_self"
+              aria-current={catalogViewIsCurrent('category', 'outerwear')}
+              onClick={event => openCatalog('/products?category=outerwear', event)}
             >
               Гадуур хувцас
             </a>
             <a
               class="flex min-h-11 items-center border-x border-ink/20 px-5 font-semibold text-ink no-underline"
               href="/products?useCase=workday"
+              target="_self"
+              aria-current={catalogViewIsCurrent('useCase', 'workday')}
+              onClick={event => openCatalog('/products?useCase=workday', event)}
             >
               Ажлын өдөр
             </a>

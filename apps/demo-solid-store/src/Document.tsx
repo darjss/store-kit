@@ -1,5 +1,13 @@
-import { HydrationScript } from '@solidjs/web'
+import { HydrationScript, getRequestEvent } from '@solidjs/web'
 import type { ParentProps } from 'solid-js'
+
+import { routeTitle } from '~/app/router'
+
+const currentPathname = () => {
+  if (typeof window !== 'undefined') return window.location.pathname
+  const request = getRequestEvent()?.request
+  return request ? new URL(request.url).pathname : '/'
+}
 
 export default function Document(props: ParentProps) {
   return (
@@ -13,7 +21,7 @@ export default function Document(props: ParentProps) {
         />
         <meta name="theme-color" content="#f5ac00" />
         <link rel="icon" href="data:," />
-        <title>ДУНД · Гаднаас дотогш</title>
+        <title>{routeTitle(currentPathname())}</title>
         <HydrationScript />
       </head>
       <body class="min-w-80 overflow-x-clip bg-white pb-[calc(4.25rem+env(safe-area-inset-bottom))] text-ink lg:pb-0">

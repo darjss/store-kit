@@ -15,8 +15,7 @@ import { catalogSearchSchema, toCatalogFilters } from '~/app/catalog-search'
 import type { CatalogSearch } from '~/app/catalog-search'
 import { formatMnt } from '~/catalog/format'
 import { mediaUrl } from '~/catalog/media'
-import type { PurchaseProduct, StoreImage } from '~/catalog/model'
-import { getStoreEnvironment } from '~/server/environment'
+import type { ProductPageData, PurchaseProduct, StoreImage } from '~/catalog/model'
 
 const useCaseLabels: Record<string, string> = {
   'workday': 'Ажлын өдөр',
@@ -122,19 +121,6 @@ export async function searchCatalog(input: unknown) {
   }
 
   const query = input.query.trim()
-  const cache = getStoreEnvironment().CACHE
-  const cacheKey = `dund:data:v2:catalog-search:${encodeURIComponent(query.toLocaleLowerCase('mn-MN'))}`
-  const cached: unknown = await cache.get(cacheKey, 'json')
-  if (Value.Check(catalogSearchResultSchema, cached)) {
-    return respond(cached, {
-      headers: {
-        'cache-control': 'private, no-store',
-        'x-dund-data-cache': 'HIT',
-      },
-    })
-  }
-  if (cached !== null) await cache.delete(cacheKey)
-
   const result = await commerce.catalog.listProducts({ query, limit: 8 })
   const searchResult: CatalogSearchResult = {
     items: result.value.items.map(product => {
@@ -165,13 +151,7 @@ export async function searchCatalog(input: unknown) {
       { status: 500, headers: { 'cache-control': 'private, no-store' } },
     )
   }
-  await cache.put(cacheKey, JSON.stringify(searchResult), { expirationTtl: 60 })
-  return respond(searchResult, {
-    headers: {
-      'cache-control': 'private, no-store',
-      'x-dund-data-cache': 'MISS',
-    },
-  })
+  return searchResult
 }
 
 export async function getHomeFrame() {
@@ -338,6 +318,10 @@ export async function getHomeFrame() {
   )
 }
 
+interface CatalogFrameProps {
+  filters: (props: { children: Element }) => Element
+}
+
 export async function getCatalogFrame(input: unknown) {
   const search = validateSearch(input) satisfies CatalogSearch
   const filters = toCatalogFilters(search)
@@ -348,7 +332,7 @@ export async function getCatalogFrame(input: unknown) {
   ])
 
   const products = result.value.items
-  return () => (
+  return (props: CatalogFrameProps) => (
     <main id="main-content" tabindex="-1">
       <header class="bg-cobalt px-[clamp(1rem,4vw,4rem)] py-[clamp(3rem,7vw,6rem)] text-white">
         <div class="mx-auto max-w-360">
@@ -394,6 +378,7 @@ export async function getCatalogFrame(input: unknown) {
             <a
               class="inline-flex min-h-11 shrink-0 snap-start items-center border-2 border-ink px-4 font-semibold text-ink no-underline aria-[current=page]:bg-amber"
               href={catalogHref(filters, { useCase: undefined })}
+              target="_self"
               aria-current={!filters.useCase ? 'page' : undefined}
             >
               Бүх хэрэглээ
@@ -402,6 +387,7 @@ export async function getCatalogFrame(input: unknown) {
               <a
                 class="inline-flex min-h-11 shrink-0 snap-start items-center border-2 border-ink px-4 font-semibold text-ink no-underline aria-[current=page]:bg-amber"
                 href={catalogHref(filters, { useCase: slug })}
+                target="_self"
                 aria-current={filters.useCase === slug ? 'page' : undefined}
               >
                 {label}
@@ -409,56 +395,58 @@ export async function getCatalogFrame(input: unknown) {
             ))}
           </nav>
 
-          <details
-            class="mt-3 border-2 border-ink bg-white"
-            open={Boolean(filters.category || filters.brand)}
-          >
-            <summary class="flex min-h-12 cursor-pointer items-center justify-between px-4 font-bold">
-              Төрөл, брэндээр шүүх <span aria-hidden="true">＋</span>
-            </summary>
-            <div class="grid gap-5 border-t-2 border-ink p-4 md:grid-cols-2">
-              <div>
-                <strong class="text-cobalt">Төрөл</strong>
-                <div class="mt-2 flex flex-wrap gap-2">
-                  <a
-                    class="inline-flex min-h-11 items-center border-2 border-ink px-3 font-semibold text-ink no-underline"
-                    href={catalogHref(filters, { category: undefined })}
-                  >
-                    Бүх төрөл
-                  </a>
-                  {categories.map(category => (
+          {props.filters({
+            children: (
+              <div class="grid gap-5 border-t-2 border-ink p-4 md:grid-cols-2">
+                <div>
+                  <strong class="text-cobalt">Төрөл</strong>
+                  <div class="mt-2 flex flex-wrap gap-2">
                     <a
-                      class="inline-flex min-h-11 items-center border-2 border-ink px-3 font-semibold text-ink no-underline aria-[current=page]:bg-amber"
-                      href={catalogHref(filters, { category: category.slug })}
-                      aria-current={filters.category === category.slug ? 'page' : undefined}
+                      class="inline-flex min-h-11 items-center border-2 border-ink px-3 font-semibold text-ink no-underline"
+                      href={catalogHref(filters, { category: undefined })}
+                      target="_self"
+                      aria-current={!filters.category ? 'page' : undefined}
                     >
-                      {category.name}
+                      Бүх төрөл
                     </a>
-                  ))}
+                    {categories.map(category => (
+                      <a
+                        class="inline-flex min-h-11 items-center border-2 border-ink px-3 font-semibold text-ink no-underline aria-[current=page]:bg-amber"
+                        href={catalogHref(filters, { category: category.slug })}
+                        target="_self"
+                        aria-current={filters.category === category.slug ? 'page' : undefined}
+                      >
+                        {category.name}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <strong class="text-cobalt">Брэнд</strong>
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <a
+                      class="inline-flex min-h-11 items-center border-2 border-cobalt px-3 font-semibold text-cobalt no-underline"
+                      href={catalogHref(filters, { brand: undefined })}
+                      target="_self"
+                      aria-current={!filters.brand ? 'page' : undefined}
+                    >
+                      Бүх брэнд
+                    </a>
+                    {brands.map(brand => (
+                      <a
+                        class="inline-flex min-h-11 items-center border-2 border-cobalt px-3 font-semibold text-cobalt no-underline aria-[current=page]:bg-cobalt aria-[current=page]:text-white"
+                        href={catalogHref(filters, { brand: brand.slug })}
+                        target="_self"
+                        aria-current={filters.brand === brand.slug ? 'page' : undefined}
+                      >
+                        {brand.name}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div>
-                <strong class="text-cobalt">Брэнд</strong>
-                <div class="mt-2 flex flex-wrap gap-2">
-                  <a
-                    class="inline-flex min-h-11 items-center border-2 border-cobalt px-3 font-semibold text-cobalt no-underline"
-                    href={catalogHref(filters, { brand: undefined })}
-                  >
-                    Бүх брэнд
-                  </a>
-                  {brands.map(brand => (
-                    <a
-                      class="inline-flex min-h-11 items-center border-2 border-cobalt px-3 font-semibold text-cobalt no-underline aria-[current=page]:bg-cobalt aria-[current=page]:text-white"
-                      href={catalogHref(filters, { brand: brand.slug })}
-                      aria-current={filters.brand === brand.slug ? 'page' : undefined}
-                    >
-                      {brand.name}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </details>
+            ),
+          })}
 
           <div class="mt-3 flex flex-wrap items-end justify-between gap-3">
             <div class="flex flex-wrap items-center gap-2" aria-label="Идэвхтэй шүүлтүүр">
@@ -466,6 +454,7 @@ export async function getCatalogFrame(input: unknown) {
                 <a
                   class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
                   href={catalogHref(filters, { query: undefined })}
+                  target="_self"
                 >
                   “{filters.query}” ×
                 </a>
@@ -474,6 +463,7 @@ export async function getCatalogFrame(input: unknown) {
                 <a
                   class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
                   href={catalogHref(filters, { category: undefined })}
+                  target="_self"
                 >
                   {categories.find(category => category.slug === filters.category)?.name ??
                     filters.category}{' '}
@@ -484,6 +474,7 @@ export async function getCatalogFrame(input: unknown) {
                 <a
                   class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
                   href={catalogHref(filters, { brand: undefined })}
+                  target="_self"
                 >
                   {brands.find(brand => brand.slug === filters.brand)?.name ?? filters.brand} ×
                 </a>
@@ -492,12 +483,17 @@ export async function getCatalogFrame(input: unknown) {
                 <a
                   class="inline-flex min-h-11 items-center border border-cobalt px-3 font-semibold text-cobalt no-underline"
                   href={catalogHref(filters, { useCase: undefined })}
+                  target="_self"
                 >
                   {useCaseLabels[filters.useCase] ?? filters.useCase} ×
                 </a>
               )}
               {(filters.query || filters.category || filters.brand || filters.useCase) && (
-                <a class="inline-flex min-h-11 items-center font-bold text-alert" href="/products">
+                <a
+                  class="inline-flex min-h-11 items-center font-bold text-alert"
+                  href="/products"
+                  target="_self"
+                >
                   Бүгдийг цэвэрлэх
                 </a>
               )}
@@ -609,37 +605,12 @@ export async function getCatalogFrame(input: unknown) {
   )
 }
 
-interface ProductFrameProps {
-  purchase: (props: { $key?: string; product: PurchaseProduct }) => Element
-}
-
-export async function getProductFrame(input: unknown) {
+export async function getProductPage(input: unknown) {
   const slug = validateSlug(input)
   const result = await commerce.catalog.getProduct(slug)
-  if (result.status === 'error') {
-    return (_props: ProductFrameProps) => (
-      <main
-        id="main-content"
-        tabindex="-1"
-        class="grid min-h-[70svh] place-content-center bg-amber px-5 text-center"
-      >
-        <p class="font-bold text-cobalt">404 / БАРАА ОЛДСОНГҮЙ</p>
-        <h1 class="mt-3 text-[clamp(2.75rem,9vw,6rem)] leading-none font-extrabold">
-          Энэ бараа байхгүй байна.
-        </h1>
-        <p class="mt-4 text-lg">Холбоосоо шалгаад капсул руу буцна уу.</p>
-        <a
-          class="mx-auto mt-7 inline-flex min-h-12 items-center bg-cobalt px-5 font-bold text-white no-underline"
-          href="/products"
-        >
-          Бүх бараа →
-        </a>
-      </main>
-    )
-  }
+  if (result.status === 'error') return null
 
   const product = result.value
-  const details = product.details ?? {}
   const purchaseProduct: PurchaseProduct = {
     id: product.id,
     slug: product.slug,
@@ -663,43 +634,32 @@ export async function getProductFrame(input: unknown) {
     })),
   }
 
-  return (props: ProductFrameProps) => (
-    <main id="main-content" tabindex="-1">
-      <header class="grid border-b-3 border-ink bg-white lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.36fr)]">
-        <div class="px-[clamp(1rem,4vw,4rem)] py-[clamp(3rem,7vw,6rem)]">
-          <a
-            class="inline-flex min-h-11 items-center font-bold text-cobalt"
-            href={product.category ? `/products?category=${product.category.slug}` : '/products'}
-          >
-            ← {product.category?.name ?? 'Бүх бараа'}
-          </a>
-          <p class="mt-6 font-bold text-cobalt">
-            {product.brand?.name ?? 'ДУНД'} /{' '}
-            {product.useCases
-              .map(useCase => useCaseLabels[useCase])
-              .filter((label): label is string => Boolean(label))
-              .join(' · ') || 'Өдөр тутам'}
-          </p>
-          <h1 class="mt-3 max-w-[14ch] text-[clamp(3rem,8vw,5.75rem)] leading-[0.9] font-extrabold tracking-[-0.035em] text-balance">
-            {product.name}
-          </h1>
-          <p class="mt-6 max-w-[58ch] text-xl leading-relaxed text-ink/70">
-            {product.shortDescription}
-          </p>
-        </div>
-        <div class="flex items-end bg-amber p-[clamp(1rem,4vw,3rem)]">
-          <p class="m-0 text-2xl font-extrabold">
-            −24° → +23°
-            <br />
-            <span class="text-base font-semibold">
-              Энэ хэсгийн дулааны үүргийг доороос шалгана уу.
-            </span>
-          </p>
-        </div>
-      </header>
+  return {
+    product: purchaseProduct,
+    category: {
+      name: product.category?.name ?? 'Бүх бараа',
+      href: product.category ? `/products?category=${product.category.slug}` : '/products',
+    },
+    brandName: product.brand?.name ?? 'ДУНД',
+    useCaseText:
+      product.useCases
+        .map(useCase => useCaseLabels[useCase])
+        .filter((label): label is string => Boolean(label))
+        .join(' · ') || 'Өдөр тутам',
+    shortDescription: product.shortDescription ?? 'Тайлбар шинэчлэгдэж байна.',
+  } satisfies ProductPageData
+}
 
-      {props.purchase({ $key: product.id, product: purchaseProduct })}
+export async function getProductDetailsFrame(input: unknown) {
+  const slug = validateSlug(input)
+  const result = await commerce.catalog.getProduct(slug)
+  if (result.status === 'error') return () => <div />
 
+  const product = result.value
+  const details = product.details ?? {}
+
+  return () => (
+    <div>
       <section
         class="grid border-y-3 border-ink bg-surface lg:grid-cols-2"
         aria-labelledby="description-title"
@@ -748,6 +708,6 @@ export async function getProductFrame(input: unknown) {
           )}
         </div>
       </section>
-    </main>
+    </div>
   )
 }

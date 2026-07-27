@@ -1,11 +1,9 @@
-import { query } from '@solidjs/router'
+import { useNavigate } from '@solidjs/router'
 import type { CatalogSearchResult } from '@store-kit/contracts/catalog'
 import { For, Show, createEffect, createSignal, onSettled } from 'solid-js'
 
 import { formatMnt } from '~/catalog/format'
 import { searchCatalog } from '~/server/catalog'
-
-const findCatalogMatches = query(searchCatalog, 'dund-catalog-search')
 
 const stockLabel = (status: CatalogSearchResult['items'][number]['stockStatus']) => {
   if (status === 'sold-out') return 'Дууссан'
@@ -23,6 +21,7 @@ export function CatalogSearchDialog(props: {
   open: () => boolean
   setOpen: (open: boolean) => void
 }) {
+  const navigate = useNavigate()
   const [queryText, setQueryText] = createSignal('')
   const [state, setState] = createSignal<SearchState>({ type: 'prompt' })
   let dialog: HTMLDialogElement | undefined
@@ -38,11 +37,17 @@ export function CatalogSearchDialog(props: {
 
   const runSearch = async (value: string, version: number) => {
     try {
-      const result = await findCatalogMatches({ query: value })
+      const result = await searchCatalog({ query: value })
       if (version === requestVersion) setState({ type: 'ready', result })
     } catch {
       if (version === requestVersion) setState({ type: 'error' })
     }
+  }
+
+  const openCatalog = (href: string, event: MouseEvent) => {
+    event.preventDefault()
+    close()
+    navigate(href)
   }
 
   const updateQuery = (value: string) => {
@@ -213,21 +218,24 @@ export function CatalogSearchDialog(props: {
           <a
             class="inline-flex min-h-11 items-center border-2 border-white px-4 font-semibold text-white no-underline"
             href="/products?useCase=cold-weather"
-            onClick={close}
+            target="_self"
+            onClick={event => openCatalog('/products?useCase=cold-weather', event)}
           >
             Хүйтэн өдөр
           </a>
           <a
             class="inline-flex min-h-11 items-center border-2 border-white px-4 font-semibold text-white no-underline"
             href="/products?useCase=workday"
-            onClick={close}
+            target="_self"
+            onClick={event => openCatalog('/products?useCase=workday', event)}
           >
             Ажлын өдөр
           </a>
           <a
             class="inline-flex min-h-11 items-center border-2 border-white px-4 font-semibold text-white no-underline"
             href="/products?useCase=travel"
-            onClick={close}
+            target="_self"
+            onClick={event => openCatalog('/products?useCase=travel', event)}
           >
             Аялал
           </a>

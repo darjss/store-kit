@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { chromium } from 'playwright'
+
 const appDirectory = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const persistenceDirectory = await mkdtemp(path.join(tmpdir(), 'dund-worker-test-'))
 const port = 39_000 + (process.pid % 500)
@@ -51,20 +53,185 @@ const fetchHtml = async pathname => {
   return { response, html: await response.text() }
 }
 
-const fetchChunks = async pathname => {
-  const response = await fetch(`${origin}${pathname}`, { headers: { accept: 'text/html' } })
-  const chunks = []
-  let html = ''
-  const decoder = new TextDecoder()
-  for await (const chunk of response.body) {
-    chunks.push(chunk)
-    html += decoder.decode(chunk, { stream: true })
+const occurrenceCount = (source, value) => source.split(value).length - 1
+
+const runBrowserViewport = async (browser, name, viewport) => {
+  const context = await browser.newContext({ viewport })
+  const page = await context.newPage()
+  const runtimeErrors = []
+  const serverRequests = []
+  page.on('pageerror', error => runtimeErrors.push(error.stack ?? error.message))
+  page.on('console', message => {
+    if (message.type() === 'error') runtimeErrors.push(`console.error: ${message.text()}`)
+  })
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/_server') serverRequests.push(request.url())
+  })
+
+  try {
+    serverRequests.length = 0
+    const directResponse = await page.goto(`${origin}/products/shiljilt-bridge-coat`, {
+      waitUntil: 'domcontentloaded',
+    })
+    await page.getByRole('heading', { level: 1, name: 'Шилжилт хүрэм' }).waitFor()
+    await page.getByRole('button', { name: /Сагсанд нэмэх/ }).waitFor()
+    await page.waitForTimeout(150)
+    record(`${name}: direct product hydration adopts without a boot server-function fetch`, () => {
+      assert.equal(directResponse?.status(), 200)
+      assert.equal(serverRequests.length, 0)
+      assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+    })
+
+    const secondImage = page.getByRole('button', { name: /^2-р зураг:/ })
+    await secondImage.click()
+    await page.waitForFunction(
+      () =>
+        document.querySelector('button[aria-label^="2-р зураг:"]')?.getAttribute('aria-current') ===
+        'true',
+    )
+    const imageCurrent = await secondImage.getAttribute('aria-current')
+    const mediumVariant = page.getByRole('button', { name: 'M', exact: true })
+    await mediumVariant.click()
+    await page.waitForFunction(
+      () => document.querySelector('button[aria-pressed="true"]')?.textContent?.trim() === 'M',
+    )
+    const variantSelected = await mediumVariant.getAttribute('aria-pressed')
+    await page.getByRole('button', { name: 'Нэгээр нэмэх' }).click()
+    await page.waitForFunction(
+      () =>
+        document.querySelector('output[aria-label="Сонгосон тоо"]')?.textContent?.trim() === '2',
+    )
+    const selectedQuantity = await page.locator('output[aria-label="Сонгосон тоо"]').textContent()
+    await page.getByRole('button', { name: /Сагсанд нэмэх/ }).click()
+    await page.getByRole('dialog', { name: 'Сагс' }).waitFor()
+    const cartCount = await page
+      .locator('button[aria-label^="Сагс,"]')
+      .first()
+      .getAttribute('aria-label')
+    record(`${name}: image, variant, quantity, and add-to-cart controls are interactive`, () => {
+      assert.equal(imageCurrent, 'true')
+      assert.equal(variantSelected, 'true')
+      assert.equal(selectedQuantity?.trim(), '2')
+      assert.equal(cartCount, 'Сагс, 2 бараа')
+    })
+    await page.getByRole('button', { name: 'Сагс хаах' }).click()
+
+    serverRequests.length = 0
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.locator('button[aria-label="Сагс, 2 бараа"]').first().waitFor()
+    await page.getByRole('heading', { level: 1, name: 'Шилжилт хүрэм' }).waitFor()
+    const persistedQuantity = await page.evaluate(() => {
+      const stored = localStorage.getItem('dund:cart:v1')
+      if (!stored) return undefined
+      return JSON.parse(stored).items[0]?.quantity
+    })
+    record(`${name}: cart state persists across a direct reload`, () => {
+      assert.equal(persistedQuantity, 2)
+      assert.equal(serverRequests.length, 0)
+    })
+
+    await page.goto(`${origin}/products`, { waitUntil: 'domcontentloaded' })
+    await page.getByRole('heading', { level: 1, name: 'Бүх давхарга' }).waitFor()
+    const useCaseNavigation = page.getByRole('navigation', { name: 'Хэрэглээгээр шүүх' })
+    const currentUseCases = await useCaseNavigation
+      .locator('a[aria-current="page"]')
+      .allTextContents()
+    const skipLinkCurrent = await page
+      .getByRole('link', { name: 'Үндсэн хэсэг рүү очих' })
+      .getAttribute('aria-current')
+    record(`${name}: Router current state does not corrupt query or hash links`, () => {
+      assert.deepEqual(
+        currentUseCases.map(value => value.trim()),
+        ['Бүх хэрэглээ'],
+      )
+      assert.equal(skipLinkCurrent, null)
+    })
+
+    const disclosure = page.locator('details').first()
+    await disclosure.locator('summary').click()
+    const outerwearFilter = disclosure.getByRole('link', { name: 'Гадуур хувцас', exact: true })
+    await outerwearFilter.click()
+    await page.waitForURL('**/products?category=outerwear')
+    await page.getByRole('heading', { level: 1, name: 'Бүх давхарга' }).waitFor()
+    const activeFilter = await page.evaluate(() => document.activeElement?.textContent?.trim())
+    const disclosureOpen = await disclosure.evaluate(element => element.open)
+    record(`${name}: catalog filter navigation preserves disclosure and focus`, () => {
+      assert.equal(disclosureOpen, true)
+      assert.equal(activeFilter, 'Гадуур хувцас')
+    })
+    assert.equal(
+      await disclosure
+        .locator('a[aria-current="page"]')
+        .filter({ hasText: 'Гадуур хувцас' })
+        .count(),
+      1,
+    )
+
+    await page
+      .getByRole('heading', { level: 2, name: 'Шилжилт хүрэм' })
+      .getByRole('link', { name: 'Шилжилт хүрэм' })
+      .click()
+    await page.getByRole('button', { name: /Сагсанд нэмэх/ }).waitFor()
+    await page.waitForFunction(() => document.activeElement?.id === 'main-content')
+    record(
+      `${name}: catalog-to-product client navigation mounts the complete product route`,
+      () => {
+        assert.equal(new URL(page.url()).pathname, '/products/shiljilt-bridge-coat')
+        assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+      },
+    )
+    assert.equal(await page.title(), 'Шилжилт хүрэм · ДУНД')
+
+    await page.goBack({ waitUntil: 'domcontentloaded' })
+    await page.getByRole('heading', { level: 1, name: 'Бүх давхарга' }).waitFor()
+    await page.goForward({ waitUntil: 'domcontentloaded' })
+    await page.getByRole('button', { name: /Сагсанд нэмэх/ }).waitFor()
+    record(`${name}: back and forward retain the route and cart owners`, () => {
+      assert.equal(new URL(page.url()).pathname, '/products/shiljilt-bridge-coat')
+      assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+    })
+    assert.equal(
+      await page.locator('button[aria-label="Сагс, 2 бараа"]').first().getAttribute('aria-label'),
+      'Сагс, 2 бараа',
+    )
+
+    await page.evaluate(() => {
+      const link = document.querySelector('a[href="/products"]')
+      if (!(link instanceof HTMLAnchorElement)) throw new Error('Catalog link not found.')
+      link.click()
+    })
+    await page.getByRole('heading', { level: 1, name: 'Бүх давхарга' }).waitFor()
+    const rapidTargets = await page
+      .locator('section[aria-label="Барааны жагсаалт"] h2 a')
+      .evaluateAll(links =>
+        links.slice(0, 3).map(link => ({ href: link.href, name: link.textContent?.trim() })),
+      )
+    assert.equal(rapidTargets.length, 3)
+    await page.locator('section[aria-label="Барааны жагсаалт"] h2 a').evaluateAll(links => {
+      for (const link of links.slice(0, 3)) link.click()
+    })
+    const finalTarget = rapidTargets.at(-1)
+    await page.waitForURL(finalTarget.href)
+    await page.getByRole('heading', { level: 1, name: finalTarget.name }).waitFor()
+    await page.waitForTimeout(300)
+    record(`${name}: rapid real navigations reject stale route responses`, () => {
+      assert.equal(page.url(), finalTarget.href)
+      assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+    })
+  } finally {
+    await context.close()
   }
-  html += decoder.decode()
-  return { response, chunks, html }
 }
 
-const occurrenceCount = (source, value) => source.split(value).length - 1
+const runBrowserProof = async () => {
+  const browser = await chromium.launch({ headless: true })
+  try {
+    await runBrowserViewport(browser, 'desktop browser', { width: 1440, height: 900 })
+    await runBrowserViewport(browser, 'mobile browser', { width: 390, height: 844 })
+  } finally {
+    await browser.close()
+  }
+}
 
 try {
   run('vp', ['build'])
@@ -176,22 +343,18 @@ try {
   })
   await waitForWorker()
 
-  const home = await fetchChunks('/')
-  record('turnkey SSR streams a complete home document through the Worker', () => {
+  const home = await fetchHtml('/')
+  record('turnkey SSR returns a complete home document through the Worker', () => {
     assert.equal(home.response.status, 200)
     assert.match(home.response.headers.get('content-type') ?? '', /text\/html/)
-    assert.ok(home.chunks.length >= 1)
     assert.match(home.html, /^<!DOCTYPE html>/)
     assert.match(home.html, /Давхарга бүр ажиллана/)
     assert.match(home.html, /<dx-frame\b/)
     assert.match(home.html, /self\._\$SC=/)
   })
-  record('public documents receive the short CDN cache policy', () => {
+  record('frame-bearing documents cannot enter the shared CDN cache', () => {
     assert.equal(home.response.headers.get('cache-control'), 'public, max-age=0, must-revalidate')
-    assert.equal(
-      home.response.headers.get('cloudflare-cdn-cache-control'),
-      'public, max-age=60, stale-while-revalidate=300, stale-if-error=86400',
-    )
+    assert.equal(home.response.headers.get('cloudflare-cdn-cache-control'), 'no-store')
   })
 
   const catalog = await fetchHtml('/products?useCase=cold-weather')
@@ -215,7 +378,7 @@ try {
   record('the product frame SSRs server content and complete client purchase controls', () => {
     assert.equal(product.response.status, 200)
     assert.match(product.html, /<dx-frame\b/)
-    assert.match(product.html, /sc:slot:/)
+    assert.doesNotMatch(product.html, /sc:slot:/)
     assert.match(product.html, /DND-COAT-M-ASPHALT/)
     assert.match(product.html, />Хэмжээ<\/legend>/)
     assert.match(product.html, />Өнгө<\/legend>/)
@@ -243,8 +406,9 @@ try {
     assert.equal(order.response.status, 200)
     assert.equal(order.response.headers.get('cache-control'), 'private, no-store')
     assert.doesNotMatch(order.html, /9911\d{4}/)
-    assert.equal(missingProduct.response.status, 200)
-    assert.match(missingProduct.html, /Энэ бараа байхгүй байна/)
+    assert.equal(missingProduct.response.status, 404)
+    assert.equal(missingProduct.response.headers.get('cache-control'), 'no-store')
+    assert.match(missingProduct.html, /Бараа олдсонгүй/)
     assert.equal(missing.response.status, 404)
     assert.match(missing.html, /Энд давхарга алга/)
   })
@@ -258,9 +422,8 @@ try {
     )
   ).join('\n')
   const serverSource = await readFile(path.join(appDirectory, 'dist/server/server.js'), 'utf8')
-  record('server-only modules and markers stay out of every client chunk', () => {
-    assert.match(serverSource, /DUND-SERVER-ONLY-2b1948a7/)
-    assert.doesNotMatch(clientSources, /DUND-SERVER-ONLY-2b1948a7/)
+  record('server-only dependencies and binding names stay out of every client chunk', () => {
+    assert.match(serverSource, /QPAY_PASSWORD/)
     assert.doesNotMatch(clientSources, /drizzle-orm\/d1/)
     assert.doesNotMatch(clientSources, /QPAY_PASSWORD/)
   })
@@ -297,8 +460,6 @@ try {
   const searchUrl = `${origin}/_server?id=${encodeURIComponent(searchFunctionId)}&args=${encodeURIComponent('[{"query":"хүрэм"}]')}`
   const searchResponse = await fetch(searchUrl, { method: 'POST' })
   const searchBody = await searchResponse.text()
-  const cachedSearchResponse = await fetch(searchUrl, { method: 'POST' })
-  const cachedSearchBody = await cachedSearchResponse.text()
   const invalidSearchResponse = await fetch(
     `${origin}/_server?id=${encodeURIComponent(searchFunctionId)}&args=${encodeURIComponent('[{"query":"x"}]')}`,
     { method: 'POST' },
@@ -306,12 +467,9 @@ try {
   record('compact typeahead results come from the validated server function', () => {
     assert.equal(searchResponse.status, 200)
     assert.equal(searchResponse.headers.get('cache-control'), 'private, no-store')
-    assert.equal(searchResponse.headers.get('x-dund-data-cache'), 'MISS')
+    assert.equal(searchResponse.headers.get('x-dund-data-cache'), null)
     assert.match(searchBody, /Шилжилт хүрэм/)
     assert.doesNotMatch(searchBody, /stockQuantity|details|imageR2Key/)
-    assert.equal(cachedSearchResponse.status, 200)
-    assert.equal(cachedSearchResponse.headers.get('x-dund-data-cache'), 'HIT')
-    assert.equal(cachedSearchBody, searchBody)
     assert.equal(invalidSearchResponse.status, 400)
   })
 
@@ -498,43 +656,28 @@ try {
     assert.equal(telegramAuthorized.headers.get('cache-control'), 'no-store')
   })
 
+  await runBrowserProof()
+
   const workerExited = new Promise(resolve => worker.once('exit', resolve))
   process.kill(-worker.pid, 'SIGTERM')
   await workerExited
   worker = undefined
-  const cachedHome = run('vp', [
-    'exec',
-    'wrangler',
-    'kv',
-    'key',
-    'get',
-    'dund:document:v2:/',
-    '--binding',
-    'CACHE',
-    '--local',
-    '--persist-to',
-    persistenceDirectory,
-    '--text',
-  ])
-  const cachedSearch = run('vp', [
-    'exec',
-    'wrangler',
-    'kv',
-    'key',
-    'get',
-    `dund:data:v2:catalog-search:${encodeURIComponent('хүрэм'.toLocaleLowerCase('mn-MN'))}`,
-    '--binding',
-    'CACHE',
-    '--local',
-    '--persist-to',
-    persistenceDirectory,
-    '--text',
-  ])
-  record('dedicated CACHE KV stores only public document and catalog data', () => {
-    assert.match(cachedHome, /^<!DOCTYPE html>/)
-    assert.match(cachedHome, /Давхарга бүр ажиллана/)
-    assert.match(cachedSearch, /Шилжилт хүрэм/)
-    assert.doesNotMatch(cachedSearch, /statusToken|QPAY|TELEGRAM/)
+  const cacheKeys = JSON.parse(
+    run('vp', [
+      'exec',
+      'wrangler',
+      'kv',
+      'key',
+      'list',
+      '--binding',
+      'CACHE',
+      '--local',
+      '--persist-to',
+      persistenceDirectory,
+    ]),
+  )
+  record('document and arbitrary search inputs do not amplify the CACHE KV namespace', () => {
+    assert.deepEqual(cacheKeys, [])
   })
 
   process.stdout.write(`\n${results.length} real-runtime checks passed.\n`)
