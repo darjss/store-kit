@@ -15,9 +15,22 @@ export default defineConfig({
       miniflare: {
         bindings: {
           DEPLOYMENT_ENV: 'production',
-          TEST_MIGRATIONS: await readD1Migrations(
-            path.join(root, 'packages/db/migrations/20260723180551_old_karnak'),
-          ),
+          TEST_MIGRATIONS: (
+            await Promise.all(
+              ['20260723180551_old_karnak', '20260727160704_parallel_starhawk'].map(
+                async directory =>
+                  (
+                    await readD1Migrations(path.join(root, 'packages/db/migrations', directory))
+                  ).map(migration => ({
+                    ...migration,
+                    name: `${directory}/${migration.name}`,
+                  })),
+              ),
+            )
+          ).flat(),
+          BETTER_AUTH_SECRET: 'integration-test-auth-secret-at-least-thirty-two-characters',
+          GOOGLE_CLIENT_ID: 'integration-test-google-client-id',
+          GOOGLE_CLIENT_SECRET: 'integration-test-google-client-secret',
           PUBLIC_APP_URL: 'https://plugged.mn',
           PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
           QPAY_USERNAME: 'integration-test',

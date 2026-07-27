@@ -74,6 +74,34 @@ const postJson = (
     }),
   )
 
+describe('admin authentication', () => {
+  it('mounts the Google social sign-in handler at the default Better Auth path', async () => {
+    const response = await postJson(
+      '/api/auth/sign-in/social',
+      { provider: 'google', callbackURL: '/admin' },
+      { origin: 'https://plugged.mn' },
+      'https://plugged.mn',
+    )
+    const body = (await response.json()) as { redirect?: unknown; url?: unknown }
+
+    expect(response.status).toBe(200)
+    expect(body.redirect).toBe(true)
+    expect(body.url).toEqual(expect.stringMatching(/^https:\/\/accounts\.google\.com\//u))
+  })
+
+  it('returns the unauthenticated contract without exposing session details', async () => {
+    const response = await app.handle(
+      new Request('https://plugged.mn/api/admin/session', {
+        headers: { origin: 'https://plugged.mn' },
+      }),
+    )
+
+    expect(response.status).toBe(401)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(await response.json()).toEqual({ _tag: 'Unauthenticated' })
+  })
+})
+
 describe('checked shared request contracts', () => {
   it('rejects malformed checkout and cart bodies at the Elysia boundary', async () => {
     const checkoutResponse = await postJson('/api/checkout', {

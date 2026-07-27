@@ -10,6 +10,7 @@ import {
   entityIdPrefixes,
   hasTypeIdPrefix,
 } from './ids'
+import { account, session, user, verification } from './schema/auth'
 import { brand, category, product, productImage, productVariant } from './schema/catalog'
 import { checkoutSettings, order, orderLine, payment } from './schema/shopping'
 
@@ -23,6 +24,10 @@ test('entity ID generators use their stable prefixes and produce valid TypeIDs',
     [createId('order'), entityIdPrefixes.order],
     [createId('orderLine'), entityIdPrefixes.orderLine],
     [createId('payment'), entityIdPrefixes.payment],
+    [createId('authUser'), entityIdPrefixes.authUser],
+    [createId('authSession'), entityIdPrefixes.authSession],
+    [createId('authAccount'), entityIdPrefixes.authAccount],
+    [createId('authVerification'), entityIdPrefixes.authVerification],
   ] as const
 
   for (const [id, prefix] of ids) {
@@ -58,6 +63,10 @@ test('every entity primary key has its prefixed Drizzle default', () => {
     [order.id.defaultFn?.(), entityIdPrefixes.order],
     [orderLine.id.defaultFn?.(), entityIdPrefixes.orderLine],
     [payment.id.defaultFn?.(), entityIdPrefixes.payment],
+    [user.id.defaultFn?.(), entityIdPrefixes.authUser],
+    [session.id.defaultFn?.(), entityIdPrefixes.authSession],
+    [account.id.defaultFn?.(), entityIdPrefixes.authAccount],
+    [verification.id.defaultFn?.(), entityIdPrefixes.authVerification],
   ] as const
 
   for (const [id, prefix] of defaults) {
@@ -77,6 +86,10 @@ test('every single-column entity primary key is explicitly not null', () => {
     { table: order, id: order.id },
     { table: orderLine, id: orderLine.id },
     { table: payment, id: payment.id },
+    { table: user, id: user.id },
+    { table: session, id: session.id },
+    { table: account, id: account.id },
+    { table: verification, id: verification.id },
   ] as const
 
   for (const { table, id } of entities) {

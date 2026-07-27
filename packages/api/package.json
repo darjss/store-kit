@@ -7,8 +7,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.6.25",
     "@store-kit/commerce": "workspace:*",
     "@store-kit/contracts": "workspace:*",
+    "@store-kit/db": "workspace:*",
+    "better-auth": "^1.6.25",
     "better-result": "catalog:",
     "elysia": "^1.4.29",
     "typebox": "catalog:"

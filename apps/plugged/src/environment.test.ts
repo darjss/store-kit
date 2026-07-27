@@ -4,7 +4,12 @@ import { validatePluggedEnvironment } from './environment'
 import type { PluggedRuntimeEnvironment } from './environment'
 
 const localEnvironment = {
+  AUTH_KV: {},
+  BETTER_AUTH_SECRET: 'test-auth-secret-at-least-thirty-two-characters',
+  DB: {},
   DEPLOYMENT_ENV: 'development',
+  GOOGLE_CLIENT_ID: 'google-client-id',
+  GOOGLE_CLIENT_SECRET: 'google-client-secret',
   PUBLIC_APP_URL: 'https://plugged.localhost',
   PUBLIC_MEDIA_BASE_URL: 'https://plugged-development-media.example.com/',
   QPAY_BASE_URL: 'https://merchant-sandbox.qpay.mn',

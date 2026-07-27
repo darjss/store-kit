@@ -35,6 +35,7 @@ type WranglerConfig = {
   assets: { directory: string; binding: string }
   d1_databases: Omit<D1Binding, 'database_id'>[]
   kv_namespaces: Binding[]
+  secrets: { required: string[] }
   vars: Record<string, string>
   env: { development: WranglerEnvironment }
   observability: { enabled: boolean }
@@ -63,6 +64,9 @@ describe('Plugged Wrangler deployment configuration', () => {
         },
       ],
       kv_namespaces: [{ binding: 'CACHE' }, { binding: 'AUTH_KV' }],
+      secrets: {
+        required: ['BETTER_AUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+      },
       vars: {
         DEPLOYMENT_ENV: 'production',
         PUBLIC_APP_URL: 'https://plugged.mn',
@@ -102,6 +106,9 @@ describe('Plugged Wrangler deployment configuration', () => {
       QPAY_BASE_URL: 'https://merchant.qpay.mn',
     })
     expect(development.secrets.required).toEqual([
+      'BETTER_AUTH_SECRET',
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET',
       'QPAY_USERNAME',
       'QPAY_PASSWORD',
       'QPAY_INVOICE_CODE',

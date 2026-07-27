@@ -44,7 +44,8 @@ and production domains on their matching buckets. Uploaded catalog objects recei
 to cache the catalog image types.
 
 For local development, copy `.dev.vars.example`, set `DEPLOYMENT_ENV=development`, and provide the
-remote development custom-domain origin. An empty value intentionally fails validation.
+remote development custom-domain origin. Configure Google's authorized redirect URI as
+`{PUBLIC_APP_URL}/api/auth/callback/google`. An empty value intentionally fails validation.
 
 ## Reliable local browser runtime
 
@@ -110,6 +111,9 @@ PLUGGED_SMOKE_URL=https://storekit.plugged.darjs.dev/ \
 The secret-name task only prints interactive `wrangler secret put` commands. It never reads or
 writes secret values. Required names are:
 
+- `BETTER_AUTH_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 - `QPAY_USERNAME`
 - `QPAY_PASSWORD`
 - `QPAY_INVOICE_CODE`
@@ -120,8 +124,9 @@ writes secret values. Required names are:
 
 For a new Worker, Wrangler cannot run `secret put` until the Worker exists. The guarded development
 deploy therefore accepts Cloudflare's first-deploy `--secrets-file` equivalent through
-`PLUGGED_SECRETS_FILE`. The file must be absolute, mode `600`, contain all three QPay secrets, and
-contain either all four Telegram secrets or none. Never put the file in the repository.
+`PLUGGED_SECRETS_FILE`. The file must be absolute, mode `600`, contain all three auth and all three
+QPay secrets, and contain either all four Telegram secrets or none. Never put the file in the
+repository.
 
 Astro selects the named Cloudflare environment at build time with
 `CLOUDFLARE_ENV=development`. The guarded command validates `env.development`, builds it, and gives
