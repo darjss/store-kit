@@ -92,6 +92,7 @@ function createCheckoutState(props: CheckoutRootProps) {
     enabled: false,
   }))
   const [result, setResult] = createSignal<Result<CheckoutCreated, CheckoutDomainError>>()
+  let checkoutAttempt: { request: string; idempotencyKey: string } | undefined
   const created = createMemo(() =>
     result()?.match({
       err: () => undefined,
@@ -135,7 +136,18 @@ function createCheckoutState(props: CheckoutRootProps) {
           return
         }
 
-        const input: CheckoutInput = { ...normalizedDetails, items }
+        const request = { ...normalizedDetails, items }
+        const serializedRequest = JSON.stringify(request)
+        if (checkoutAttempt?.request !== serializedRequest) {
+          checkoutAttempt = {
+            request: serializedRequest,
+            idempotencyKey: `checkout_${crypto.randomUUID()}`,
+          }
+        }
+        const input: CheckoutInput = {
+          ...request,
+          idempotencyKey: checkoutAttempt.idempotencyKey,
+        }
         const checkoutResult = await mutation.mutateAsync(input)
         checkoutResult.match({
           err: error => {

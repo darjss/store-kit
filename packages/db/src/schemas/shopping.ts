@@ -1,3 +1,4 @@
+import { paymentInstructionsSchema } from '@store-kit/contracts/checkout'
 import { orderStatusSchema } from '@store-kit/contracts/orders'
 import { paymentMethodSchema, paymentStatusSchema } from '@store-kit/contracts/payments'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-orm/typebox'
@@ -43,6 +44,7 @@ const paymentRefinements = {
   method: () => paymentMethodSchema,
   status: () => paymentStatusSchema,
   amountMnt: () => nonNegativeIntegerSchema,
+  checkoutNextAction: () => Type.Union([paymentInstructionsSchema, Type.Null()]),
 }
 
 export const selectCheckoutSettingsSchema = createSelectSchema(

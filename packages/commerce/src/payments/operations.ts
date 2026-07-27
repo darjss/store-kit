@@ -30,6 +30,8 @@ import {
 } from '#commerce/errors/payments'
 import { orderOperations } from '#commerce/orders/operations'
 
+const notificationLeaseMs = 60_000
+
 export const confirmOrderPayment = async (
   orderId: string,
   reference: {
@@ -138,11 +140,21 @@ export const handleQPayCallback = async (paymentLookupId: string): Promise<Webho
       ).match({
         err: async () => acknowledged(),
         ok: async confirmation => {
+          const claimedAt = Date.now()
+          const leaseId = crypto.randomUUID()
           const notification = await database.query.payments.claimQPayStaffNotification(
             paymentLookupId,
-            Date.now(),
+            leaseId,
+            claimedAt,
+            claimedAt + notificationLeaseMs,
           )
-          if (!notification) return acknowledged()
+          if (!notification) {
+            const persisted = await database.query.payments.findById(paymentLookupId)
+            return persisted?.staffNotificationStatus === 'sending' &&
+              persisted.telegramMessageId === null
+              ? retryableFailure()
+              : acknowledged()
+          }
 
           const label = confirmation.needsStaffAction
             ? `ЯАРАЛТАЙ: үлдэгдэл хүрэлцэхгүй · ${localPayment.orderId}`
@@ -151,6 +163,7 @@ export const handleQPayCallback = async (paymentLookupId: string): Promise<Webho
             err: async () => {
               await database.query.payments.releaseQPayStaffNotification(
                 paymentLookupId,
+                leaseId,
                 Date.now(),
               )
               return retryableFailure()
@@ -158,6 +171,7 @@ export const handleQPayCallback = async (paymentLookupId: string): Promise<Webho
             ok: async sent => {
               const completed = await database.query.payments.completeQPayStaffNotification(
                 paymentLookupId,
+                leaseId,
                 sent.messageId,
                 Date.now(),
               )
@@ -271,6 +285,21 @@ export const handleBankTransferCallback = async (input: {
   })
 }
 
+const bankClaimResult = (status: PaymentStatus) =>
+  match(paymentStates[status])<Result<BankTransferClaim, BankTransferClaimError>>({
+    pending: () =>
+      Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'pending' }),
+    claimed: () =>
+      Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'claimed' }),
+    paid: () => Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'paid' }),
+    confirming: () =>
+      Result.err<BankTransferClaim, BankTransferClaimError>(
+        bankTransferClaimNotAllowed('confirming'),
+      ),
+    failed: () =>
+      Result.err<BankTransferClaim, BankTransferClaimError>(bankTransferClaimNotAllowed('failed')),
+  })
+
 export const claimBankTransfer = async (orderId: string, statusToken: string) => {
   const claimableOrder = (await orderOperations.getPrivateStatus(orderId, statusToken)).andThen(
     order => {
@@ -284,76 +313,62 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
 
   return claimableOrder.match<Promise<Result<BankTransferClaim, BankTransferClaimError>>>({
     err: async error => Result.err<BankTransferClaim, BankTransferClaimError>(error),
-    ok: order =>
-      matchAsync(paymentStates[order.payment.status])<
-        Result<BankTransferClaim, BankTransferClaimError>
-      >({
-        paid: () => Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'paid' }),
-        claimed: () =>
-          Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'claimed' }),
-        confirming: () =>
-          Result.err<BankTransferClaim, BankTransferClaimError>(
-            bankTransferClaimNotAllowed('confirming'),
-          ),
-        failed: () =>
-          Result.err<BankTransferClaim, BankTransferClaimError>(
-            bankTransferClaimNotAllowed('failed'),
-          ),
-        pending: async () => {
-          const claimed = await database.query.payments.markBankTransferClaimed(orderId, Date.now())
-          if (!claimed) {
-            const persisted = await database.query.payments.findByOrderId(orderId)
-            if (!persisted)
-              return Result.err<BankTransferClaim, BankTransferClaimError>(
-                bankTransferClaimNotAllowed('failed'),
-              )
+    ok: async order => {
+      if (order.payment.status === 'paid') return bankClaimResult('paid')
+      if (order.payment.status === 'confirming' || order.payment.status === 'failed') {
+        return bankClaimResult(order.payment.status)
+      }
 
-            return match(paymentStates[persisted.status])<
-              Result<BankTransferClaim, BankTransferClaimError>
-            >({
-              pending: () =>
-                Result.ok<BankTransferClaim, BankTransferClaimError>({
-                  paymentStatus: 'pending',
-                }),
-              claimed: () =>
-                Result.ok<BankTransferClaim, BankTransferClaimError>({
-                  paymentStatus: 'claimed',
-                }),
-              paid: () =>
-                Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'paid' }),
-              confirming: () =>
-                Result.err<BankTransferClaim, BankTransferClaimError>(
-                  bankTransferClaimNotAllowed('confirming'),
-                ),
-              failed: () =>
-                Result.err<BankTransferClaim, BankTransferClaimError>(
-                  bankTransferClaimNotAllowed('failed'),
-                ),
-            })
-          }
+      const claimedAt = Date.now()
+      const leaseId = crypto.randomUUID()
+      const claimed = await database.query.payments.claimBankTransferNotification(
+        orderId,
+        leaseId,
+        claimedAt,
+        claimedAt + notificationLeaseMs,
+      )
+      if (!claimed) {
+        const persisted = await database.query.payments.findByOrderId(orderId)
+        if (
+          persisted?.status === 'claimed' &&
+          persisted.staffNotificationStatus === 'sending' &&
+          persisted.telegramMessageId === null
+        ) {
+          return Result.err<BankTransferClaim, BankTransferClaimError>(staffNotificationFailed())
+        }
+        return persisted ? bankClaimResult(persisted.status) : bankClaimResult('failed')
+      }
 
-          const stored = await (
-            await sendBankClaimMessage({
-              orderId,
-              orderNumber: order.number,
-              customerName: order.customerName,
-              customerPhone: order.customerPhone,
-              amountMnt: order.totalMnt,
-            })
-          ).match({
-            err: async () => undefined,
-            ok: async sent =>
-              database.query.payments.storeTelegramMessageId(orderId, sent.messageId, Date.now()),
-          })
-          if (stored)
-            return Result.ok<BankTransferClaim, BankTransferClaimError>({
-              paymentStatus: 'claimed',
-            })
-
-          await database.query.payments.releaseBankTransferClaim(orderId, Date.now())
+      return (
+        await sendBankClaimMessage({
+          orderId,
+          orderNumber: order.number,
+          customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          amountMnt: order.totalMnt,
+        })
+      ).match<Promise<Result<BankTransferClaim, BankTransferClaimError>>>({
+        err: async () => {
+          await database.query.payments.releaseBankTransferNotification(
+            orderId,
+            leaseId,
+            Date.now(),
+          )
           return Result.err<BankTransferClaim, BankTransferClaimError>(staffNotificationFailed())
         },
-      }),
+        ok: async sent => {
+          const completed = await database.query.payments.completeBankTransferNotification(
+            orderId,
+            leaseId,
+            sent.messageId,
+            Date.now(),
+          )
+          return completed
+            ? Result.ok<BankTransferClaim, BankTransferClaimError>({ paymentStatus: 'claimed' })
+            : Result.err<BankTransferClaim, BankTransferClaimError>(staffNotificationFailed())
+        },
+      })
+    },
   })
 }
 

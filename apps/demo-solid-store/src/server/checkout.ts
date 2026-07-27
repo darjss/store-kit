@@ -1,4 +1,3 @@
-import { respond } from '@solidjs/web'
 import { commerce } from '@store-kit/commerce'
 import {
   checkoutCreatedSchema,
@@ -7,7 +6,10 @@ import {
 } from '@store-kit/contracts/checkout'
 import type { CheckoutInput } from '@store-kit/contracts/checkout'
 import type { ValidationIssue } from '@store-kit/contracts/common'
+import { env } from 'cloudflare:workers'
 import { Value } from 'typebox/value'
+
+import { enforceRateLimit, throwUnexpectedServerError } from './policy'
 
 const validationIssues = (input: unknown): ValidationIssue[] =>
   Value.Errors(checkoutInputSchema, input).map(error => ({
@@ -17,6 +19,8 @@ const validationIssues = (input: unknown): ValidationIssue[] =>
 
 export async function submitCheckout(input: unknown) {
   'use server'
+
+  await enforceRateLimit('checkout', env.CHECKOUT_RATE_LIMITER)
 
   if (!Value.Check(checkoutInputSchema, input)) {
     return {
@@ -28,29 +32,27 @@ export async function submitCheckout(input: unknown) {
     }
   }
 
-  const result = await commerce.checkout.createOrder(input as CheckoutInput)
-  if (result.status === 'error') {
-    if (!Value.Check(checkoutErrorSchema, result.error)) {
-      throw respond(
-        { code: 'invalid_checkout_failure', message: 'Захиалга үүсгэж чадсангүй.' },
-        { status: 500 },
-      )
+  try {
+    const result = await commerce.checkout.createOrder(input as CheckoutInput)
+    if (result.status === 'error') {
+      if (!Value.Check(checkoutErrorSchema, result.error)) {
+        throw new Error('Invalid checkout domain failure.')
+      }
+      return {
+        ok: false as const,
+        failure: {
+          type: 'domain' as const,
+          error: result.error,
+        },
+      }
     }
-    return {
-      ok: false as const,
-      failure: {
-        type: 'domain' as const,
-        error: result.error,
-      },
+
+    if (!Value.Check(checkoutCreatedSchema, result.value)) {
+      throw new Error('Invalid checkout result.')
     }
-  }
 
-  if (!Value.Check(checkoutCreatedSchema, result.value)) {
-    throw respond(
-      { code: 'invalid_checkout_result', message: 'Захиалга үүсгэж чадсангүй.' },
-      { status: 500 },
-    )
+    return { ok: true as const, order: result.value }
+  } catch (error) {
+    return throwUnexpectedServerError('checkout', error, 'Захиалга үүсгэж чадсангүй.')
   }
-
-  return { ok: true as const, order: result.value }
 }

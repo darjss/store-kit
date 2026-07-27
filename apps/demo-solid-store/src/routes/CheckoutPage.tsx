@@ -3,6 +3,7 @@ import { checkoutDetailsSchema, ulaanbaatarDistrictSchema } from '@store-kit/con
 import type {
   CheckoutCreated,
   CheckoutDetails,
+  CheckoutInput,
   CheckoutError,
   UlaanbaatarDistrict,
 } from '@store-kit/contracts/checkout'
@@ -300,6 +301,7 @@ export default function CheckoutPage() {
   const [created, setCreated] = createSignal<CheckoutCreated>()
   const fieldElements = new Map<string, { focus: () => void }>()
   let submissionInFlight = false
+  let checkoutAttempt: { request: string; idempotencyKey: string } | undefined
 
   const fieldIssues = () => {
     const current = failure()
@@ -365,13 +367,25 @@ export default function CheckoutPage() {
         return
       }
 
-      const result = await submitCheckout({
+      const request = {
         ...normalized,
         items: snapshot(cart.items).map(item => ({
           variantId: item.variantId,
           quantity: item.quantity,
         })),
-      })
+      }
+      const serializedRequest = JSON.stringify(request)
+      if (checkoutAttempt?.request !== serializedRequest) {
+        checkoutAttempt = {
+          request: serializedRequest,
+          idempotencyKey: `checkout_${crypto.randomUUID()}`,
+        }
+      }
+      const input: CheckoutInput = {
+        ...request,
+        idempotencyKey: checkoutAttempt.idempotencyKey,
+      }
+      const result = await submitCheckout(input)
 
       if (!result.ok) {
         if (result.failure.type === 'field') {

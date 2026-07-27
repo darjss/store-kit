@@ -1,3 +1,4 @@
+import type { PaymentInstructions } from '@store-kit/contracts/checkout'
 import { sql } from 'drizzle-orm'
 import {
   check,
@@ -52,6 +53,8 @@ export const order = sqliteTable(
       .$defaultFn(() => createId('order')),
     number: text('number').notNull(),
     statusTokenHash: text('status_token_hash').notNull(),
+    checkoutKeyHash: text('checkout_key_hash'),
+    checkoutRequestHash: text('checkout_request_hash'),
     status: text('status', {
       enum: ['new', 'confirmed', 'preparing', 'delivering', 'completed', 'cancelled'],
     }).notNull(),
@@ -71,6 +74,7 @@ export const order = sqliteTable(
     primaryKey({ name: 'customer_order_pk', columns: [table.id] }),
     uniqueIndex('customer_order_number_unique').on(table.number),
     uniqueIndex('customer_order_status_token_hash_unique').on(table.statusTokenHash),
+    uniqueIndex('customer_order_checkout_key_hash_unique').on(table.checkoutKeyHash),
     index('customer_order_id_status_token_hash_index').on(table.id, table.statusTokenHash),
     index('customer_order_created_at_index').on(table.createdAt),
     check(
@@ -141,6 +145,10 @@ export const payment = sqliteTable(
     amountMnt: integer('amount_mnt').notNull(),
     providerInvoiceId: text('provider_invoice_id'),
     providerPaymentId: text('provider_payment_id'),
+    checkoutNextAction: text('checkout_next_action', { mode: 'json' }).$type<PaymentInstructions>(),
+    providerSetupLeaseId: text('provider_setup_lease_id'),
+    providerSetupLeaseExpiresAt: integer('provider_setup_lease_expires_at'),
+    providerSetupRetryAt: integer('provider_setup_retry_at'),
     claimedAt: integer('claimed_at'),
     telegramMessageId: text('telegram_message_id'),
     staffNotificationStatus: text('staff_notification_status', {
@@ -148,6 +156,8 @@ export const payment = sqliteTable(
     })
       .notNull()
       .default('pending'),
+    staffNotificationLeaseId: text('staff_notification_lease_id'),
+    staffNotificationLeaseExpiresAt: integer('staff_notification_lease_expires_at'),
     paidAt: integer('paid_at'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),

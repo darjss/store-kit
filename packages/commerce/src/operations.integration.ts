@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test'
 
 import { createCheckoutOrder } from './checkout/operations'
 import { commerce } from './index'
+import { hashStatusToken } from './orders/status-token'
 import { confirmOrderPayment } from './payments/operations'
 
 const entityId = (prefix: string, value: number) =>
@@ -89,6 +90,7 @@ const insertCheckoutSettings = async () => {
 }
 
 const checkoutInput = (variantId: string) => ({
+  idempotencyKey: `checkout_${crypto.randomUUID()}`,
   items: [{ variantId, quantity: 1 }],
   customer: { name: 'Customer', phone: '99112233' },
   delivery: {
@@ -133,6 +135,90 @@ describe('commerce operations with local D1', () => {
       address: 'Test address',
       delivery_notes: null,
     })
+  })
+
+  it('replays one stable order for concurrent and repeated checkout keys', async () => {
+    const { variantId } = await insertProduct(208)
+    await insertCheckoutSettings()
+    const input = {
+      ...checkoutInput(variantId),
+      idempotencyKey: 'checkout_123e4567-e89b-42d3-a456-426614174208',
+    }
+
+    const results = await Promise.all(Array.from({ length: 6 }, () => createCheckoutOrder(input)))
+    const repeated = await createCheckoutOrder(input)
+    const successful = results.filter(result => result.status === 'ok')
+    expect(successful).toHaveLength(6)
+    expect(results.every(result => JSON.stringify(result) === JSON.stringify(results[0]))).toBe(
+      true,
+    )
+    expect(repeated).toEqual(results[0])
+    if (repeated.status === 'error') return
+
+    const persisted = await env.DB.prepare(
+      `select
+         (select count(*) from customer_order where id = ?) as order_count,
+         (select count(*) from payment where order_id = ?) as payment_count,
+         (select count(*) from order_line where order_id = ?) as line_count`,
+    )
+      .bind(repeated.value.orderId, repeated.value.orderId, repeated.value.orderId)
+      .first<{ order_count: number; payment_count: number; line_count: number }>()
+    expect(persisted).toEqual({ order_count: 1, payment_count: 1, line_count: 1 })
+  })
+
+  it('rejects a checkout key reused for a different request without weakening cart authority', async () => {
+    const { variantId } = await insertProduct(209)
+    await insertCheckoutSettings()
+    const input = {
+      ...checkoutInput(variantId),
+      idempotencyKey: 'checkout_123e4567-e89b-42d3-a456-426614174209',
+    }
+
+    const first = await createCheckoutOrder(input)
+    const conflict = await createCheckoutOrder({
+      ...input,
+      customer: { ...input.customer, name: 'Different Customer' },
+    })
+
+    expect(first).toMatchObject({ status: 'ok' })
+    expect(conflict).toEqual({
+      status: 'error',
+      error: {
+        _tag: 'InvalidCheckoutDetails',
+        fields: [{ path: '/idempotencyKey', code: 'invalid' }],
+      },
+    })
+  })
+
+  it('keeps one recoverable checkout row when the real QPay adapter fails', async () => {
+    const { variantId } = await insertProduct(210)
+    await insertCheckoutSettings()
+    const input = {
+      ...checkoutInput(variantId),
+      idempotencyKey: 'checkout_123e4567-e89b-42d3-a456-426614174210',
+      paymentMethod: 'qpay' as const,
+    }
+
+    const first = await createCheckoutOrder(input)
+    const retry = await createCheckoutOrder(input)
+    const checkoutKeyHash = await hashStatusToken(`checkout:${input.idempotencyKey}`)
+    const persisted = await env.DB.prepare(
+      `select count(*) as count from customer_order where checkout_key_hash = ?`,
+    )
+      .bind(checkoutKeyHash)
+      .first<{ count: number }>()
+    const payment = await env.DB.prepare(
+      `select provider_invoice_id, checkout_next_action
+       from payment
+       where order_id = (select id from customer_order where checkout_key_hash = ?)`,
+    )
+      .bind(checkoutKeyHash)
+      .first<{ provider_invoice_id: string | null; checkout_next_action: string | null }>()
+
+    expect(first).toMatchObject({ status: 'error', error: { _tag: 'PaymentSetupFailed' } })
+    expect(retry).toMatchObject({ status: 'error', error: { _tag: 'PaymentSetupFailed' } })
+    expect(persisted?.count).toBe(1)
+    expect(payment).toEqual({ provider_invoice_id: null, checkout_next_action: null })
   })
 
   it('preserves the empty-cart domain check for typed commerce calls', async () => {

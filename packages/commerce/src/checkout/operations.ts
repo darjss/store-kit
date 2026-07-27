@@ -4,10 +4,8 @@ import type {
   CheckoutCreated,
   CheckoutError,
   CheckoutInput,
-  PaymentInstructions,
   QPayPaymentInstructions,
 } from '@store-kit/contracts/checkout'
-import type { PaymentMethod } from '@store-kit/contracts/payments'
 import { database } from '@store-kit/db'
 import { createId } from '@store-kit/db/ids'
 import { Result } from 'better-result'
@@ -23,9 +21,13 @@ import {
 } from '#commerce/errors/checkout'
 import { hashStatusToken } from '#commerce/orders/status-token'
 
+const qpaySetupLeaseMs = 60_000
+const qpaySetupRetryDelayMs = 5_000
+
 export const normalizeCheckoutInput = (input: CheckoutInput): CheckoutInput => {
   const notes = input.delivery.notes?.trim()
   return {
+    idempotencyKey: input.idempotencyKey,
     customer: {
       name: input.customer.name.trim(),
       phone: input.customer.phone.trim(),
@@ -44,6 +46,7 @@ export const normalizeCheckoutInput = (input: CheckoutInput): CheckoutInput => {
 type AuthoritativeVariant = Awaited<
   ReturnType<typeof database.query.checkout.prepare>
 >['variants'][number]
+type CheckoutRecord = NonNullable<Awaited<ReturnType<typeof database.query.checkout.findByKeyHash>>>
 
 const validateAuthoritativeCartLine = (
   item: CartLineInput,
@@ -61,43 +64,131 @@ const validateAuthoritativeCartLine = (
   return corrections
 }
 
-type PreparedPayment = {
-  providerInvoiceId: string | null
-  nextAction: PaymentInstructions
+const checkoutIdentity = async (input: CheckoutInput) => {
+  const { idempotencyKey: _idempotencyKey, ...request } = input
+  const [checkoutKeyHash, checkoutRequestHash, statusToken] = await Promise.all([
+    hashStatusToken(`checkout:${input.idempotencyKey}`),
+    hashStatusToken(JSON.stringify(request)),
+    hashStatusToken(`status:${input.idempotencyKey}`),
+  ])
+  return { checkoutKeyHash, checkoutRequestHash, statusToken }
 }
 
-const preparePayment = async (
-  method: PaymentMethod,
-  input: { orderNumber: string; totalMnt: number; paymentId: string },
-  bankTransfer: BankTransferPaymentInstructions,
-) => {
-  if (method === 'bank_transfer') {
-    const prepared = { providerInvoiceId: null, nextAction: bankTransfer } satisfies PreparedPayment
-    return Result.ok<PreparedPayment, CheckoutError>(prepared)
+const checkoutCreated = (
+  record: CheckoutRecord,
+  statusToken: string,
+): Result<CheckoutCreated, CheckoutError> => {
+  const nextAction = record.payment?.checkoutNextAction
+  if (!nextAction) return Result.err(paymentSetupFailed('Төлбөрийн хүсэлт бэлтгэгдэж байна.'))
+
+  return Result.ok({
+    orderId: record.id,
+    orderNumber: record.number,
+    statusToken,
+    nextAction,
+  })
+}
+
+const setupQPay = async (record: CheckoutRecord, statusToken: string) => {
+  const payment = record.payment
+  const checkoutKeyHash = record.checkoutKeyHash
+  if (!payment || payment.method !== 'qpay' || !checkoutKeyHash) {
+    return Result.err<CheckoutCreated, CheckoutError>(
+      paymentSetupFailed('Төлбөрийн хүсэлтийг бэлтгэж чадсангүй.'),
+    )
+  }
+  if (payment.checkoutNextAction) return checkoutCreated(record, statusToken)
+
+  const now = Date.now()
+  const leaseId = crypto.randomUUID()
+  const claimed = await database.query.checkout.claimQPaySetup(
+    payment.id,
+    leaseId,
+    now,
+    now + qpaySetupLeaseMs,
+  )
+  if (!claimed) {
+    const replay = await database.query.checkout.findByKeyHash(checkoutKeyHash)
+    return replay
+      ? checkoutCreated(replay, statusToken)
+      : Result.err<CheckoutCreated, CheckoutError>(
+          paymentSetupFailed('Төлбөрийн хүсэлтийг бэлтгэж чадсангүй.'),
+        )
   }
 
-  return (
-    await createQPayInvoice({
-      orderNumber: input.orderNumber,
-      amountMnt: input.totalMnt,
-      description: `${input.orderNumber} захиалга`,
-      paymentLookupId: input.paymentId,
-    })
-  )
-    .map<PreparedPayment>(invoice => {
+  const invoice = await createQPayInvoice({
+    orderNumber: record.number,
+    amountMnt: payment.amountMnt,
+    description: `${record.number} захиалга`,
+    paymentLookupId: payment.id,
+  })
+
+  return invoice.match<Promise<Result<CheckoutCreated, CheckoutError>>>({
+    err: async error => {
+      const failedAt = Date.now()
+      await database.query.checkout.releaseQPaySetup(
+        payment.id,
+        leaseId,
+        failedAt + qpaySetupRetryDelayMs,
+        failedAt,
+      )
+      return Result.err<CheckoutCreated, CheckoutError>(paymentSetupFailed(error.message))
+    },
+    ok: async value => {
       const nextAction = {
         type: 'qpay',
-        qrText: invoice.qrText,
-        qrImage: invoice.qrImage,
-        urls: invoice.urls,
+        qrText: value.qrText,
+        qrImage: value.qrImage,
+        urls: value.urls,
       } satisfies QPayPaymentInstructions
-      return { providerInvoiceId: invoice.invoiceId, nextAction } satisfies PreparedPayment
-    })
-    .mapError<CheckoutError>(error => paymentSetupFailed(error.message))
+      const completed = await database.query.checkout.completeQPaySetup(
+        payment.id,
+        leaseId,
+        value.invoiceId,
+        nextAction,
+        Date.now(),
+      )
+      if (completed) {
+        return Result.ok<CheckoutCreated, CheckoutError>({
+          orderId: record.id,
+          orderNumber: record.number,
+          statusToken,
+          nextAction,
+        })
+      }
+
+      const replay = await database.query.checkout.findByKeyHash(checkoutKeyHash)
+      return replay
+        ? checkoutCreated(replay, statusToken)
+        : Result.err<CheckoutCreated, CheckoutError>(
+            paymentSetupFailed('Төлбөрийн хүсэлтийг бэлтгэж чадсангүй.'),
+          )
+    },
+  })
+}
+
+const replayCheckout = async (
+  record: CheckoutRecord,
+  checkoutRequestHash: string,
+  statusToken: string,
+) => {
+  if (record.checkoutRequestHash !== checkoutRequestHash) {
+    return Result.err<CheckoutCreated, CheckoutError>(
+      invalidCheckoutDetails([{ path: '/idempotencyKey', code: 'invalid' }]),
+    )
+  }
+  if (record.payment?.checkoutNextAction) return checkoutCreated(record, statusToken)
+  return setupQPay(record, statusToken)
 }
 
 export const createCheckoutOrder = async (checkoutInput: CheckoutInput) => {
   const input = normalizeCheckoutInput(checkoutInput)
+  const identity = await checkoutIdentity(input)
+  const existing = await database.query.checkout.findByKeyHash(identity.checkoutKeyHash)
+  if (existing) {
+    return replayCheckout(existing, identity.checkoutRequestHash, identity.statusToken)
+  }
+
   if (input.items.length === 0)
     return Result.err<CheckoutCreated, CheckoutError>(emptyCheckoutCart())
 
@@ -120,85 +211,80 @@ export const createCheckoutOrder = async (checkoutInput: CheckoutInput) => {
   const orderId = createId('order')
   const paymentId = createId('payment')
   const orderNumber = `${settings.orderPrefix}-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
-  const statusToken = `${crypto.randomUUID()}${crypto.randomUUID()}`
   const subtotalMnt = input.items.reduce(
     (sum, item) => sum + byId.get(item.variantId)!.unitPriceMnt * item.quantity,
     0,
   )
   const totalMnt = subtotalMnt + settings.deliveryFeeMnt
   const now = Date.now()
-  const payment = await preparePayment(
-    input.paymentMethod,
-    { orderNumber, totalMnt, paymentId },
-    {
-      type: 'bank_transfer',
-      bankName: settings.bankName,
-      accountName: settings.bankAccountName,
-      accountNumber: settings.bankAccountNumber,
-    },
-  )
+  const bankTransfer = {
+    type: 'bank_transfer',
+    bankName: settings.bankName,
+    accountName: settings.bankAccountName,
+    accountNumber: settings.bankAccountNumber,
+  } satisfies BankTransferPaymentInstructions
 
-  return payment.match<Promise<Result<CheckoutCreated, CheckoutError>>>({
-    err: async error => Result.err<CheckoutCreated, CheckoutError>(error),
-    ok: async prepared => {
-      await database.query.checkout.insertOrder({
-        order: {
-          id: orderId,
-          number: orderNumber,
-          statusTokenHash: await hashStatusToken(statusToken),
-          status: 'new',
-          customerName: input.customer.name,
-          customerPhone: input.customer.phone,
-          district: input.delivery.district,
-          khoroo: input.delivery.khoroo,
-          address: input.delivery.address,
-          deliveryNotes: input.delivery.notes ?? null,
-          subtotalMnt,
-          deliveryFeeMnt: settings.deliveryFeeMnt,
-          totalMnt,
-          createdAt: now,
-          updatedAt: now,
-        },
-        lines: input.items.map(item => {
-          const variant = byId.get(item.variantId)!
-          return {
-            id: createId('orderLine'),
-            orderId,
-            productId: variant.productId,
-            variantId: variant.variantId,
-            productName: variant.productName,
-            variantName: variant.variantName,
-            sku: variant.sku,
-            options: variant.options,
-            imageR2Key: variant.imageR2Key,
-            imageWidth: variant.imageWidth,
-            imageHeight: variant.imageHeight,
-            imageAlt: variant.imageAlt,
-            unitPriceMnt: variant.unitPriceMnt,
-            quantity: item.quantity,
-            lineTotalMnt: variant.unitPriceMnt * item.quantity,
-          }
-        }),
-        payment: {
-          id: paymentId,
+  try {
+    await database.query.checkout.insertOrder({
+      order: {
+        id: orderId,
+        number: orderNumber,
+        statusTokenHash: await hashStatusToken(identity.statusToken),
+        checkoutKeyHash: identity.checkoutKeyHash,
+        checkoutRequestHash: identity.checkoutRequestHash,
+        status: 'new',
+        customerName: input.customer.name,
+        customerPhone: input.customer.phone,
+        district: input.delivery.district,
+        khoroo: input.delivery.khoroo,
+        address: input.delivery.address,
+        deliveryNotes: input.delivery.notes ?? null,
+        subtotalMnt,
+        deliveryFeeMnt: settings.deliveryFeeMnt,
+        totalMnt,
+        createdAt: now,
+        updatedAt: now,
+      },
+      lines: input.items.map(item => {
+        const variant = byId.get(item.variantId)!
+        return {
+          id: createId('orderLine'),
           orderId,
-          method: input.paymentMethod,
-          status: 'pending',
-          amountMnt: totalMnt,
-          providerInvoiceId: prepared.providerInvoiceId,
-          createdAt: now,
-          updatedAt: now,
-        },
-      })
-
-      return Result.ok<CheckoutCreated, CheckoutError>({
+          productId: variant.productId,
+          variantId: variant.variantId,
+          productName: variant.productName,
+          variantName: variant.variantName,
+          sku: variant.sku,
+          options: variant.options,
+          imageR2Key: variant.imageR2Key,
+          imageWidth: variant.imageWidth,
+          imageHeight: variant.imageHeight,
+          imageAlt: variant.imageAlt,
+          unitPriceMnt: variant.unitPriceMnt,
+          quantity: item.quantity,
+          lineTotalMnt: variant.unitPriceMnt * item.quantity,
+        }
+      }),
+      payment: {
+        id: paymentId,
         orderId,
-        orderNumber,
-        statusToken,
-        nextAction: prepared.nextAction,
-      })
-    },
-  })
+        method: input.paymentMethod,
+        status: 'pending',
+        amountMnt: totalMnt,
+        checkoutNextAction: input.paymentMethod === 'bank_transfer' ? bankTransfer : null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    })
+  } catch (error) {
+    const concurrent = await database.query.checkout.findByKeyHash(identity.checkoutKeyHash)
+    if (!concurrent) throw error
+    return replayCheckout(concurrent, identity.checkoutRequestHash, identity.statusToken)
+  }
+
+  const persisted = await database.query.checkout.findByKeyHash(identity.checkoutKeyHash)
+  if (!persisted) throw new Error('Persisted checkout could not be replayed.')
+  return replayCheckout(persisted, identity.checkoutRequestHash, identity.statusToken)
 }
 
 export const checkoutOperations = { createOrder: createCheckoutOrder }

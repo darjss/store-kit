@@ -299,9 +299,19 @@ try {
     const allowed = new Set(['workday', 'off-duty', 'layering', 'travel', 'cold-weather'])
     assert.ok(seed.products.flatMap(product => product.useCases).every(tag => allowed.has(tag)))
   })
-  record('Wrangler names only isolated ДУНД data and cache resources', () => {
+  record('Wrangler names only isolated ДУНД data, cache, and abuse-control resources', () => {
     assert.match(wranglerConfig, /"database_name": "dund-demo-solid-store-\d+-db"/)
     assert.match(wranglerConfig, /"kv_namespaces": \[\{ "binding": "CACHE", "id":/)
+    for (const binding of [
+      'CHECKOUT_RATE_LIMITER',
+      'PRIVATE_STATUS_RATE_LIMITER',
+      'BANK_CLAIM_RATE_LIMITER',
+      'QPAY_REFRESH_RATE_LIMITER',
+      'SEARCH_RATE_LIMITER',
+      'CART_RATE_LIMITER',
+    ]) {
+      assert.match(wranglerConfig, new RegExp(`"name": "${binding}"`))
+    }
     assert.doesNotMatch(wranglerConfig, /plugged/i)
   })
 
@@ -426,6 +436,7 @@ try {
     assert.match(serverSource, /QPAY_PASSWORD/)
     assert.doesNotMatch(clientSources, /drizzle-orm\/d1/)
     assert.doesNotMatch(clientSources, /QPAY_PASSWORD/)
+    assert.doesNotMatch(clientSources, /CHECKOUT_RATE_LIMITER|QPAY_REFRESH_RATE_LIMITER/)
   })
 
   const catalogFunctionId =
@@ -473,6 +484,26 @@ try {
     assert.equal(invalidSearchResponse.status, 400)
   })
 
+  const exhaustSearchRateLimit = async (remaining, statuses = []) => {
+    if (remaining === 0) return statuses
+    const response = await fetch(searchUrl, {
+      method: 'POST',
+      headers: { 'cf-connecting-ip': '198.51.100.77' },
+    })
+    await response.arrayBuffer()
+    return exhaustSearchRateLimit(remaining - 1, [...statuses, response.status])
+  }
+  const rateLimitedSearchStatuses = await exhaustSearchRateLimit(35)
+  record('the real Worker enforces the isolated search rate-limit binding', () => {
+    assert.equal(rateLimitedSearchStatuses[0], 200)
+    assert.ok(rateLimitedSearchStatuses.includes(429))
+    assert.ok(
+      rateLimitedSearchStatuses
+        .slice(rateLimitedSearchStatuses.indexOf(429))
+        .every(status => status === 429),
+    )
+  })
+
   const cartFunctionId = /registerServerReference\("([^"]+)", async function validateCart/.exec(
     serverSource,
   )?.[1]
@@ -511,6 +542,7 @@ try {
     /registerServerReference\("([^"]+)", async function submitCheckout/.exec(serverSource)?.[1]
   assert.ok(checkoutFunctionId, 'The production server bundle must register submitCheckout.')
   const checkoutInput = {
+    idempotencyKey: 'checkout_123e4567-e89b-42d3-a456-426614174000',
     items: [{ variantId: 'var_01kyfqxb0me06sxpr1vkrdy49j', quantity: 1 }],
     customer: { name: '  Тэмүүлэн  ', phone: '99112233' },
     delivery: {
@@ -528,6 +560,19 @@ try {
     { method: 'POST' },
   )
   const checkoutBody = await checkoutResponse.text()
+  const retryCheckoutResponses = await Promise.all(
+    Array.from({ length: 2 }, () =>
+      fetch(
+        `${origin}/_server?id=${encodeURIComponent(checkoutFunctionId)}&args=${encodeURIComponent(
+          JSON.stringify([checkoutInput]),
+        )}`,
+        { method: 'POST' },
+      ),
+    ),
+  )
+  const retryCheckoutBodies = await Promise.all(
+    retryCheckoutResponses.map(response => response.text()),
+  )
   const invalidCheckoutResponse = await fetch(
     `${origin}/_server?id=${encodeURIComponent(checkoutFunctionId)}&args=${encodeURIComponent(
       JSON.stringify([{ ...checkoutInput, customer: { name: '', phone: '55' } }]),
@@ -536,10 +581,7 @@ try {
   )
   const invalidCheckoutBody = await invalidCheckoutResponse.text()
   const createdOrderId = /ord_[0-7][0-9a-hjkmnp-tv-z]{25}/.exec(checkoutBody)?.[0]
-  const createdStatusToken =
-    /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/.exec(
-      checkoutBody,
-    )?.[0]
+  const createdStatusToken = /[0-9a-f]{64}/.exec(checkoutBody)?.[0]
   record('bank-transfer checkout validates fields and persists an authoritative D1 order', () => {
     assert.equal(checkoutResponse.status, 200)
     assert.match(checkoutBody, /DND-/)
@@ -547,6 +589,8 @@ try {
     assert.match(checkoutBody, /Хаан банк/)
     assert.ok(createdOrderId)
     assert.ok(createdStatusToken)
+    assert.ok(retryCheckoutResponses.every(response => response.status === 200))
+    assert.ok(retryCheckoutBodies.every(body => body === checkoutBody))
     assert.equal(invalidCheckoutResponse.status, 200)
     assert.match(invalidCheckoutBody, /field/)
     assert.match(invalidCheckoutBody, /customer\/name/)

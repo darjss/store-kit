@@ -8,6 +8,7 @@ import {
   catalogSlugSchema,
 } from '@store-kit/contracts/catalog'
 import type { CatalogSearchResult, ProductListFilters } from '@store-kit/contracts/catalog'
+import { env } from 'cloudflare:workers'
 import type { Element } from 'solid-js'
 import { Value } from 'typebox/value'
 
@@ -16,6 +17,8 @@ import type { CatalogSearch } from '~/app/catalog-search'
 import { formatMnt } from '~/catalog/format'
 import { mediaUrl } from '~/catalog/media'
 import type { ProductPageData, PurchaseProduct, StoreImage } from '~/catalog/model'
+
+import { enforceRateLimit, throwUnexpectedServerError } from './policy'
 
 const useCaseLabels: Record<string, string> = {
   'workday': 'Ажлын өдөр',
@@ -113,6 +116,7 @@ const validateSlug = (input: unknown) => {
 }
 
 export async function searchCatalog(input: unknown) {
+  await enforceRateLimit('catalog-search', env.SEARCH_RATE_LIMITER)
   if (!Value.Check(catalogSearchInputSchema, input) || input.query.trim().length < 2) {
     throw respond(
       { ok: false as const, code: 'invalid_catalog_search' },
@@ -120,38 +124,39 @@ export async function searchCatalog(input: unknown) {
     )
   }
 
-  const query = input.query.trim()
-  const result = await commerce.catalog.listProducts({ query, limit: 8 })
-  const searchResult: CatalogSearchResult = {
-    items: result.value.items.map(product => {
-      const stockQuantity = product.variants.reduce(
-        (total, variant) => total + variant.stockQuantity,
-        0,
-      )
-      return {
-        slug: product.slug,
-        name: product.name,
-        shortDescription: product.shortDescription ?? 'Тайлбар шинэчлэгдэж байна.',
-        image: product.images[0] ? toPublicImage(product.images[0]) : null,
-        priceMnt: minimumPrice(product.variants) ?? null,
-        stockStatus:
-          stockQuantity === 0
-            ? ('sold-out' as const)
-            : stockQuantity <= 3
-              ? ('low-stock' as const)
-              : ('in-stock' as const),
-      }
-    }),
-    total: result.value.total,
-  }
+  try {
+    const query = input.query.trim()
+    const result = await commerce.catalog.listProducts({ query, limit: 8 })
+    const searchResult: CatalogSearchResult = {
+      items: result.value.items.map(product => {
+        const stockQuantity = product.variants.reduce(
+          (total, variant) => total + variant.stockQuantity,
+          0,
+        )
+        return {
+          slug: product.slug,
+          name: product.name,
+          shortDescription: product.shortDescription ?? 'Тайлбар шинэчлэгдэж байна.',
+          image: product.images[0] ? toPublicImage(product.images[0]) : null,
+          priceMnt: minimumPrice(product.variants) ?? null,
+          stockStatus:
+            stockQuantity === 0
+              ? ('sold-out' as const)
+              : stockQuantity <= 3
+                ? ('low-stock' as const)
+                : ('in-stock' as const),
+        }
+      }),
+      total: result.value.total,
+    }
 
-  if (!Value.Check(catalogSearchResultSchema, searchResult)) {
-    throw respond(
-      { ok: false as const, code: 'invalid_catalog_search_result' },
-      { status: 500, headers: { 'cache-control': 'private, no-store' } },
-    )
+    if (!Value.Check(catalogSearchResultSchema, searchResult)) {
+      throw new Error('Invalid catalog search result.')
+    }
+    return searchResult
+  } catch (error) {
+    return throwUnexpectedServerError('catalog-search', error, 'Хайлтыг гүйцэтгэж чадсангүй.')
   }
-  return searchResult
 }
 
 export async function getHomeFrame() {

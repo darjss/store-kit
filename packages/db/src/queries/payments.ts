@@ -1,6 +1,6 @@
 import type { OrderStatus } from '@store-kit/contracts/orders'
 import type { PaymentStatus } from '@store-kit/contracts/payments'
-import { and, eq, exists, gte, isNull, lt, notExists, or, sql } from 'drizzle-orm'
+import { and, eq, exists, gte, isNull, lt, lte, notExists, or, sql } from 'drizzle-orm'
 
 import { db } from '../client'
 import { productVariant } from '../schema/catalog'
@@ -8,18 +8,39 @@ import { order as customerOrder, orderLine, payment } from '../schema/shopping'
 
 type Payment = typeof payment.$inferSelect
 
-export const markBankTransferClaimed = async (
+export const claimBankTransferNotification = async (
   orderId: string,
+  leaseId: string,
   claimedAt: number,
+  expiresAt: number,
 ): Promise<Payment | undefined> => {
-  const [updated] = await db
+  const availableNotification = or(
+    eq(payment.staffNotificationStatus, 'pending'),
+    and(
+      eq(payment.staffNotificationStatus, 'sending'),
+      or(
+        isNull(payment.staffNotificationLeaseExpiresAt),
+        lte(payment.staffNotificationLeaseExpiresAt, claimedAt),
+      ),
+    ),
+  )
+  const [claimed] = await db
     .update(payment)
-    .set({ status: 'claimed', claimedAt, updatedAt: claimedAt })
+    .set({
+      status: 'claimed',
+      claimedAt: sql`coalesce(${payment.claimedAt}, ${claimedAt})`,
+      staffNotificationStatus: 'sending',
+      staffNotificationLeaseId: leaseId,
+      staffNotificationLeaseExpiresAt: expiresAt,
+      updatedAt: claimedAt,
+    })
     .where(
       and(
         eq(payment.orderId, orderId),
         eq(payment.method, 'bank_transfer'),
-        eq(payment.status, 'pending'),
+        or(eq(payment.status, 'pending'), eq(payment.status, 'claimed')),
+        isNull(payment.telegramMessageId),
+        availableNotification,
         exists(
           db
             .select({ value: sql`1` })
@@ -29,7 +50,7 @@ export const markBankTransferClaimed = async (
       ),
     )
     .returning()
-  return updated
+  return claimed
 }
 
 export const findById = (id: string): Promise<Payment | undefined> =>
@@ -38,39 +59,91 @@ export const findById = (id: string): Promise<Payment | undefined> =>
 export const findByOrderId = (orderId: string): Promise<Payment | undefined> =>
   db.query.payment.findFirst({ where: { orderId } })
 
-export const storeTelegramMessageId = async (
+export const completeBankTransferNotification = async (
   orderId: string,
+  leaseId: string,
   messageId: string,
   updatedAt: number,
 ): Promise<Payment | undefined> => {
-  const [stored] = await db
+  const [completed] = await db
     .update(payment)
-    .set({ telegramMessageId: messageId, updatedAt })
+    .set({
+      telegramMessageId: messageId,
+      staffNotificationStatus: 'sent',
+      staffNotificationLeaseId: null,
+      staffNotificationLeaseExpiresAt: null,
+      updatedAt,
+    })
     .where(
       and(
         eq(payment.orderId, orderId),
         eq(payment.method, 'bank_transfer'),
         eq(payment.status, 'claimed'),
+        eq(payment.staffNotificationStatus, 'sending'),
+        eq(payment.staffNotificationLeaseId, leaseId),
         isNull(payment.telegramMessageId),
       ),
     )
     .returning()
-  return stored
+  return completed
 }
+
+export const releaseBankTransferNotification = (
+  orderId: string,
+  leaseId: string,
+  updatedAt: number,
+): Promise<Payment[]> =>
+  db
+    .update(payment)
+    .set({
+      status: 'pending',
+      claimedAt: null,
+      staffNotificationStatus: 'pending',
+      staffNotificationLeaseId: null,
+      staffNotificationLeaseExpiresAt: null,
+      updatedAt,
+    })
+    .where(
+      and(
+        eq(payment.orderId, orderId),
+        eq(payment.method, 'bank_transfer'),
+        eq(payment.status, 'claimed'),
+        eq(payment.staffNotificationStatus, 'sending'),
+        eq(payment.staffNotificationLeaseId, leaseId),
+        isNull(payment.telegramMessageId),
+      ),
+    )
+    .returning()
 
 export const claimQPayStaffNotification = async (
   paymentId: string,
-  updatedAt: number,
+  leaseId: string,
+  claimedAt: number,
+  expiresAt: number,
 ): Promise<Payment | undefined> => {
   const [claimed] = await db
     .update(payment)
-    .set({ staffNotificationStatus: 'sending', updatedAt })
+    .set({
+      staffNotificationStatus: 'sending',
+      staffNotificationLeaseId: leaseId,
+      staffNotificationLeaseExpiresAt: expiresAt,
+      updatedAt: claimedAt,
+    })
     .where(
       and(
         eq(payment.id, paymentId),
         eq(payment.method, 'qpay'),
         eq(payment.status, 'paid'),
-        eq(payment.staffNotificationStatus, 'pending'),
+        or(
+          eq(payment.staffNotificationStatus, 'pending'),
+          and(
+            eq(payment.staffNotificationStatus, 'sending'),
+            or(
+              isNull(payment.staffNotificationLeaseExpiresAt),
+              lte(payment.staffNotificationLeaseExpiresAt, claimedAt),
+            ),
+          ),
+        ),
         isNull(payment.telegramMessageId),
       ),
     )
@@ -80,6 +153,7 @@ export const claimQPayStaffNotification = async (
 
 export const completeQPayStaffNotification = async (
   paymentId: string,
+  leaseId: string,
   messageId: string,
   updatedAt: number,
 ): Promise<Payment | undefined> => {
@@ -88,6 +162,8 @@ export const completeQPayStaffNotification = async (
     .set({
       telegramMessageId: messageId,
       staffNotificationStatus: 'sent',
+      staffNotificationLeaseId: null,
+      staffNotificationLeaseExpiresAt: null,
       updatedAt,
     })
     .where(
@@ -96,6 +172,7 @@ export const completeQPayStaffNotification = async (
         eq(payment.method, 'qpay'),
         eq(payment.status, 'paid'),
         eq(payment.staffNotificationStatus, 'sending'),
+        eq(payment.staffNotificationLeaseId, leaseId),
         isNull(payment.telegramMessageId),
       ),
     )
@@ -105,31 +182,24 @@ export const completeQPayStaffNotification = async (
 
 export const releaseQPayStaffNotification = (
   paymentId: string,
+  leaseId: string,
   updatedAt: number,
 ): Promise<Payment[]> =>
   db
     .update(payment)
-    .set({ staffNotificationStatus: 'pending', updatedAt })
+    .set({
+      staffNotificationStatus: 'pending',
+      staffNotificationLeaseId: null,
+      staffNotificationLeaseExpiresAt: null,
+      updatedAt,
+    })
     .where(
       and(
         eq(payment.id, paymentId),
         eq(payment.method, 'qpay'),
         eq(payment.status, 'paid'),
         eq(payment.staffNotificationStatus, 'sending'),
-        isNull(payment.telegramMessageId),
-      ),
-    )
-    .returning()
-
-export const releaseBankTransferClaim = (orderId: string, updatedAt: number): Promise<Payment[]> =>
-  db
-    .update(payment)
-    .set({ status: 'pending', claimedAt: null, telegramMessageId: null, updatedAt })
-    .where(
-      and(
-        eq(payment.orderId, orderId),
-        eq(payment.method, 'bank_transfer'),
-        eq(payment.status, 'claimed'),
+        eq(payment.staffNotificationLeaseId, leaseId),
         isNull(payment.telegramMessageId),
       ),
     )
@@ -142,7 +212,15 @@ export const rejectBankTransferClaim = async (
 ) => {
   const reject = db
     .update(payment)
-    .set({ status: 'pending', claimedAt: null, telegramMessageId: null, updatedAt })
+    .set({
+      status: 'pending',
+      claimedAt: null,
+      telegramMessageId: null,
+      staffNotificationStatus: 'pending',
+      staffNotificationLeaseId: null,
+      staffNotificationLeaseExpiresAt: null,
+      updatedAt,
+    })
     .where(
       and(
         eq(payment.orderId, orderId),
@@ -472,14 +550,14 @@ export const confirmAndDecrementStock = async (
 }
 
 export const paymentQuery = {
-  markBankTransferClaimed,
+  claimBankTransferNotification,
   findById,
   findByOrderId,
-  storeTelegramMessageId,
+  completeBankTransferNotification,
+  releaseBankTransferNotification,
   claimQPayStaffNotification,
   completeQPayStaffNotification,
   releaseQPayStaffNotification,
-  releaseBankTransferClaim,
   rejectBankTransferClaim,
   confirmAndDecrementStock,
 }

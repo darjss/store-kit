@@ -49,6 +49,7 @@ const seedCheckout = async (suffix: number) => {
 }
 
 const checkoutBody = (variantId: string) => ({
+  idempotencyKey: `checkout_${crypto.randomUUID()}`,
   items: [{ variantId, quantity: 1 }],
   customer: { name: 'Customer', phone: '99112233' },
   delivery: {

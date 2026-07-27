@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vite-plus/test'
 
 import { db } from './client'
 import { createId } from './ids'
+import { checkoutQuery } from './queries/checkout'
 import { paymentQuery } from './queries/payments'
 import { product, productVariant } from './schema/catalog'
 import { order, orderLine, payment } from './schema/shopping'
@@ -276,6 +277,63 @@ describe('atomic payment confirmation', () => {
   })
 })
 
+describe('QPay setup ownership', () => {
+  it('reclaims an expired setup lease and rejects a stale provider response', async () => {
+    const fixture = await createFixture({ method: 'qpay' })
+    const now = Date.now()
+    await db
+      .update(payment)
+      .set({
+        providerInvoiceId: null,
+        providerSetupLeaseId: 'expired-setup-owner',
+        providerSetupLeaseExpiresAt: now - 1,
+      })
+      .where(eq(payment.id, fixture.paymentId))
+
+    const leaseId = crypto.randomUUID()
+    const reclaimed = await checkoutQuery.claimQPaySetup(
+      fixture.paymentId,
+      leaseId,
+      now,
+      now + 60_000,
+    )
+    const nextAction = {
+      type: 'qpay' as const,
+      qrText: 'qr-text',
+      qrImage: 'data:image/png;base64,AA==',
+      urls: [{ name: 'Khan Bank', link: 'khanbank://q?data=payment' }],
+    }
+    const staleCompletion = await checkoutQuery.completeQPaySetup(
+      fixture.paymentId,
+      'expired-setup-owner',
+      'stale-invoice',
+      nextAction,
+      now,
+    )
+    const staleRelease = await checkoutQuery.releaseQPaySetup(
+      fixture.paymentId,
+      'expired-setup-owner',
+      now + 5_000,
+      now,
+    )
+    const completed = await checkoutQuery.completeQPaySetup(
+      fixture.paymentId,
+      leaseId,
+      'current-invoice',
+      nextAction,
+      now,
+    )
+
+    expect(reclaimed?.providerSetupLeaseId).toBe(leaseId)
+    expect(staleCompletion).toBeUndefined()
+    expect(staleRelease).toEqual([])
+    expect(completed).toMatchObject({
+      providerInvoiceId: 'current-invoice',
+      checkoutNextAction: nextAction,
+    })
+  })
+})
+
 describe('notification and bank-transfer claim ownership', () => {
   it('allows only one concurrent QPay callback to own the staff notification', async () => {
     const fixture = await createFixture({
@@ -285,27 +343,95 @@ describe('notification and bank-transfer claim ownership', () => {
       telegramMessageId: null,
     })
 
-    const claims = await Promise.all(
-      Array.from({ length: 4 }, () =>
-        paymentQuery.claimQPayStaffNotification(fixture.paymentId, Date.now()),
-      ),
+    const attempts = await Promise.all(
+      Array.from({ length: 4 }, async () => {
+        const leaseId = crypto.randomUUID()
+        const now = Date.now()
+        const claim = await paymentQuery.claimQPayStaffNotification(
+          fixture.paymentId,
+          leaseId,
+          now,
+          now + 60_000,
+        )
+        return { leaseId, claim }
+      }),
     )
-    const owner = claims.find(claim => claim !== undefined)
-    expect(claims.filter(Boolean)).toHaveLength(1)
-    expect(owner?.staffNotificationStatus).toBe('sending')
+    const owner = attempts.find(attempt => attempt.claim !== undefined)
+    expect(attempts.filter(attempt => attempt.claim)).toHaveLength(1)
+    expect(owner?.claim?.staffNotificationStatus).toBe('sending')
+    expect(owner).toBeDefined()
+    if (!owner) return
 
     const completed = await paymentQuery.completeQPayStaffNotification(
       fixture.paymentId,
+      owner.leaseId,
       'qpay-paid-message',
       Date.now(),
     )
-    const repeated = await paymentQuery.claimQPayStaffNotification(fixture.paymentId, Date.now())
+    const repeatedAt = Date.now()
+    const repeated = await paymentQuery.claimQPayStaffNotification(
+      fixture.paymentId,
+      crypto.randomUUID(),
+      repeatedAt,
+      repeatedAt + 60_000,
+    )
 
     expect(completed).toMatchObject({
       telegramMessageId: 'qpay-paid-message',
       staffNotificationStatus: 'sent',
     })
     expect(repeated).toBeUndefined()
+  })
+
+  it('reclaims an expired QPay notification lease and rejects stale ownership', async () => {
+    const fixture = await createFixture({
+      method: 'qpay',
+      orderStatus: 'confirmed',
+      paymentStatus: 'paid',
+      telegramMessageId: null,
+    })
+    const now = Date.now()
+    await db
+      .update(payment)
+      .set({
+        staffNotificationStatus: 'sending',
+        staffNotificationLeaseId: 'expired-qpay-owner',
+        staffNotificationLeaseExpiresAt: now - 1,
+      })
+      .where(eq(payment.id, fixture.paymentId))
+
+    const leaseId = crypto.randomUUID()
+    const reclaimed = await paymentQuery.claimQPayStaffNotification(
+      fixture.paymentId,
+      leaseId,
+      now,
+      now + 60_000,
+    )
+    const staleCompletion = await paymentQuery.completeQPayStaffNotification(
+      fixture.paymentId,
+      'expired-qpay-owner',
+      'stale-message',
+      now,
+    )
+    const staleRelease = await paymentQuery.releaseQPayStaffNotification(
+      fixture.paymentId,
+      'expired-qpay-owner',
+      now,
+    )
+    const completed = await paymentQuery.completeQPayStaffNotification(
+      fixture.paymentId,
+      leaseId,
+      'current-message',
+      now,
+    )
+
+    expect(reclaimed?.staffNotificationLeaseId).toBe(leaseId)
+    expect(staleCompletion).toBeUndefined()
+    expect(staleRelease).toEqual([])
+    expect(completed).toMatchObject({
+      telegramMessageId: 'current-message',
+      staffNotificationStatus: 'sent',
+    })
   })
 
   it('allows only one concurrent pending-to-claimed request to own notification sending', async () => {
@@ -315,14 +441,66 @@ describe('notification and bank-transfer claim ownership', () => {
     })
 
     const claims = await Promise.all(
-      Array.from({ length: 4 }, () =>
-        paymentQuery.markBankTransferClaimed(fixture.orderId, Date.now()),
-      ),
+      Array.from({ length: 4 }, () => {
+        const now = Date.now()
+        return paymentQuery.claimBankTransferNotification(
+          fixture.orderId,
+          crypto.randomUUID(),
+          now,
+          now + 60_000,
+        )
+      }),
     )
     const persisted = await paymentQuery.findByOrderId(fixture.orderId)
 
     expect(claims.filter(Boolean)).toHaveLength(1)
     expect(persisted?.status).toBe('claimed')
+  })
+
+  it('reclaims an expired bank notification lease and rejects stale ownership', async () => {
+    const fixture = await createFixture({ telegramMessageId: null })
+    const now = Date.now()
+    await db
+      .update(payment)
+      .set({
+        staffNotificationStatus: 'sending',
+        staffNotificationLeaseId: 'expired-bank-owner',
+        staffNotificationLeaseExpiresAt: now - 1,
+      })
+      .where(eq(payment.id, fixture.paymentId))
+
+    const leaseId = crypto.randomUUID()
+    const reclaimed = await paymentQuery.claimBankTransferNotification(
+      fixture.orderId,
+      leaseId,
+      now,
+      now + 60_000,
+    )
+    const staleCompletion = await paymentQuery.completeBankTransferNotification(
+      fixture.orderId,
+      'expired-bank-owner',
+      'stale-message',
+      now,
+    )
+    const staleRelease = await paymentQuery.releaseBankTransferNotification(
+      fixture.orderId,
+      'expired-bank-owner',
+      now,
+    )
+    const completed = await paymentQuery.completeBankTransferNotification(
+      fixture.orderId,
+      leaseId,
+      'current-message',
+      now,
+    )
+
+    expect(reclaimed?.staffNotificationLeaseId).toBe(leaseId)
+    expect(staleCompletion).toBeUndefined()
+    expect(staleRelease).toEqual([])
+    expect(completed).toMatchObject({
+      telegramMessageId: 'current-message',
+      staffNotificationStatus: 'sent',
+    })
   })
 
   it('binds transitions to the current message and reflects reordered and repeated state', async () => {
@@ -357,9 +535,23 @@ describe('notification and bank-transfer claim ownership', () => {
     })
     expect(reorderedConfirm).toEqual({ status: 'payment-mismatch' })
 
-    expect(await paymentQuery.markBankTransferClaimed(fixture.orderId, Date.now())).toBeDefined()
+    const claimedAt = Date.now()
+    const leaseId = crypto.randomUUID()
     expect(
-      await paymentQuery.storeTelegramMessageId(fixture.orderId, 'new-message', Date.now()),
+      await paymentQuery.claimBankTransferNotification(
+        fixture.orderId,
+        leaseId,
+        claimedAt,
+        claimedAt + 60_000,
+      ),
+    ).toBeDefined()
+    expect(
+      await paymentQuery.completeBankTransferNotification(
+        fixture.orderId,
+        leaseId,
+        'new-message',
+        Date.now(),
+      ),
     ).toBeDefined()
 
     const oldReject = await paymentQuery.rejectBankTransferClaim(

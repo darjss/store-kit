@@ -1,0 +1,9 @@
+ALTER TABLE `customer_order` ADD `checkout_key_hash` text;--> statement-breakpoint
+ALTER TABLE `customer_order` ADD `checkout_request_hash` text;--> statement-breakpoint
+ALTER TABLE `payment` ADD `checkout_next_action` text;--> statement-breakpoint
+ALTER TABLE `payment` ADD `provider_setup_lease_id` text;--> statement-breakpoint
+ALTER TABLE `payment` ADD `provider_setup_lease_expires_at` integer;--> statement-breakpoint
+ALTER TABLE `payment` ADD `provider_setup_retry_at` integer;--> statement-breakpoint
+ALTER TABLE `payment` ADD `staff_notification_lease_id` text;--> statement-breakpoint
+ALTER TABLE `payment` ADD `staff_notification_lease_expires_at` integer;--> statement-breakpoint
+CREATE UNIQUE INDEX `customer_order_checkout_key_hash_unique` ON `customer_order` (`checkout_key_hash`);

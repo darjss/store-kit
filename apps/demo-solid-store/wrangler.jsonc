@@ -22,6 +22,38 @@
     },
   ],
   "kv_namespaces": [{ "binding": "CACHE", "id": "8d61a3d608ff4841ae27f1a69155efc6" }],
+  "ratelimits": [
+    {
+      "name": "CHECKOUT_RATE_LIMITER",
+      "namespace_id": "2026072701",
+      "simple": { "limit": 6, "period": 60 },
+    },
+    {
+      "name": "PRIVATE_STATUS_RATE_LIMITER",
+      "namespace_id": "2026072702",
+      "simple": { "limit": 60, "period": 60 },
+    },
+    {
+      "name": "BANK_CLAIM_RATE_LIMITER",
+      "namespace_id": "2026072703",
+      "simple": { "limit": 6, "period": 60 },
+    },
+    {
+      "name": "QPAY_REFRESH_RATE_LIMITER",
+      "namespace_id": "2026072704",
+      "simple": { "limit": 12, "period": 60 },
+    },
+    {
+      "name": "SEARCH_RATE_LIMITER",
+      "namespace_id": "2026072705",
+      "simple": { "limit": 30, "period": 60 },
+    },
+    {
+      "name": "CART_RATE_LIMITER",
+      "namespace_id": "2026072706",
+      "simple": { "limit": 60, "period": 60 },
+    },
+  ],
   "vars": {
     "DEPLOYMENT_ENV": "production",
     "PUBLIC_APP_URL": "https://dund-demo-solid-store-20260726201612.darjs.workers.dev",

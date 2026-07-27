@@ -11,6 +11,7 @@ import {
 import { toStandardSchema } from './standard-schema'
 
 const checkout = {
+  idempotencyKey: 'checkout_123e4567-e89b-42d3-a456-426614174000',
   items: [{ variantId: 'var_01arz3ndektsv4rrffq69g5fav', quantity: 1 }],
   customer: { name: 'Бат', phone: '99112233' },
   delivery: {
@@ -31,6 +32,9 @@ test('checkout composes browser details with authoritative cart items', () => {
   expect(Value.Check(checkoutDetailsSchema, details)).toBe(true)
   expect(Value.Check(checkoutDetailsSchema, checkout)).toBe(false)
   expect(Value.Check(checkoutInputSchema, checkout)).toBe(true)
+  expect(
+    Value.Check(checkoutInputSchema, { ...checkout, idempotencyKey: 'checkout_not-random' }),
+  ).toBe(false)
   expect(
     Value.Check(checkoutInputSchema, {
       ...checkout,
@@ -111,6 +115,29 @@ test('checkout result exposes only serialized customer payment instructions', ()
     Value.Check(checkoutCreatedSchema, {
       ...created,
       nextAction: { ...nextAction, providerInvoiceId: 'private-provider-id' },
+    }),
+  ).toBe(false)
+})
+
+test('QPay instructions reject unsafe links and unbounded QR data', () => {
+  const instructions = {
+    type: 'qpay',
+    qrText: 'qpay-qr-text',
+    qrImage: 'data:image/png;base64,AA==',
+    urls: [{ name: 'Khan Bank', link: 'khanbank://q?data=payment' }],
+  } as const
+
+  expect(Value.Check(paymentInstructionsSchema, instructions)).toBe(true)
+  expect(
+    Value.Check(paymentInstructionsSchema, {
+      ...instructions,
+      qrImage: `data:image/png;base64,${'A'.repeat(524_289)}`,
+    }),
+  ).toBe(false)
+  expect(
+    Value.Check(paymentInstructionsSchema, {
+      ...instructions,
+      urls: [{ name: 'Bank', link: 'x'.repeat(2_049) }],
     }),
   ).toBe(false)
 })

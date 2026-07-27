@@ -9,6 +9,14 @@ const requiredTextSchema = (maxLength: number) =>
   Type.String({ minLength: 1, maxLength, pattern: '\\S' })
 
 export const normalizedMongolianPhonePattern = '^[6789]\\d{7}$'
+export const checkoutIdempotencyKeyPattern =
+  '^checkout_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+
+export const checkoutIdempotencyKeySchema = Type.String({
+  minLength: 45,
+  maxLength: 45,
+  pattern: checkoutIdempotencyKeyPattern,
+})
 
 export const ulaanbaatarDistrictSchema = Type.Union([
   Type.Literal('Багануур'),
@@ -52,6 +60,7 @@ export const checkoutDetailsSchema = Type.Object(
 export const checkoutInputSchema = Type.Object(
   {
     ...checkoutDetailsSchema.properties,
+    idempotencyKey: checkoutIdempotencyKeySchema,
     items: Type.Array(cartLineInputSchema, { minItems: 1, maxItems: 20 }),
   },
   { additionalProperties: false },
@@ -60,16 +69,21 @@ export const checkoutInputSchema = Type.Object(
 export const qpayPaymentInstructionsSchema = Type.Object(
   {
     type: Type.Literal('qpay'),
-    qrText: Type.String({ minLength: 1 }),
-    qrImage: Type.String({ minLength: 1 }),
+    qrText: Type.String({ minLength: 1, maxLength: 4_096 }),
+    qrImage: Type.String({
+      minLength: 1,
+      maxLength: 524_288,
+      pattern: '^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$',
+    }),
     urls: Type.Array(
       Type.Object(
         {
-          name: Type.String({ minLength: 1 }),
-          link: Type.String({ minLength: 1 }),
+          name: Type.String({ minLength: 1, maxLength: 100 }),
+          link: Type.String({ minLength: 1, maxLength: 2_048 }),
         },
         { additionalProperties: false },
       ),
+      { maxItems: 30 },
     ),
   },
   { additionalProperties: false },
@@ -140,6 +154,7 @@ export const checkoutErrorSchema = Type.Union([
   ),
 ])
 
+export type CheckoutIdempotencyKey = Static<typeof checkoutIdempotencyKeySchema>
 export type UlaanbaatarDistrict = Static<typeof ulaanbaatarDistrictSchema>
 export type CheckoutCustomer = Static<typeof checkoutCustomerSchema>
 export type CheckoutDelivery = Static<typeof checkoutDeliverySchema>
