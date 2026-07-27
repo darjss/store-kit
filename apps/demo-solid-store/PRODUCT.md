@@ -71,3 +71,9 @@ The desired feeling is the first clear winter sunlight in an apartment entryway:
 Target WCAG 2.2 AA. Body text needs at least 4.5:1 contrast. Large text and controls need at least 3:1 contrast. Keyboard focus must stay visible. Touch targets must be at least 44 × 44 CSS pixels. Product meaning must not depend on color alone.
 
 Support 200% browser zoom, reduced motion, keyboard-only use, and narrow screens from 320 CSS pixels. Use direct alt text that describes the garment, layer, pose, and setting. Do not infer gender from a product category. Use fit notes and garment measurements instead of gendered sizing claims.
+
+## Checkout runtime requirement
+
+The guest cart is browser-owned and persists in `localStorage`. A direct checkout request cannot send those cart lines to the server without JavaScript. Therefore, ДУНД deliberately requires JavaScript to start checkout. The checkout page shows this limitation in a `noscript` notice and does not render a customer form when the browser cannot restore a cart.
+
+The rendered checkout form uses an explicit POST Router action. Customer names, phone numbers, and addresses must not enter a GET URL. The server rebuilds and validates the full checkout command from `FormData`; client fields and hidden cart lines are not trusted.

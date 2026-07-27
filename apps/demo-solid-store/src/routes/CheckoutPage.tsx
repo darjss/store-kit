@@ -1,19 +1,27 @@
+import { useSubmissions } from '@solidjs/router'
 import type { CartValidationError } from '@store-kit/contracts/cart'
 import { checkoutDetailsSchema, ulaanbaatarDistrictSchema } from '@store-kit/contracts/checkout'
 import type {
   CheckoutCreated,
   CheckoutDetails,
-  CheckoutInput,
   CheckoutError,
   UlaanbaatarDistrict,
 } from '@store-kit/contracts/checkout'
 import type { ValidationIssue } from '@store-kit/contracts/common'
-import { For, Show, createSignal, createStore, onSettled, snapshot } from 'solid-js'
+import {
+  For,
+  Show,
+  createOptimistic,
+  createSignal,
+  createStore,
+  onSettled,
+  snapshot,
+} from 'solid-js'
 import { Value } from 'typebox/value'
 
 import { useCart } from '~/cart/CartProvider'
 import { formatMnt } from '~/catalog/format'
-import { submitCheckout } from '~/server/checkout'
+import { checkoutAction } from '~/server/checkout'
 
 const districts = ulaanbaatarDistrictSchema.anyOf.map(district => district.const)
 
@@ -83,121 +91,156 @@ type CheckoutFailure =
   | { type: 'domain'; error: CheckoutDomainFailure }
   | { type: 'transport'; message: string }
 
+const actionTransportMessage = (value: unknown) =>
+  value &&
+  typeof value === 'object' &&
+  'code' in value &&
+  'message' in value &&
+  typeof value.message === 'string'
+    ? value.message
+    : undefined
+
+const unreachableFailure = (failure: never): never => {
+  throw new Error(`Unsupported checkout failure: ${JSON.stringify(failure)}`)
+}
+
 function FailureNotice(props: {
   failure: CheckoutFailure
   retry: () => void
   useBankTransfer: () => void
   openCart: () => void
+  noticeRef: (element: HTMLDivElement) => void
 }) {
-  if (props.failure.type === 'field') {
-    return (
-      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
-        <h2 class="m-0 text-2xl font-extrabold">Мэдээллээ шалгана уу</h2>
-        <p class="mt-2">Тодруулсан талбаруудыг засаад дахин оролдоно уу.</p>
-        <ul class="mt-3 list-disc pl-5">
-          <For each={props.failure.fields}>
-            {field => <li>{fieldLabels[field.path] ?? 'Оруулсан мэдээлэл'}</li>}
-          </For>
-        </ul>
-      </div>
-    )
-  }
-
-  if (props.failure.type === 'transport') {
-    return (
-      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
-        <h2 class="m-0 text-2xl font-extrabold">Холболт амжилтгүй</h2>
-        <p class="mt-2">{props.failure.message}</p>
-        <button
-          class="mt-4 min-h-11 border-2 border-ink px-4 font-bold"
-          type="button"
-          onClick={props.retry}
-        >
-          Дахин оролдох
-        </button>
-      </div>
-    )
-  }
-
-  const error = props.failure.error
-  if (error._tag === 'CartChanged') {
-    return (
-      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
-        <h2 class="m-0 text-2xl font-extrabold">Сагсаа засна уу</h2>
-        <For each={error.corrections}>{correction => <p class="mt-2">{correction.message}</p>}</For>
-        <button
-          class="mt-4 min-h-11 bg-alert px-4 font-bold text-white"
-          type="button"
-          onClick={props.openCart}
-        >
-          Сагсны засварыг нээх
-        </button>
-      </div>
-    )
-  }
-
-  if (error._tag === 'CartEmpty') {
-    return (
-      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
-        <h2 class="m-0 text-2xl font-extrabold">Сагс хоосон байна</h2>
-        <p class="mt-2">{error.message}</p>
-        <a class="mt-4 inline-flex min-h-11 items-center font-bold text-cobalt" href="/products">
-          Бараа сонгох →
-        </a>
-      </div>
-    )
-  }
-
-  if (error._tag === 'InvalidCart') {
-    return (
-      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
-        <h2 class="m-0 text-2xl font-extrabold">Сагсны мэдээлэл буруу байна</h2>
-        <button
-          class="mt-4 min-h-11 border-2 border-ink px-4 font-bold"
-          type="button"
-          onClick={props.openCart}
-        >
-          Сагсаа шалгах
-        </button>
-      </div>
-    )
-  }
-
-  if (error._tag === 'PaymentSetupFailed') {
-    return (
-      <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
-        <h2 class="m-0 text-2xl font-extrabold">Төлбөр үүсгэж чадсангүй</h2>
-        <p class="mt-2">{error.message}</p>
-        <div class="mt-4 flex flex-wrap gap-3">
-          <button
-            class="min-h-11 border-2 border-ink px-4 font-bold"
-            type="button"
-            onClick={props.retry}
-          >
-            Дахин оролдох
-          </button>
-          <Show when={error.canUseBankTransfer}>
+  const content = () => {
+    const failure = props.failure
+    switch (failure.type) {
+      case 'field':
+        return (
+          <>
+            <h2 class="m-0 text-2xl font-extrabold">Мэдээллээ шалгана уу</h2>
+            <p class="mt-2">Тодруулсан талбаруудыг засаад дахин оролдоно уу.</p>
+            <ul class="mt-3 list-disc pl-5">
+              <For each={failure.fields}>
+                {field => <li>{fieldLabels[field.path] ?? 'Оруулсан мэдээлэл'}</li>}
+              </For>
+            </ul>
+          </>
+        )
+      case 'transport':
+        return (
+          <>
+            <h2 class="m-0 text-2xl font-extrabold">Холболт амжилтгүй</h2>
+            <p class="mt-2">{failure.message}</p>
             <button
-              class="min-h-11 bg-cobalt px-4 font-bold text-white"
+              class="mt-4 min-h-11 border-2 border-ink px-4 font-bold"
               type="button"
-              onClick={props.useBankTransfer}
+              onClick={props.retry}
             >
-              Дансаар төлөх
+              Дахин оролдох
             </button>
-          </Show>
-        </div>
-      </div>
-    )
+          </>
+        )
+      case 'domain': {
+        const error = failure.error
+        switch (error._tag) {
+          case 'CartChanged':
+            return (
+              <>
+                <h2 class="m-0 text-2xl font-extrabold">Сагсаа засна уу</h2>
+                <For each={error.corrections}>
+                  {correction => <p class="mt-2">{correction.message}</p>}
+                </For>
+                <button
+                  class="mt-4 min-h-11 bg-alert px-4 font-bold text-white"
+                  type="button"
+                  onClick={props.openCart}
+                >
+                  Сагсны засварыг нээх
+                </button>
+              </>
+            )
+          case 'CartEmpty':
+            return (
+              <>
+                <h2 class="m-0 text-2xl font-extrabold">Сагс хоосон байна</h2>
+                <p class="mt-2">{error.message}</p>
+                <a
+                  class="mt-4 inline-flex min-h-11 items-center font-bold text-cobalt"
+                  href="/products"
+                >
+                  Бараа сонгох →
+                </a>
+              </>
+            )
+          case 'InvalidCart':
+            return (
+              <>
+                <h2 class="m-0 text-2xl font-extrabold">Сагсны мэдээлэл буруу байна</h2>
+                <button
+                  class="mt-4 min-h-11 border-2 border-ink px-4 font-bold"
+                  type="button"
+                  onClick={props.openCart}
+                >
+                  Сагсаа шалгах
+                </button>
+              </>
+            )
+          case 'PaymentSetupFailed':
+            return (
+              <>
+                <h2 class="m-0 text-2xl font-extrabold">Төлбөр үүсгэж чадсангүй</h2>
+                <p class="mt-2">{error.message}</p>
+                <div class="mt-4 flex flex-wrap gap-3">
+                  <button
+                    class="min-h-11 border-2 border-ink px-4 font-bold"
+                    type="button"
+                    onClick={props.retry}
+                  >
+                    Дахин оролдох
+                  </button>
+                  <Show when={error.canUseBankTransfer}>
+                    <button
+                      class="min-h-11 bg-cobalt px-4 font-bold text-white"
+                      type="button"
+                      onClick={props.useBankTransfer}
+                    >
+                      Дансаар төлөх
+                    </button>
+                  </Show>
+                </div>
+              </>
+            )
+          case 'DeliveryUnavailable':
+            return (
+              <>
+                <h2 class="m-0 text-2xl font-extrabold">Захиалга үүсгэж чадсангүй</h2>
+                <p class="mt-2">{error.message}</p>
+              </>
+            )
+          case 'InvalidCheckoutDetails':
+            return (
+              <>
+                <h2 class="m-0 text-2xl font-extrabold">Мэдээллээ шалгана уу</h2>
+                <p class="mt-2">Тодруулсан талбаруудыг засаад дахин оролдоно уу.</p>
+              </>
+            )
+          default:
+            return unreachableFailure(error)
+        }
+      }
+      default:
+        return unreachableFailure(failure)
+    }
   }
 
   return (
-    <div class="mt-6 border-3 border-alert bg-white p-5" role="alert">
-      <h2 class="m-0 text-2xl font-extrabold">Захиалга үүсгэж чадсангүй</h2>
-      <p class="mt-2">
-        {error._tag === 'DeliveryUnavailable'
-          ? error.message
-          : 'Тодруулсан талбаруудыг засаад дахин оролдоно уу.'}
-      </p>
+    <div
+      ref={props.noticeRef}
+      class="mt-6 border-3 border-alert bg-white p-5 outline-offset-2 focus:outline-3 focus:outline-alert"
+      role="alert"
+      tabindex="-1"
+    >
+      {content()}
     </div>
   )
 }
@@ -295,14 +338,49 @@ export default function CheckoutPage() {
     delivery: { district: 'Баянзүрх', khoroo: '', address: '', notes: '' },
     paymentMethod: 'qpay',
   })
-  const [failure, setFailure] = createSignal<CheckoutFailure>()
+  const [localFailure, setLocalFailure] = createSignal<CheckoutFailure>()
   const [blurIssues, setBlurIssues] = createSignal<ValidationIssue[]>([])
-  const [pending, setPending] = createSignal(false)
-  const [created, setCreated] = createSignal<CheckoutCreated>()
+  const [activeAttempt, setActiveAttempt] = createSignal<string>()
+  const [actionPending, setActionPending] = createOptimistic(false)
+  const submissions = useSubmissions(checkoutAction)
   const fieldElements = new Map<string, { focus: () => void }>()
-  let submissionInFlight = false
+  let checkoutForm: HTMLFormElement | undefined
+  let failureNotice: HTMLDivElement | undefined
+  let idempotencyInput: HTMLInputElement | undefined
+  let itemsInput: HTMLInputElement | undefined
   let checkoutAttempt: { request: string; idempotencyKey: string } | undefined
 
+  const latestSubmission = () => {
+    const attempt = activeAttempt()
+    return submissions.findLast(
+      submission => attempt && submission.input[0].get('idempotencyKey') === attempt,
+    )
+  }
+  const actionFailure = (): CheckoutFailure | undefined => {
+    const submission = latestSubmission()
+    if (!submission) return undefined
+    const transportMessage = actionTransportMessage(submission.result)
+    if (submission.error || !submission.result || transportMessage) {
+      return {
+        type: 'transport',
+        message:
+          transportMessage ??
+          'Сүлжээний алдаа гарлаа. Мэдээлэл тань хадгалагдсан тул дахин оролдоно уу.',
+      }
+    }
+    if (submission.result.ok) return undefined
+    const resultFailure = submission.result.failure
+    if (resultFailure.type === 'field') return resultFailure
+    if (resultFailure.error._tag === 'InvalidCheckoutDetails') {
+      return { type: 'field', fields: resultFailure.error.fields }
+    }
+    return { type: 'domain', error: resultFailure.error }
+  }
+  const failure = () => localFailure() ?? actionFailure()
+  const created = () => {
+    const result = latestSubmission()?.result
+    return result?.ok ? result.order : undefined
+  }
   const fieldIssues = () => {
     const current = failure()
     const submitted = current?.type === 'field' ? current.fields : []
@@ -318,7 +396,7 @@ export default function CheckoutPage() {
   }
 
   const setFieldFailure = (fields: ValidationIssue[]) => {
-    setFailure({ type: 'field', fields })
+    setLocalFailure({ type: 'field', fields })
     focusFirstInvalid(fields)
   }
 
@@ -329,98 +407,90 @@ export default function CheckoutPage() {
     setBlurIssues(current => [...current.filter(issue => issue.path !== path), ...issues])
   }
 
-  const submit = async () => {
-    if (submissionInFlight || cart.items.length === 0) return
-    submissionInFlight = true
-    setPending(true)
-    setFailure()
-
-    try {
-      const normalized = normalizeDetails(snapshot(details))
-      if (!Value.Check(checkoutDetailsSchema, normalized)) {
-        setFieldFailure(validationIssues(normalized))
-        return
-      }
-
-      const cartReady = await cart.validate()
-      await Promise.resolve()
-      if (!cartReady) {
-        const cartState = cart.validation()
-        if (cartState.type === 'corrections') {
-          setFailure({
-            type: 'domain',
-            error: {
-              _tag: 'CartChanged',
-              message: 'Сагсны бараа эсвэл үлдэгдэл өөрчлөгдсөн байна.',
-              corrections: cartState.cart.corrections,
-            },
-          })
-          cart.setOpen(true)
-        } else if (cartState.type === 'domain-error') {
-          setFailure({ type: 'domain', error: cartState.error })
-        } else {
-          setFailure({
-            type: 'transport',
-            message: 'Сагсны үнэ, үлдэгдлийг шалгаж чадсангүй. Мэдээлэл тань хадгалагдсан.',
-          })
-        }
-        return
-      }
-
-      const request = {
-        ...normalized,
-        items: snapshot(cart.items).map(item => ({
-          variantId: item.variantId,
-          quantity: item.quantity,
-        })),
-      }
-      const serializedRequest = JSON.stringify(request)
-      if (checkoutAttempt?.request !== serializedRequest) {
-        checkoutAttempt = {
-          request: serializedRequest,
-          idempotencyKey: `checkout_${crypto.randomUUID()}`,
-        }
-      }
-      const input: CheckoutInput = {
-        ...request,
-        idempotencyKey: checkoutAttempt.idempotencyKey,
-      }
-      const result = await submitCheckout(input)
-
-      if (!result.ok) {
-        if (result.failure.type === 'field') {
-          setFieldFailure(result.failure.fields)
-          return
-        }
-        if (result.failure.error._tag === 'InvalidCheckoutDetails') {
-          setFieldFailure(result.failure.error.fields)
-          return
-        }
-        setFailure({ type: 'domain', error: result.failure.error })
-        return
-      }
-
-      cart.clear()
-      setCreated(result.order)
-    } catch {
-      setFailure({
-        type: 'transport',
-        message: 'Сүлжээний алдаа гарлаа. Мэдээлэл тань хадгалагдсан тул дахин оролдоно уу.',
-      })
-    } finally {
-      submissionInFlight = false
-      setPending(false)
+  const prepareSubmission = (event: SubmitEvent & { currentTarget: HTMLFormElement }) => {
+    if (event.currentTarget.hasAttribute('aria-busy') || actionPending()) {
+      event.preventDefault()
+      return
     }
+
+    const normalized = normalizeDetails(snapshot(details))
+    if (!Value.Check(checkoutDetailsSchema, normalized)) {
+      event.preventDefault()
+      setFieldFailure(validationIssues(normalized))
+      return
+    }
+
+    const items = snapshot(cart.items).map(item => ({
+      variantId: item.variantId,
+      quantity: item.quantity,
+    }))
+    const serializedRequest = JSON.stringify({ ...normalized, items })
+    if (checkoutAttempt?.request !== serializedRequest) {
+      checkoutAttempt = {
+        request: serializedRequest,
+        idempotencyKey: `checkout_${crypto.randomUUID()}`,
+      }
+    }
+    if (!idempotencyInput || !itemsInput) {
+      event.preventDefault()
+      return
+    }
+
+    latestSubmission()?.clear()
+    setLocalFailure()
+    setActiveAttempt(checkoutAttempt.idempotencyKey)
+    idempotencyInput.value = checkoutAttempt.idempotencyKey
+    itemsInput.value = JSON.stringify(items)
   }
 
+  const submit = () => checkoutForm?.requestSubmit()
   const useBankTransfer = () => {
     setDetails(draft => {
       draft.paymentMethod = 'bank_transfer'
     })
-    queueMicrotask(() => void submit())
+    queueMicrotask(submit)
   }
 
+  checkoutAction
+    .onSubmit(() => setActionPending(true))
+    .onSettled(submission => {
+      const attempt = activeAttempt()
+      if (!attempt || submission.input[0].get('idempotencyKey') !== attempt) return
+
+      const result = submission.result
+      if (result?.ok) {
+        cart.clear()
+        queueMicrotask(() => document.querySelector<HTMLElement>('#main-content')?.focus())
+        return
+      }
+      if (actionTransportMessage(result)) {
+        queueMicrotask(() => failureNotice?.focus())
+        return
+      }
+
+      const fields =
+        result && !result.ok
+          ? result.failure.type === 'field'
+            ? result.failure.fields
+            : result.failure.error._tag === 'InvalidCheckoutDetails'
+              ? result.failure.error.fields
+              : undefined
+          : undefined
+      if (fields) focusFirstInvalid(fields)
+      else queueMicrotask(() => failureNotice?.focus())
+
+      if (
+        result &&
+        !result.ok &&
+        result.failure.type === 'domain' &&
+        result.failure.error._tag === 'CartChanged'
+      ) {
+        cart.setOpen(true)
+      }
+    })
+
   onSettled(() => {
+    for (const submission of submissions) submission.clear()
     if (cart.items.length > 0 && cart.validation().type === 'idle') void cart.validate()
   })
 
@@ -445,6 +515,16 @@ export default function CheckoutPage() {
               </p>
             </header>
 
+            <noscript>
+              <section class="mt-8 border-3 border-alert bg-white p-6" role="alert">
+                <h2 class="text-2xl font-extrabold">JavaScript шаардлагатай</h2>
+                <p class="mt-2">
+                  Сагс зөвхөн энэ хөтчийн localStorage-д хадгалагддаг. JavaScript-гүй үед захиалгын
+                  барааг серверт найдвартай илгээх боломжгүй тул төлбөрийн маягт ажиллахгүй.
+                </p>
+              </section>
+            </noscript>
+
             <Show
               when={cart.items.length > 0}
               fallback={
@@ -463,22 +543,41 @@ export default function CheckoutPage() {
                 {current => (
                   <FailureNotice
                     failure={current()}
-                    retry={() => void submit()}
+                    retry={submit}
                     useBankTransfer={useBankTransfer}
                     openCart={() => cart.setOpen(true)}
+                    noticeRef={element => {
+                      failureNotice = element
+                    }}
                   />
                 )}
               </Show>
 
               <form
+                ref={element => {
+                  checkoutForm = element
+                }}
+                action={checkoutAction}
+                method="post"
+                enctype="multipart/form-data"
                 class="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]"
                 novalidate
-                aria-busy={pending() ? 'true' : undefined}
-                onSubmit={event => {
-                  event.preventDefault()
-                  void submit()
-                }}
+                onSubmit={prepareSubmission}
               >
+                <input
+                  ref={element => {
+                    idempotencyInput = element
+                  }}
+                  type="hidden"
+                  name="idempotencyKey"
+                />
+                <input
+                  ref={element => {
+                    itemsInput = element
+                  }}
+                  type="hidden"
+                  name="items"
+                />
                 <div class="grid gap-8">
                   <fieldset class="border-3 border-ink bg-white p-[clamp(1rem,4vw,2rem)]">
                     <legend class="px-2 text-2xl font-extrabold">1. Холбоо барих</legend>
@@ -763,10 +862,12 @@ export default function CheckoutPage() {
                   <button
                     class="mt-5 min-h-14 w-full bg-cobalt px-5 font-bold text-white disabled:cursor-not-allowed disabled:opacity-55"
                     type="submit"
-                    disabled={pending()}
-                    aria-busy={pending() ? 'true' : undefined}
+                    disabled={actionPending()}
+                    aria-busy={actionPending() ? 'true' : undefined}
                   >
-                    {pending() ? 'Баталгаажуулж байна…' : 'Захиалга үүсгэх →'}
+                    <span aria-live="polite">
+                      {actionPending() ? 'Баталгаажуулж байна…' : 'Захиалга үүсгэх →'}
+                    </span>
                   </button>
                 </aside>
               </form>

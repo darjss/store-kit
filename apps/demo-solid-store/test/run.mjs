@@ -55,6 +55,20 @@ const fetchHtml = async pathname => {
 
 const occurrenceCount = (source, value) => source.split(value).length - 1
 
+const checkoutForm = input => {
+  const form = new FormData()
+  form.set('idempotencyKey', input.idempotencyKey)
+  form.set('items', JSON.stringify(input.items))
+  form.set('customer.name', input.customer.name)
+  form.set('customer.phone', input.customer.phone)
+  form.set('delivery.district', input.delivery.district)
+  form.set('delivery.khoroo', input.delivery.khoroo)
+  form.set('delivery.address', input.delivery.address)
+  if (input.delivery.notes) form.set('delivery.notes', input.delivery.notes)
+  form.set('paymentMethod', input.paymentMethod)
+  return form
+}
+
 const runBrowserViewport = async (browser, name, viewport) => {
   const context = await browser.newContext({ viewport })
   const page = await context.newPage()
@@ -65,7 +79,13 @@ const runBrowserViewport = async (browser, name, viewport) => {
     if (message.type() === 'error') runtimeErrors.push(`console.error: ${message.text()}`)
   })
   page.on('request', request => {
-    if (new URL(request.url()).pathname === '/_server') serverRequests.push(request.url())
+    if (new URL(request.url()).pathname === '/_server') {
+      serverRequests.push({
+        functionId: request.headers()['x-server-function-id'],
+        method: request.method(),
+        url: request.url(),
+      })
+    }
   })
 
   try {
@@ -218,16 +238,164 @@ const runBrowserViewport = async (browser, name, viewport) => {
       assert.equal(page.url(), finalTarget.href)
       assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
     })
+
+    if (name === 'desktop browser') {
+      await page.goto(`${origin}/checkout`, { waitUntil: 'domcontentloaded' })
+      const checkoutForm = page.locator('form[action*="/_server"]').first()
+      await checkoutForm.waitFor()
+      await page.locator('#customer-name').fill('Тэмүүлэн')
+      await page.locator('#customer-phone').fill('99112233')
+      await page.locator('#delivery-khoroo').fill('1-р хороо')
+      await page.locator('#delivery-address').fill('Энхтайвны өргөн чөлөө 1')
+      await page.getByRole('radio', { name: /Дансаар шилжүүлэх/ }).check()
+      const formMethod = await checkoutForm.getAttribute('method')
+      const checkoutActionUrl = new URL(await checkoutForm.getAttribute('action'), origin)
+      serverRequests.length = 0
+      await page.getByRole('button', { name: 'Захиалга үүсгэх →' }).evaluate(button => {
+        button.click()
+        button.click()
+      })
+      await page.getByText('ЗАХИАЛГА / ҮҮССЭН').waitFor()
+      await page.waitForFunction(() => document.activeElement?.id === 'main-content')
+      const checkoutRequests = serverRequests.filter(
+        request => request.functionId === checkoutActionUrl.searchParams.get('id'),
+      )
+      record(`${name}: checkout Router action is POST-only and duplicate-click safe`, () => {
+        assert.equal(formMethod?.toLowerCase(), 'post')
+        assert.equal(checkoutRequests.length, 1)
+        assert.equal(checkoutRequests[0].method, 'POST')
+        assert.ok(
+          checkoutRequests.every(
+            request => !/Тэмүүлэн|99112233|Энхтайвны/.test(decodeURIComponent(request.url)),
+          ),
+        )
+        assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+      })
+
+      await page.goto(`${origin}/products/shiljilt-bridge-coat`, {
+        waitUntil: 'domcontentloaded',
+      })
+      await page.getByRole('button', { name: /Сагсанд нэмэх/ }).click()
+      await page.getByRole('dialog', { name: 'Сагс' }).waitFor()
+      await page.getByRole('button', { name: 'Сагс хаах' }).click()
+      await page.goto(`${origin}/checkout`, { waitUntil: 'domcontentloaded' })
+      const disposalForm = page.locator('form[action*="/_server"]').first()
+      await disposalForm.waitFor()
+      await page.locator('#customer-name').fill('Саруул')
+      await page.locator('#customer-phone').fill('88112233')
+      await page.locator('#delivery-khoroo').fill('2-р хороо')
+      await page.locator('#delivery-address').fill('Сөүлийн гудамж 2')
+      await page.getByRole('radio', { name: /Дансаар шилжүүлэх/ }).check()
+      const disposalActionUrl = new URL(await disposalForm.getAttribute('action'), origin)
+      const actionRequest = page.waitForRequest(
+        request =>
+          request.headers()['x-server-function-id'] === disposalActionUrl.searchParams.get('id'),
+      )
+      await page.getByRole('button', { name: 'Захиалга үүсгэх →' }).click()
+      const pendingRequest = await actionRequest
+      await page.goto(`${origin}/products`, { waitUntil: 'domcontentloaded' })
+      await page.getByRole('heading', { level: 1, name: 'Бүх давхарга' }).waitFor()
+      await page.waitForTimeout(300)
+      await page.goto(`${origin}/checkout`, { waitUntil: 'domcontentloaded' })
+      await page.waitForTimeout(100)
+      const staleSuccessCount = await page.getByText('ЗАХИАЛГА / ҮҮССЭН').count()
+      record(`${name}: checkout action disposal cannot restore a stale result`, () => {
+        assert.equal(pendingRequest.method(), 'POST')
+        assert.equal(staleSuccessCount, 0)
+        assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+      })
+    }
   } finally {
     await context.close()
   }
 }
 
-const runBrowserProof = async () => {
+const runBrowserProof = async privateOrder => {
   const browser = await chromium.launch({ headless: true })
   try {
     await runBrowserViewport(browser, 'desktop browser', { width: 1440, height: 900 })
     await runBrowserViewport(browser, 'mobile browser', { width: 390, height: 844 })
+
+    const noJsContext = await browser.newContext({
+      javaScriptEnabled: false,
+      viewport: { width: 390, height: 844 },
+    })
+    const noJsPage = await noJsContext.newPage()
+    await noJsPage.goto(`${origin}/checkout`, { waitUntil: 'domcontentloaded' })
+    const noJsText = await noJsPage.locator('body').textContent()
+    const noJsCustomerFields = await noJsPage.locator('[name="customer.name"]').count()
+    record('no-JS checkout states the localStorage limitation and collects no PII', () => {
+      assert.match(noJsText ?? '', /JavaScript шаардлагатай/)
+      assert.equal(noJsCustomerFields, 0)
+    })
+    await noJsContext.close()
+
+    const paymentContext = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+    const paymentPage = await paymentContext.newPage()
+    const paymentErrors = []
+    const paymentRequests = []
+    paymentPage.on('pageerror', error => paymentErrors.push(error.stack ?? error.message))
+    paymentPage.on('console', message => {
+      if (message.type() === 'error') paymentErrors.push(`console.error: ${message.text()}`)
+    })
+    paymentPage.on('request', request => {
+      if (new URL(request.url()).pathname === '/_server') paymentRequests.push(request)
+    })
+    await paymentPage.goto(
+      `${origin}/orders/${privateOrder.orderId}#token=${encodeURIComponent(privateOrder.statusToken)}`,
+      { waitUntil: 'domcontentloaded' },
+    )
+    const orderHeading = paymentPage.getByRole('heading', { level: 1, name: /DND-/ })
+    await orderHeading.waitFor()
+    const expectedOrderNumber = await orderHeading.textContent()
+    const staleOrderId = 'ord_01kyfqxb0ne06sxpvwgf6b37re'
+    await paymentPage.evaluate(
+      ({ orderId, staleOrderId }) => {
+        sessionStorage.setItem(`dund:order-token:${staleOrderId}`, 'x'.repeat(32))
+        const stale = document.createElement('a')
+        stale.href = `/orders/${staleOrderId}`
+        const current = document.createElement('a')
+        current.href = `/orders/${orderId}`
+        document.body.append(stale, current)
+        stale.click()
+        current.click()
+      },
+      { orderId: privateOrder.orderId, staleOrderId },
+    )
+    await paymentPage.waitForURL(`**/orders/${privateOrder.orderId}`)
+    await paymentPage.getByRole('heading', { level: 1, name: expectedOrderNumber.trim() }).waitFor()
+    await paymentPage.waitForTimeout(300)
+    record('rapid private-route changes reject stale order and token results', () => {
+      assert.equal(new URL(paymentPage.url()).pathname, `/orders/${privateOrder.orderId}`)
+      assert.equal(paymentErrors.length, 0, paymentErrors.join('\n'))
+    })
+
+    const claimForm = paymentPage.locator('form[action*="/_server"]').filter({
+      has: paymentPage.getByRole('button', { name: 'Би төлбөр шилжүүлсэн' }),
+    })
+    const claimActionUrl = new URL(await claimForm.getAttribute('action'), origin)
+    paymentRequests.length = 0
+    await paymentPage.getByRole('button', { name: 'Би төлбөр шилжүүлсэн' }).evaluate(button => {
+      button.click()
+      button.click()
+    })
+    const actionNotice = paymentPage.locator('p[tabindex="-1"][aria-live]').first()
+    await actionNotice.waitFor({ timeout: 30_000 })
+    await paymentPage.waitForFunction(
+      () => document.activeElement?.matches('p[tabindex="-1"][aria-live]'),
+      undefined,
+      { timeout: 30_000 },
+    )
+    const claimRequests = paymentRequests.filter(
+      request =>
+        request.headers()['x-server-function-id'] === claimActionUrl.searchParams.get('id'),
+    )
+    record('payment Router action is duplicate-click safe and focuses its announcement', () => {
+      assert.equal(claimRequests.length, 1)
+      assert.equal(claimRequests[0].method(), 'POST')
+      assert.equal(paymentErrors.length, 0, paymentErrors.join('\n'))
+    })
+    await paymentContext.close()
   } finally {
     await browser.close()
   }
@@ -412,7 +580,8 @@ try {
   record('direct checkout, private order shell, and not-found routes resolve', () => {
     assert.equal(checkout.response.status, 200)
     assert.equal(checkout.response.headers.get('cache-control'), 'private, no-store')
-    assert.match(checkout.html, /Захиалга/)
+    assert.match(checkout.html, /JavaScript шаардлагатай/)
+    assert.doesNotMatch(checkout.html, /name="customer\.name"|name="customer\.phone"/)
     assert.equal(order.response.status, 200)
     assert.equal(order.response.headers.get('cache-control'), 'private, no-store')
     assert.doesNotMatch(order.html, /9911\d{4}/)
@@ -553,33 +722,31 @@ try {
     },
     paymentMethod: 'bank_transfer',
   }
-  const checkoutResponse = await fetch(
-    `${origin}/_server?id=${encodeURIComponent(checkoutFunctionId)}&args=${encodeURIComponent(
-      JSON.stringify([checkoutInput]),
-    )}`,
-    { method: 'POST' },
-  )
+  const checkoutActionUrl = `${origin}/_server?id=${encodeURIComponent(checkoutFunctionId)}`
+  const checkoutResponse = await fetch(checkoutActionUrl, {
+    method: 'POST',
+    body: checkoutForm(checkoutInput),
+  })
   const checkoutBody = await checkoutResponse.text()
   const retryCheckoutResponses = await Promise.all(
     Array.from({ length: 2 }, () =>
-      fetch(
-        `${origin}/_server?id=${encodeURIComponent(checkoutFunctionId)}&args=${encodeURIComponent(
-          JSON.stringify([checkoutInput]),
-        )}`,
-        { method: 'POST' },
-      ),
+      fetch(checkoutActionUrl, { method: 'POST', body: checkoutForm(checkoutInput) }),
     ),
   )
   const retryCheckoutBodies = await Promise.all(
     retryCheckoutResponses.map(response => response.text()),
   )
-  const invalidCheckoutResponse = await fetch(
-    `${origin}/_server?id=${encodeURIComponent(checkoutFunctionId)}&args=${encodeURIComponent(
-      JSON.stringify([{ ...checkoutInput, customer: { name: '', phone: '55' } }]),
-    )}`,
-    { method: 'POST' },
+  const invalidCheckoutResponse = await fetch(checkoutActionUrl, {
+    method: 'POST',
+    body: checkoutForm({ ...checkoutInput, customer: { name: '', phone: '55' } }),
+  })
+  const malformedCheckoutResponse = await fetch(
+    `${checkoutActionUrl}&args=${encodeURIComponent('[{"customer":{"name":"attacker"}}]')}`,
+    { method: 'POST', headers: { 'cf-connecting-ip': '203.0.113.91' } },
   )
+  const checkoutGetResponse = await fetch(checkoutActionUrl)
   const invalidCheckoutBody = await invalidCheckoutResponse.text()
+  const malformedCheckoutBody = await malformedCheckoutResponse.text()
   const createdOrderId = /ord_[0-7][0-9a-hjkmnp-tv-z]{25}/.exec(checkoutBody)?.[0]
   const createdStatusToken = /[0-9a-f]{64}/.exec(checkoutBody)?.[0]
   record('bank-transfer checkout validates fields and persists an authoritative D1 order', () => {
@@ -594,6 +761,10 @@ try {
     assert.equal(invalidCheckoutResponse.status, 200)
     assert.match(invalidCheckoutBody, /field/)
     assert.match(invalidCheckoutBody, /customer\/name/)
+    assert.equal(malformedCheckoutResponse.status, 200)
+    assert.match(malformedCheckoutBody, /field/)
+    assert.equal(checkoutGetResponse.status, 405)
+    assert.doesNotMatch(checkoutResponse.url, /Тэмүүлэн|99112233|Энхтайвны/)
   })
 
   const privateOrderFunctionId =
@@ -634,18 +805,21 @@ try {
     /registerServerReference\("([^"]+)", async function refreshPrivateQPay/.exec(serverSource)?.[1]
   assert.ok(claimFunctionId, 'The production server bundle must register bank claims.')
   assert.ok(qpayRefreshFunctionId, 'The production server bundle must register QPay refresh.')
-  const invalidPaymentAccess = JSON.stringify([
-    { orderId: createdOrderId, statusToken: 'x'.repeat(32) },
-  ])
+  const privatePaymentForm = statusToken => {
+    const form = new FormData()
+    form.set('orderId', createdOrderId)
+    form.set('statusToken', statusToken)
+    return form
+  }
   const [claimResponse, qpayRefreshResponse] = await Promise.all([
-    fetch(
-      `${origin}/_server?id=${encodeURIComponent(claimFunctionId)}&args=${encodeURIComponent(invalidPaymentAccess)}`,
-      { method: 'POST' },
-    ),
-    fetch(
-      `${origin}/_server?id=${encodeURIComponent(qpayRefreshFunctionId)}&args=${encodeURIComponent(invalidPaymentAccess)}`,
-      { method: 'POST' },
-    ),
+    fetch(`${origin}/_server?id=${encodeURIComponent(claimFunctionId)}`, {
+      method: 'POST',
+      body: privatePaymentForm('x'.repeat(32)),
+    }),
+    fetch(`${origin}/_server?id=${encodeURIComponent(qpayRefreshFunctionId)}`, {
+      method: 'POST',
+      body: privatePaymentForm('x'.repeat(32)),
+    }),
   ])
   const [claimBody, qpayRefreshBody] = await Promise.all([
     claimResponse.text(),
@@ -700,7 +874,7 @@ try {
     assert.equal(telegramAuthorized.headers.get('cache-control'), 'no-store')
   })
 
-  await runBrowserProof()
+  await runBrowserProof({ orderId: createdOrderId, statusToken: createdStatusToken })
 
   const workerExited = new Promise(resolve => worker.once('exit', resolve))
   process.kill(-worker.pid, 'SIGTERM')

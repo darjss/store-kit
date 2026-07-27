@@ -1,3 +1,4 @@
+import { action } from '@solidjs/router'
 import { commerce } from '@store-kit/commerce'
 import {
   checkoutCreatedSchema,
@@ -17,11 +18,47 @@ const validationIssues = (input: unknown): ValidationIssue[] =>
     code: 'invalid',
   }))
 
-export async function submitCheckout(input: unknown) {
+const formText = (form: FormData, name: string) => {
+  const value = form.get(name)
+  return typeof value === 'string' ? value : undefined
+}
+
+const checkoutFormInput = (form: FormData): unknown => {
+  if (!(form instanceof FormData)) return undefined
+  const itemsSource = formText(form, 'items')
+  let items: unknown
+  if (itemsSource && itemsSource.length <= 16_384) {
+    try {
+      items = JSON.parse(itemsSource)
+    } catch {
+      items = undefined
+    }
+  }
+
+  const notes = formText(form, 'delivery.notes')?.trim()
+  return {
+    idempotencyKey: formText(form, 'idempotencyKey'),
+    items,
+    customer: {
+      name: formText(form, 'customer.name')?.trim(),
+      phone: formText(form, 'customer.phone')?.replace(/\D/g, '').replace(/^976/, ''),
+    },
+    delivery: {
+      district: formText(form, 'delivery.district'),
+      khoroo: formText(form, 'delivery.khoroo')?.trim(),
+      address: formText(form, 'delivery.address')?.trim(),
+      ...(notes ? { notes } : {}),
+    },
+    paymentMethod: formText(form, 'paymentMethod'),
+  }
+}
+
+export async function submitCheckout(form: FormData) {
   'use server'
 
   await enforceRateLimit('checkout', env.CHECKOUT_RATE_LIMITER)
 
+  const input = checkoutFormInput(form)
   if (!Value.Check(checkoutInputSchema, input)) {
     return {
       ok: false as const,
@@ -56,3 +93,5 @@ export async function submitCheckout(input: unknown) {
     return throwUnexpectedServerError('checkout', error, 'Захиалга үүсгэж чадсангүй.')
   }
 }
+
+export const checkoutAction = action(submitCheckout)

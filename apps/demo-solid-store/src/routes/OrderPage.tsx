@@ -1,15 +1,16 @@
-import { useParams } from '@solidjs/router'
+import { useParams, useSubmissions } from '@solidjs/router'
 import type { PublicOrder } from '@store-kit/contracts/orders'
 import type {
   BankTransferClaimError,
   PaymentRefreshError,
   PaymentStatus,
 } from '@store-kit/contracts/payments'
-import { For, Show, createEffect, createSignal, onSettled } from 'solid-js'
+import type { PrivateOrderAccess } from '@store-kit/contracts/private-orders'
+import { For, Show, createEffect, createOptimistic, createSignal, onSettled } from 'solid-js'
 
 import { paths } from '~/app/router'
 import { formatMnt } from '~/catalog/format'
-import { claimPrivateBankTransfer, getPrivateOrder, refreshPrivateQPay } from '~/server/orders'
+import { claimBankTransferAction, getPrivateOrder, refreshQPayAction } from '~/server/orders'
 
 const pollDelay = 5_000
 
@@ -111,41 +112,114 @@ type ActionNotice =
   | { type: 'domain'; message: string }
   | { type: 'transport'; message: string }
 
+const actionTransportMessage = (value: unknown) =>
+  value &&
+  typeof value === 'object' &&
+  'code' in value &&
+  'message' in value &&
+  typeof value.message === 'string'
+    ? value.message
+    : undefined
+
 function PendingButton(props: {
   children: string
   pendingLabel: string
   pending: boolean
-  onClick: () => void
+  disabled?: boolean
+  type?: 'button' | 'submit'
+  onClick?: () => void
 }) {
   return (
     <button
       class="min-h-12 border-2 border-ink bg-white px-4 font-bold disabled:cursor-not-allowed disabled:opacity-55"
-      type="button"
-      disabled={props.pending}
+      type={props.type ?? 'button'}
+      disabled={props.pending || props.disabled}
       aria-busy={props.pending ? 'true' : undefined}
       onClick={props.onClick}
     >
-      {props.pending ? props.pendingLabel : props.children}
+      <span aria-live="polite">{props.pending ? props.pendingLabel : props.children}</span>
     </button>
   )
 }
 
+const paymentSubmissionMatches = (input: [FormData], current: PrivateOrderAccess | undefined) =>
+  Boolean(
+    current &&
+    input[0].get('orderId') === current.orderId &&
+    input[0].get('statusToken') === current.statusToken,
+  )
+
 export default function OrderPage() {
   const params = useParams(paths.orders)
-  const [token, setToken] = createSignal<string>()
+  const [access, setAccess] = createSignal<PrivateOrderAccess>()
   const [state, setState] = createSignal<OrderViewState>({ type: 'hydrating' })
-  const [notice, setNotice] = createSignal<ActionNotice>()
   const [refreshingStatus, setRefreshingStatus] = createSignal(false)
-  const [claiming, setClaiming] = createSignal(false)
-  const [refreshingQPay, setRefreshingQPay] = createSignal(false)
+  const [claimPending, setClaimPending] = createOptimistic(false)
+  const [qpayPending, setQpayPending] = createOptimistic(false)
+  const claimSubmissions = useSubmissions(claimBankTransferAction)
+  const qpaySubmissions = useSubmissions(refreshQPayAction)
   let pollTimer: ReturnType<typeof setTimeout> | undefined
+  let actionNoticeElement: HTMLParagraphElement | undefined
   let statusRequest = 0
-  let claimInFlight = false
-  let qpayInFlight = false
+  let routeVersion = 0
 
   const readyOrder = () => {
     const current = state()
     return current.type === 'ready' ? current.order : undefined
+  }
+  const latestClaim = () =>
+    claimSubmissions.findLast(submission => paymentSubmissionMatches(submission.input, access()))
+  const latestQpay = () =>
+    qpaySubmissions.findLast(submission => paymentSubmissionMatches(submission.input, access()))
+  const paymentActionPending = () => claimPending() || qpayPending()
+
+  const notice = (): ActionNotice | undefined => {
+    const claim = latestClaim()
+    if (claim) {
+      const transportMessage = actionTransportMessage(claim.result)
+      if (claim.error || !claim.result || transportMessage) {
+        return {
+          type: 'transport',
+          message:
+            transportMessage ?? 'Сүлжээний алдаа гарлаа. Төлбөрийн мэдэгдлээ дахин илгээнэ үү.',
+        }
+      }
+      if (!claim.result.ok) {
+        return { type: 'domain', message: claimErrorMessage(claim.result.failure.error) }
+      }
+      return {
+        type: 'success',
+        message:
+          claim.result.value.paymentStatus === 'paid'
+            ? 'Төлбөр баталгаажлаа.'
+            : claim.result.value.paymentStatus === 'claimed'
+              ? 'Төлбөрийн мэдэгдэл хүлээн авлаа. Ажилтан баталгаажуулна.'
+              : 'Төлбөрийн мэдэгдэл одоогоор хүлээгдэж байна.',
+      }
+    }
+
+    const qpay = latestQpay()
+    if (!qpay) return undefined
+    const transportMessage = actionTransportMessage(qpay.result)
+    if (qpay.error || !qpay.result || transportMessage) {
+      return {
+        type: 'transport',
+        message: transportMessage ?? 'Сүлжээний алдаа гарлаа. QPay төлбөрөө дахин шалгана уу.',
+      }
+    }
+    if (!qpay.result.ok) {
+      return { type: 'domain', message: qpayErrorMessage(qpay.result.failure.error) }
+    }
+    if (qpay.result.value.paymentStatus === 'pending') {
+      return { type: 'success', message: 'QPay төлбөр одоогоор хүлээгдэж байна.' }
+    }
+    if (qpay.result.value.needsStaffAction) {
+      return {
+        type: 'domain',
+        message: 'Төлбөр орсон. Барааны үлдэгдлийг ажилтан гараар шалгаж, тантай холбогдоно.',
+      }
+    }
+    return { type: 'success', message: 'QPay төлбөр баталгаажлаа.' }
   }
 
   const clearPoll = () => {
@@ -153,122 +227,109 @@ export default function OrderPage() {
     pollTimer = undefined
   }
 
-  const schedulePoll = (order: PublicOrder, accessToken: string, orderId: string) => {
-    clearPoll()
-    if (!shouldPoll(order) || document.hidden) return
-    pollTimer = setTimeout(() => void loadOrder(accessToken, false, orderId), pollDelay)
+  const clearPaymentSubmissions = () => {
+    for (const submission of claimSubmissions) submission.clear()
+    for (const submission of qpaySubmissions) submission.clear()
   }
 
-  async function loadOrder(accessToken: string, showPending: boolean, orderId = params.id) {
+  const routeIsCurrent = (version: number) => version === routeVersion
+
+  const schedulePoll = (order: PublicOrder, current: PrivateOrderAccess, version: number) => {
+    clearPoll()
+    if (!shouldPoll(order) || document.hidden || !routeIsCurrent(version)) return
+    pollTimer = setTimeout(() => void loadOrder(current, false, version), pollDelay)
+  }
+
+  async function loadOrder(
+    current: PrivateOrderAccess,
+    showPending: boolean,
+    version = routeVersion,
+  ) {
     const request = ++statusRequest
     clearPoll()
     if (showPending) setRefreshingStatus(true)
     if (state().type !== 'ready') setState({ type: 'loading' })
 
     try {
-      const result = await getPrivateOrder({ orderId, statusToken: accessToken })
-      if (request !== statusRequest) return
+      const result = await getPrivateOrder(current)
+      if (request !== statusRequest || !routeIsCurrent(version)) return
       if (!result.ok) {
         setState({ type: 'invalid-token' })
         return
       }
       setState({ type: 'ready', order: result.order })
-      schedulePoll(result.order, accessToken, orderId)
+      schedulePoll(result.order, current, version)
     } catch {
-      if (request === statusRequest) setState({ type: 'transport-error' })
+      if (request === statusRequest && routeIsCurrent(version)) {
+        setState({ type: 'transport-error' })
+      }
     } finally {
-      if (request === statusRequest && showPending) setRefreshingStatus(false)
+      if (request === statusRequest && routeIsCurrent(version) && showPending) {
+        setRefreshingStatus(false)
+      }
     }
   }
 
   const refreshStatus = () => {
-    const accessToken = token()
-    if (accessToken) void loadOrder(accessToken, true)
+    const current = access()
+    if (current) void loadOrder(current, true)
   }
 
-  const claimBankTransfer = async () => {
-    const accessToken = token()
-    if (!accessToken || claimInFlight) return
-    claimInFlight = true
-    setClaiming(true)
-    setNotice()
-
-    try {
-      const result = await claimPrivateBankTransfer({
-        orderId: params.id,
-        statusToken: accessToken,
-      })
-      if (!result.ok) {
-        if (result.failure.error._tag === 'InvalidStatusToken') {
-          setState({ type: 'invalid-token' })
-          return
-        }
-        setNotice({ type: 'domain', message: claimErrorMessage(result.failure.error) })
-      } else {
-        const message =
-          result.value.paymentStatus === 'paid'
-            ? 'Төлбөр баталгаажлаа.'
-            : result.value.paymentStatus === 'claimed'
-              ? 'Төлбөрийн мэдэгдэл хүлээн авлаа. Ажилтан баталгаажуулна.'
-              : 'Төлбөрийн мэдэгдэл одоогоор хүлээгдэж байна.'
-        setNotice({ type: 'success', message })
-      }
-      await loadOrder(accessToken, false)
-    } catch {
-      setNotice({
-        type: 'transport',
-        message: 'Сүлжээний алдаа гарлаа. Төлбөрийн мэдэгдлээ дахин илгээнэ үү.',
-      })
-    } finally {
-      claimInFlight = false
-      setClaiming(false)
+  const preparePaymentSubmission = (event: SubmitEvent & { currentTarget: HTMLFormElement }) => {
+    if (paymentActionPending() || event.currentTarget.hasAttribute('aria-busy')) {
+      event.preventDefault()
+      return
     }
-  }
-
-  const refreshQPay = async () => {
-    const accessToken = token()
-    if (!accessToken || qpayInFlight) return
-    qpayInFlight = true
-    setRefreshingQPay(true)
-    setNotice()
-
-    try {
-      const result = await refreshPrivateQPay({
-        orderId: params.id,
-        statusToken: accessToken,
-      })
-      if (!result.ok) {
-        if (result.failure.error._tag === 'InvalidStatusToken') {
-          setState({ type: 'invalid-token' })
-          return
-        }
-        setNotice({ type: 'domain', message: qpayErrorMessage(result.failure.error) })
-      } else if (result.value.paymentStatus === 'pending') {
-        setNotice({ type: 'success', message: 'QPay төлбөр одоогоор хүлээгдэж байна.' })
-      } else if (result.value.needsStaffAction) {
-        setNotice({
-          type: 'domain',
-          message: 'Төлбөр орсон. Барааны үлдэгдлийг ажилтан гараар шалгаж, тантай холбогдоно.',
-        })
-      } else {
-        setNotice({ type: 'success', message: 'QPay төлбөр баталгаажлаа.' })
-      }
-      await loadOrder(accessToken, false)
-    } catch {
-      setNotice({
-        type: 'transport',
-        message: 'Сүлжээний алдаа гарлаа. QPay төлбөрөө дахин шалгана уу.',
-      })
-    } finally {
-      qpayInFlight = false
-      setRefreshingQPay(false)
-    }
-  }
-
-  const initializeOrderRoute = (orderId: string) => {
     statusRequest += 1
     clearPoll()
-    setNotice()
+    clearPaymentSubmissions()
+  }
+
+  const settlePaymentAction = (input: [FormData], invalidToken: boolean) => {
+    const current = access()
+    if (!paymentSubmissionMatches(input, current) || !current) return
+    if (invalidToken) {
+      setState({ type: 'invalid-token' })
+      queueMicrotask(() => document.querySelector<HTMLElement>('#main-content')?.focus())
+      return
+    }
+    void loadOrder(current, false)
+    queueMicrotask(() => actionNoticeElement?.focus())
+  }
+
+  claimBankTransferAction
+    .onSubmit(() => setClaimPending(true))
+    .onSettled(submission =>
+      settlePaymentAction(
+        submission.input,
+        Boolean(
+          submission.result &&
+          !actionTransportMessage(submission.result) &&
+          !submission.result.ok &&
+          submission.result.failure.error._tag === 'InvalidStatusToken',
+        ),
+      ),
+    )
+
+  refreshQPayAction
+    .onSubmit(() => setQpayPending(true))
+    .onSettled(submission =>
+      settlePaymentAction(
+        submission.input,
+        Boolean(
+          submission.result &&
+          !actionTransportMessage(submission.result) &&
+          !submission.result.ok &&
+          submission.result.failure.error._tag === 'InvalidStatusToken',
+        ),
+      ),
+    )
+
+  const initializeOrderRoute = (orderId: string) => {
+    const version = ++routeVersion
+    statusRequest += 1
+    clearPoll()
+    clearPaymentSubmissions()
     setState({ type: 'hydrating' })
 
     const storageKey = `dund:order-token:${orderId}`
@@ -277,15 +338,23 @@ export default function OrderPage() {
     if (fragmentToken) sessionStorage.setItem(storageKey, fragmentToken)
     if (location.hash) history.replaceState(history.state, '', location.pathname + location.search)
 
-    const accessToken = fragmentToken ?? sessionStorage.getItem(storageKey) ?? ''
-    setToken(accessToken)
-    if (accessToken) void loadOrder(accessToken, false, orderId)
+    const statusToken = fragmentToken ?? sessionStorage.getItem(storageKey) ?? ''
+    const nextAccess = statusToken ? { orderId, statusToken } : undefined
+    setAccess(nextAccess)
+    if (nextAccess) void loadOrder(nextAccess, false, version)
     else setState({ type: 'missing-token' })
   }
 
   createEffect(
     () => params.id,
-    orderId => queueMicrotask(() => initializeOrderRoute(orderId)),
+    orderId => {
+      initializeOrderRoute(orderId)
+      return () => {
+        routeVersion += 1
+        statusRequest += 1
+        clearPoll()
+      }
+    },
   )
 
   onSettled(() => {
@@ -293,15 +362,16 @@ export default function OrderPage() {
     const onVisibilityChange = () => {
       clearPoll()
       const order = readyOrder()
-      const accessToken = token()
-      if (!document.hidden && order && accessToken && shouldPoll(order)) {
-        void loadOrder(accessToken, false)
+      const current = access()
+      if (!document.hidden && order && current && shouldPoll(order)) {
+        void loadOrder(current, false)
       }
     }
     window.addEventListener('hashchange', onHashChange)
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     return () => {
+      routeVersion += 1
       statusRequest += 1
       clearPoll()
       window.removeEventListener('hashchange', onHashChange)
@@ -507,13 +577,17 @@ export default function OrderPage() {
                         <Show when={notice()}>
                           {message => (
                             <p
+                              ref={element => {
+                                actionNoticeElement = element
+                              }}
                               class={
                                 message().type === 'success'
-                                  ? 'mt-5 border-3 border-cobalt bg-surface p-4 font-bold text-cobalt'
-                                  : 'mt-5 border-3 border-alert bg-surface p-4 font-bold text-alert'
+                                  ? 'mt-5 border-3 border-cobalt bg-surface p-4 font-bold text-cobalt outline-offset-2 focus:outline-3 focus:outline-cobalt'
+                                  : 'mt-5 border-3 border-alert bg-surface p-4 font-bold text-alert outline-offset-2 focus:outline-3 focus:outline-alert'
                               }
-                              role="status"
-                              aria-live="polite"
+                              role={message().type === 'success' ? 'status' : 'alert'}
+                              aria-live={message().type === 'success' ? 'polite' : 'assertive'}
+                              tabindex="-1"
                             >
                               {message().message}
                             </p>
@@ -521,26 +595,54 @@ export default function OrderPage() {
                         </Show>
                         <div class="mt-5 flex flex-wrap gap-3">
                           <Show when={payment().method === 'qpay' && payment().status !== 'paid'}>
-                            <PendingButton
-                              pending={refreshingQPay()}
-                              pendingLabel="QPay шалгаж байна…"
-                              onClick={() => void refreshQPay()}
+                            <form
+                              action={refreshQPayAction}
+                              method="post"
+                              enctype="multipart/form-data"
+                              onSubmit={preparePaymentSubmission}
                             >
-                              QPay төлбөр шалгах
-                            </PendingButton>
+                              <input type="hidden" name="orderId" value={access()?.orderId ?? ''} />
+                              <input
+                                type="hidden"
+                                name="statusToken"
+                                value={access()?.statusToken ?? ''}
+                              />
+                              <PendingButton
+                                type="submit"
+                                pending={qpayPending()}
+                                disabled={paymentActionPending()}
+                                pendingLabel="QPay шалгаж байна…"
+                              >
+                                QPay төлбөр шалгах
+                              </PendingButton>
+                            </form>
                           </Show>
                           <Show
                             when={
                               payment().method === 'bank_transfer' && payment().status === 'pending'
                             }
                           >
-                            <PendingButton
-                              pending={claiming()}
-                              pendingLabel="Мэдэгдэж байна…"
-                              onClick={() => void claimBankTransfer()}
+                            <form
+                              action={claimBankTransferAction}
+                              method="post"
+                              enctype="multipart/form-data"
+                              onSubmit={preparePaymentSubmission}
                             >
-                              Би төлбөр шилжүүлсэн
-                            </PendingButton>
+                              <input type="hidden" name="orderId" value={access()?.orderId ?? ''} />
+                              <input
+                                type="hidden"
+                                name="statusToken"
+                                value={access()?.statusToken ?? ''}
+                              />
+                              <PendingButton
+                                type="submit"
+                                pending={claimPending()}
+                                disabled={paymentActionPending()}
+                                pendingLabel="Мэдэгдэж байна…"
+                              >
+                                Би төлбөр шилжүүлсэн
+                              </PendingButton>
+                            </form>
                           </Show>
                         </div>
                         <Show when={payment().claimedAt}>

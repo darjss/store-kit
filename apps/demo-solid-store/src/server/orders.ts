@@ -1,3 +1,4 @@
+import { action } from '@solidjs/router'
 import { commerce } from '@store-kit/commerce'
 import { publicOrderSchema } from '@store-kit/contracts/orders'
 import type { PublicOrder } from '@store-kit/contracts/orders'
@@ -28,6 +29,16 @@ const invalidAccessResult = () => ({
   ok: false as const,
   failure: { type: 'domain' as const, error: invalidStatusToken() },
 })
+
+const privateAccessFromForm = (form: FormData): unknown => {
+  if (!(form instanceof FormData)) return undefined
+  const orderId = form.get('orderId')
+  const statusToken = form.get('statusToken')
+  return {
+    orderId: typeof orderId === 'string' ? orderId : undefined,
+    statusToken: typeof statusToken === 'string' ? statusToken : undefined,
+  }
+}
 
 const publicImage = (line: {
   imageR2Key: string | null
@@ -103,10 +114,11 @@ export async function getPrivateOrder(input: unknown) {
   }
 }
 
-export async function claimPrivateBankTransfer(input: unknown) {
+export async function claimPrivateBankTransfer(form: FormData) {
   'use server'
 
   await enforceRateLimit('bank-transfer-claim', env.BANK_CLAIM_RATE_LIMITER)
+  const input = privateAccessFromForm(form)
   if (!Value.Check(privateOrderAccessSchema, input)) return invalidAccessResult()
 
   try {
@@ -132,10 +144,11 @@ export async function claimPrivateBankTransfer(input: unknown) {
   }
 }
 
-export async function refreshPrivateQPay(input: unknown) {
+export async function refreshPrivateQPay(form: FormData) {
   'use server'
 
   await enforceRateLimit('qpay-refresh', env.QPAY_REFRESH_RATE_LIMITER)
+  const input = privateAccessFromForm(form)
   if (!Value.Check(privateOrderAccessSchema, input)) return invalidAccessResult()
 
   try {
@@ -156,3 +169,6 @@ export async function refreshPrivateQPay(input: unknown) {
     return throwUnexpectedServerError('qpay-refresh', error, 'QPay төлбөрийг шалгаж чадсангүй.')
   }
 }
+
+export const claimBankTransferAction = action(claimPrivateBankTransfer)
+export const refreshQPayAction = action(refreshPrivateQPay)
