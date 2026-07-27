@@ -2,6 +2,8 @@
 
 import type { Element } from 'solid-js'
 
+import benchmark from '~/benchmark/solid2-vs-plugged.json'
+
 interface ReviewFrameProps {
   lab: () => Element
 }
@@ -129,6 +131,72 @@ const ownershipRows = [
     authority: 'D1 order/payment; token moves to sessionStorage',
   },
 ] as const
+
+const benchmarkRoutes = ['home', 'catalog', 'product'] as const
+const benchmarkTargets = ['dund', 'plugged'] as const
+const benchmarkFormFactors = ['mobile', 'desktop'] as const
+const benchmarkTransitions = ['homeCatalog', 'catalogProduct'] as const
+
+const benchmarkLabels = {
+  routes: {
+    home: 'Home',
+    catalog: 'Catalog',
+    product: 'Product',
+  },
+  targets: {
+    dund: 'DUND',
+    plugged: 'Plugged',
+  },
+  formFactors: {
+    mobile: 'Mobile',
+    desktop: 'Desktop',
+  },
+  transitions: {
+    homeCatalog: 'Home → catalog',
+    catalogProduct: 'Catalog → product',
+  },
+} as const
+
+const formatMilliseconds = (value: number) =>
+  value >= 1_000 ? `${(value / 1_000).toFixed(2)} s` : `${Math.round(value)} ms`
+
+const formatBytes = (value: number) =>
+  value >= 1_048_576 ? `${(value / 1_048_576).toFixed(2)} MiB` : `${(value / 1_024).toFixed(1)} KiB`
+
+const formatScore = (value: number) => Math.round(value).toString()
+const formatCls = (value: number) => value.toFixed(3)
+
+const measuredAt = new Intl.DateTimeFormat('en-GB', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'UTC',
+}).format(new Date(benchmark.measuredAt))
+
+const excludedHttpSamples = benchmarkTargets.reduce(
+  (targetTotal, target) =>
+    targetTotal +
+    benchmarkRoutes.reduce((routeTotal, route) => {
+      const result = benchmark.http[target][route]
+      return routeTotal + result.warm.excludedCount + (result.cacheBusted?.excludedCount ?? 0)
+    }, 0),
+  0,
+)
+
+const excludedLighthouseRuns = benchmarkTargets.reduce(
+  (targetTotal, target) =>
+    targetTotal +
+    benchmarkRoutes.reduce(
+      (routeTotal, route) =>
+        routeTotal +
+        benchmarkFormFactors.reduce(
+          (formFactorTotal, formFactor) =>
+            formFactorTotal + benchmark.lighthouse[target][route][formFactor].excludedRuns,
+          0,
+        ),
+      0,
+    ),
+  0,
+)
 
 const matrixRows = [
   [
@@ -263,6 +331,334 @@ function EvidenceCard(props: {
       <h3 class="mt-4 text-xl font-extrabold">{props.title}</h3>
       <p class="mt-2 text-sm leading-relaxed text-ink/70">{props.detail}</p>
     </article>
+  )
+}
+
+function BenchmarkSummaryCard(props: {
+  eyebrow: string
+  title: string
+  value: string
+  detail: string
+}) {
+  return (
+    <article class="min-w-0 border-2 border-ink bg-white p-5 shadow-[6px_6px_0_var(--color-ink)]">
+      <p class="text-xs font-extrabold tracking-[0.12em] text-cobalt uppercase">{props.eyebrow}</p>
+      <p class="mt-4 text-[clamp(1.6rem,4vw,2.5rem)] leading-none font-extrabold wrap-break-word">
+        {props.value}
+      </p>
+      <h3 class="mt-4 text-lg font-extrabold">{props.title}</h3>
+      <p class="mt-2 text-sm leading-relaxed text-ink/65">{props.detail}</p>
+    </article>
+  )
+}
+
+function HttpResultCards() {
+  return (
+    <div class="grid gap-3 lg:hidden">
+      {benchmarkTargets.flatMap(target =>
+        benchmarkRoutes.map(route => {
+          const result = benchmark.http[target][route].warm
+          return (
+            <article class="min-w-0 border-2 border-ink bg-white p-4">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h4 class="text-lg font-extrabold">
+                  {benchmarkLabels.targets[target]} · {benchmarkLabels.routes[route]}
+                </h4>
+                <span class="text-xs font-bold text-cobalt">n={result.validCount}</span>
+              </div>
+              <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-4">
+                {[
+                  ['DNS', formatMilliseconds(result.metrics.dnsMs.median)],
+                  ['TCP', formatMilliseconds(result.metrics.tcpMs.median)],
+                  ['TLS', formatMilliseconds(result.metrics.tlsMs.median)],
+                  ['TTFB', formatMilliseconds(result.metrics.ttfbMs.median)],
+                  ['Download', formatMilliseconds(result.metrics.downloadMs.median)],
+                  ['Total', formatMilliseconds(result.metrics.totalMs.median)],
+                  ['Wire', formatBytes(result.metrics.transferredBytes.median)],
+                  ['Decoded', formatBytes(result.metrics.decodedBytes.median)],
+                ].map(([label, value]) => (
+                  <div class="min-w-0 border-t border-ink/20 pt-2">
+                    <dt class="text-xs font-bold text-ink/55">{label}</dt>
+                    <dd class="mt-1 font-extrabold wrap-break-word">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+          )
+        }),
+      )}
+    </div>
+  )
+}
+
+function HttpResultTable() {
+  return (
+    <div class="hidden border-2 border-ink lg:block">
+      <table class="w-full table-fixed border-collapse text-left text-xs xl:text-sm">
+        <caption class="sr-only">Median warm HTTP response timings and transferred bytes</caption>
+        <thead class="bg-ink text-white">
+          <tr>
+            {[
+              'Target / route',
+              'DNS',
+              'TCP',
+              'TLS',
+              'TTFB',
+              'Download',
+              'Total',
+              'Wire',
+              'Decoded',
+            ].map(heading => (
+              <th class="p-3 font-extrabold wrap-break-word" scope="col">
+                {heading}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {benchmarkTargets.flatMap(target =>
+            benchmarkRoutes.map(route => {
+              const result = benchmark.http[target][route].warm
+              return (
+                <tr class="border-b border-ink/20 align-top last:border-b-0">
+                  <th class="bg-surface p-3 font-extrabold" scope="row">
+                    {benchmarkLabels.targets[target]} · {benchmarkLabels.routes[route]}
+                    <span class="mt-1 block text-[0.68rem] font-semibold text-ink/55">
+                      n={result.validCount}
+                    </span>
+                  </th>
+                  <td class="p-3 wrap-break-word">
+                    {formatMilliseconds(result.metrics.dnsMs.median)}
+                  </td>
+                  <td class="p-3 wrap-break-word">
+                    {formatMilliseconds(result.metrics.tcpMs.median)}
+                  </td>
+                  <td class="p-3 wrap-break-word">
+                    {formatMilliseconds(result.metrics.tlsMs.median)}
+                  </td>
+                  <td class="p-3 font-extrabold wrap-break-word text-cobalt">
+                    {formatMilliseconds(result.metrics.ttfbMs.median)}
+                  </td>
+                  <td class="p-3 wrap-break-word">
+                    {formatMilliseconds(result.metrics.downloadMs.median)}
+                  </td>
+                  <td class="p-3 font-extrabold wrap-break-word">
+                    {formatMilliseconds(result.metrics.totalMs.median)}
+                  </td>
+                  <td class="p-3 wrap-break-word">
+                    {formatBytes(result.metrics.transferredBytes.median)}
+                  </td>
+                  <td class="p-3 wrap-break-word">
+                    {formatBytes(result.metrics.decodedBytes.median)}
+                  </td>
+                </tr>
+              )
+            }),
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function LighthouseResultCards(props: { formFactor: (typeof benchmarkFormFactors)[number] }) {
+  return (
+    <div class="grid gap-3 lg:hidden">
+      {benchmarkTargets.flatMap(target =>
+        benchmarkRoutes.map(route => {
+          const result = benchmark.lighthouse[target][route][props.formFactor]
+          return (
+            <article class="min-w-0 border-2 border-ink bg-white p-4">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h4 class="text-lg font-extrabold">
+                  {benchmarkLabels.targets[target]} · {benchmarkLabels.routes[route]}
+                </h4>
+                <span class="text-xs font-bold text-cobalt">n={result.validRuns}</span>
+              </div>
+              <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                {[
+                  ['Performance', formatScore(result.metrics.performance.median)],
+                  ['FCP', formatMilliseconds(result.metrics.fcpMs.median)],
+                  ['LCP', formatMilliseconds(result.metrics.lcpMs.median)],
+                  ['Speed index', formatMilliseconds(result.metrics.speedIndexMs.median)],
+                  ['TBT', formatMilliseconds(result.metrics.tbtMs.median)],
+                  ['CLS', formatCls(result.metrics.cls.median)],
+                  ['Accessibility', formatScore(result.metrics.accessibility.median)],
+                  ['Best practices', formatScore(result.metrics.bestPractices.median)],
+                ].map(([label, value]) => (
+                  <div class="min-w-0 border-t border-ink/20 pt-2">
+                    <dt class="text-xs font-bold text-ink/55">{label}</dt>
+                    <dd class="mt-1 font-extrabold wrap-break-word">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+          )
+        }),
+      )}
+    </div>
+  )
+}
+
+function LighthouseResultTable(props: { formFactor: (typeof benchmarkFormFactors)[number] }) {
+  return (
+    <div class="hidden border-2 border-ink lg:block">
+      <table class="w-full table-fixed border-collapse text-left text-xs">
+        <caption class="sr-only">
+          {benchmarkLabels.formFactors[props.formFactor]} Lighthouse median results
+        </caption>
+        <thead class="bg-ink text-white">
+          <tr>
+            {[
+              'Target / route',
+              'Performance',
+              'FCP',
+              'LCP',
+              'Speed index',
+              'TBT',
+              'CLS',
+              'A11y',
+              'Best practices',
+            ].map(heading => (
+              <th class="p-3 font-extrabold wrap-break-word" scope="col">
+                {heading}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {benchmarkTargets.flatMap(target =>
+            benchmarkRoutes.map(route => {
+              const result = benchmark.lighthouse[target][route][props.formFactor]
+              return (
+                <tr class="border-b border-ink/20 align-top last:border-b-0">
+                  <th class="bg-surface p-3 font-extrabold" scope="row">
+                    {benchmarkLabels.targets[target]} · {benchmarkLabels.routes[route]}
+                    <span class="mt-1 block text-[0.68rem] font-semibold text-ink/55">
+                      n={result.validRuns}
+                    </span>
+                  </th>
+                  <td class="p-3 text-lg font-extrabold text-cobalt">
+                    {formatScore(result.metrics.performance.median)}
+                  </td>
+                  <td class="p-3 wrap-break-word">
+                    {formatMilliseconds(result.metrics.fcpMs.median)}
+                  </td>
+                  <td class="p-3 font-extrabold wrap-break-word">
+                    {formatMilliseconds(result.metrics.lcpMs.median)}
+                  </td>
+                  <td class="p-3 wrap-break-word">
+                    {formatMilliseconds(result.metrics.speedIndexMs.median)}
+                  </td>
+                  <td class="p-3 wrap-break-word">
+                    {formatMilliseconds(result.metrics.tbtMs.median)}
+                  </td>
+                  <td class="p-3">{formatCls(result.metrics.cls.median)}</td>
+                  <td class="p-3">{formatScore(result.metrics.accessibility.median)}</td>
+                  <td class="p-3">{formatScore(result.metrics.bestPractices.median)}</td>
+                </tr>
+              )
+            }),
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function NavigationResultCards() {
+  return (
+    <div class="grid gap-3 lg:hidden">
+      {benchmarkTargets.flatMap(target =>
+        benchmarkTransitions.map(transition => {
+          const result = benchmark.navigation[target][transition]
+          return (
+            <article class="min-w-0 border-2 border-ink bg-white p-4">
+              <h4 class="text-lg font-extrabold">
+                {benchmarkLabels.targets[target]} · {benchmarkLabels.transitions[transition]}
+              </h4>
+              <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+                <div class="border-t border-ink/20 pt-2">
+                  <dt class="text-xs font-bold text-ink/55">Median update</dt>
+                  <dd class="mt-1 font-extrabold">
+                    {formatMilliseconds(result.durationMs.median)}
+                  </dd>
+                </div>
+                <div class="border-t border-ink/20 pt-2">
+                  <dt class="text-xs font-bold text-ink/55">Median requests</dt>
+                  <dd class="mt-1 font-extrabold">{result.requestCount.median}</dd>
+                </div>
+                <div class="border-t border-ink/20 pt-2">
+                  <dt class="text-xs font-bold text-ink/55">Median wire</dt>
+                  <dd class="mt-1 font-extrabold">{formatBytes(result.transferredBytes.median)}</dd>
+                </div>
+                <div class="border-t border-ink/20 pt-2">
+                  <dt class="text-xs font-bold text-ink/55">Transport</dt>
+                  <dd class="mt-1 font-extrabold">
+                    {result.fullDocumentCount === result.sampleCount
+                      ? 'Document'
+                      : 'Router / frame'}
+                  </dd>
+                </div>
+              </dl>
+            </article>
+          )
+        }),
+      )}
+    </div>
+  )
+}
+
+function NavigationResultTable() {
+  return (
+    <div class="hidden border-2 border-ink lg:block">
+      <table class="w-full table-fixed border-collapse text-left text-sm">
+        <caption class="sr-only">Warm app-navigation benchmark results</caption>
+        <thead class="bg-ink text-white">
+          <tr>
+            {['Target / transition', 'Update', 'Requests', 'Wire', 'Transport', 'State'].map(
+              heading => (
+                <th class="p-3 font-extrabold wrap-break-word" scope="col">
+                  {heading}
+                </th>
+              ),
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {benchmarkTargets.flatMap(target =>
+            benchmarkTransitions.map(transition => {
+              const result = benchmark.navigation[target][transition]
+              const state = benchmark.navigation[target].state
+              return (
+                <tr class="border-b border-ink/20 align-top last:border-b-0">
+                  <th class="bg-surface p-3 font-extrabold" scope="row">
+                    {benchmarkLabels.targets[target]} · {benchmarkLabels.transitions[transition]}
+                    <span class="mt-1 block text-xs font-semibold text-ink/55">
+                      n={result.sampleCount}
+                    </span>
+                  </th>
+                  <td class="p-3 font-extrabold text-cobalt">
+                    {formatMilliseconds(result.durationMs.median)}
+                  </td>
+                  <td class="p-3">{result.requestCount.median}</td>
+                  <td class="p-3">{formatBytes(result.transferredBytes.median)}</td>
+                  <td class="p-3">
+                    {result.fullDocumentCount === result.sampleCount
+                      ? 'Complete document'
+                      : 'Router / frame work'}
+                  </td>
+                  <td class="p-3 leading-relaxed">
+                    Shell node {state.shellNodePersisted ? 'persisted' : 'recreated'}; cart draft{' '}
+                    {state.cartItemCountAfterFlows > 0 ? 'remained' : 'did not remain'}.
+                  </td>
+                </tr>
+              )
+            }),
+          )}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -662,6 +1058,421 @@ export async function getArchitectureReviewFrame() {
       </section>
 
       <section
+        id="benchmarks"
+        class="border-y-3 border-ink bg-amber px-[clamp(1rem,4vw,4rem)] py-[clamp(4rem,8vw,7rem)] [&_code]:wrap-anywhere"
+        aria-labelledby="benchmark-title"
+      >
+        <div class="mx-auto max-w-360">
+          <div class="grid gap-7 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-end">
+            <div>
+              <p class="font-bold text-cobalt">Measured on the deployed stores</p>
+              <h2
+                id="benchmark-title"
+                class="mt-3 max-w-[16ch] text-4xl leading-none font-extrabold sm:text-6xl"
+              >
+                Real timings, mixed results, no framework victory lap.
+              </h2>
+              <p class="mt-5 max-w-[72ch] text-lg leading-relaxed text-ink/75">
+                These measurements compare the current DUND Solid 2 deployment with the previous
+                Plugged Astro/Solid 1 demo from the same Ulaanbaatar host. Medians reduce noise; p75
+                and p95 remain available below. A result is a measured fact. The explanation is a
+                hypothesis unless a separate experiment isolates it.
+              </p>
+            </div>
+            <aside class="border-3 border-ink bg-white p-5">
+              <p class="text-xs font-extrabold tracking-[0.12em] text-cobalt uppercase">Snapshot</p>
+              <p class="mt-3 text-xl font-extrabold">{measuredAt} UTC</p>
+              <p class="mt-2 text-sm leading-relaxed text-ink/65">
+                {benchmark.environment.cpu} · {benchmark.environment.logicalCpuCount} logical CPUs ·
+                Cloudflare edge colos are recorded per HTTP sample.
+              </p>
+            </aside>
+          </div>
+
+          <nav class="mt-8 border-y-2 border-ink py-4" aria-label="Benchmarked routes">
+            <p class="text-xs font-extrabold tracking-[0.12em] text-cobalt uppercase">
+              Direct links to every tested route
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              {benchmarkTargets.flatMap(target =>
+                benchmarkRoutes.map(route => (
+                  <a
+                    class="inline-flex min-h-11 items-center border-2 border-ink bg-white px-3 text-sm font-bold text-ink no-underline hover:bg-surface"
+                    href={benchmark.targets[target].routes[route]}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {benchmarkLabels.targets[target]} · {benchmarkLabels.routes[route]} ↗
+                  </a>
+                )),
+              )}
+            </div>
+          </nav>
+
+          <div class="mt-9 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <BenchmarkSummaryCard
+              eyebrow="Warm HTTP · product"
+              value={`${formatMilliseconds(benchmark.http.dund.product.warm.metrics.totalMs.median)} / ${formatMilliseconds(benchmark.http.plugged.product.warm.metrics.totalMs.median)}`}
+              title="DUND / Plugged median total"
+              detail={`25 valid requests per route. DUND reported ${Object.keys(benchmark.http.dund.product.warm.cache.cfCacheStatus).join(', ')}; Plugged reported ${Object.keys(benchmark.http.plugged.product.warm.cache.cfCacheStatus).join(', ')}.`}
+            />
+            <BenchmarkSummaryCard
+              eyebrow="Lighthouse mobile · home"
+              value={`${formatMilliseconds(benchmark.lighthouse.dund.home.mobile.metrics.lcpMs.median)} / ${formatMilliseconds(benchmark.lighthouse.plugged.home.mobile.metrics.lcpMs.median)}`}
+              title="DUND / Plugged median LCP"
+              detail="Three valid cold Lighthouse navigations per target, route, and form factor. This is lab LCP, not field data."
+            />
+            <BenchmarkSummaryCard
+              eyebrow="Warm app navigation"
+              value={`${formatMilliseconds(benchmark.navigation.dund.catalogProduct.durationMs.median)} / ${formatMilliseconds(benchmark.navigation.plugged.catalogProduct.durationMs.median)}`}
+              title="Catalog → product, DUND / Plugged"
+              detail="Nine measured runs after one excluded warm-up. The destination h1 marks the end of the update interval."
+            />
+            <BenchmarkSummaryCard
+              eyebrow="Valid evidence volume"
+              value="165 + 36 + 36"
+              title="HTTP + Lighthouse + navigation samples"
+              detail={`Six HTTP route cases, twelve Lighthouse route/device cases, and four app-navigation cases. ${excludedHttpSamples} incomplete HTTP transfer(s) and ${excludedLighthouseRuns} invalid Lighthouse run(s) were retained as exclusions, not folded into medians.`}
+            />
+          </div>
+
+          <div class="mt-14">
+            <div class="max-w-4xl">
+              <p class="font-bold text-cobalt">1 · HTTP from this host</p>
+              <h3 class="mt-2 text-3xl font-extrabold sm:text-4xl">Warm route response medians</h3>
+              <p class="mt-4 max-w-[72ch] leading-relaxed text-ink/70">
+                Curl opened a new HTTPS transfer for each request and accepted compressed HTML.
+                “Wire” is the compressed body that curl received; “decoded” is the expanded body.
+                TCP and TLS are phase durations, while TTFB is elapsed from request start.
+              </p>
+            </div>
+            <div class="mt-6">
+              <HttpResultCards />
+              <HttpResultTable />
+            </div>
+            <div class="mt-6 border-2 border-ink bg-white p-4 sm:p-5">
+              <div class="grid gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
+                <div>
+                  <h4 class="text-xl font-extrabold">Bounded cache-busted approximation</h4>
+                  <p class="mt-2 text-sm leading-relaxed text-ink/65">
+                    Plugged only · five unique queries per route. DUND is marked not applicable
+                    because its frame documents already bypass shared CDN storage.
+                  </p>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-3">
+                  {benchmarkRoutes.map(route => {
+                    const result = benchmark.http.plugged[route].cacheBusted
+                    return (
+                      <article class="min-w-0 border-t-2 border-ink pt-3">
+                        <h5 class="font-extrabold">Plugged · {benchmarkLabels.routes[route]}</h5>
+                        <p class="mt-2 text-2xl font-extrabold text-cobalt">
+                          {formatMilliseconds(result.metrics.totalMs.median)}
+                        </p>
+                        <p class="mt-1 text-xs leading-relaxed text-ink/60">
+                          Total p75 {formatMilliseconds(result.metrics.totalMs.p75)} · p95{' '}
+                          {formatMilliseconds(result.metrics.totalMs.p95)} ·{' '}
+                          {Object.entries(result.cache.cfCacheStatus)
+                            .map(([status, count]) => `${status} × ${count}`)
+                            .join(', ')}
+                          {result.excludedCount > 0
+                            ? ` · ${result.excludedCount} incomplete attempt(s) excluded`
+                            : ''}
+                        </p>
+                      </article>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-14 border-t-3 border-ink pt-10">
+            <div class="max-w-4xl">
+              <p class="font-bold text-cobalt">2 · Lighthouse 13.4.1 lab</p>
+              <h3 class="mt-2 text-3xl font-extrabold sm:text-4xl">
+                Cold mobile and desktop navigations
+              </h3>
+              <p class="mt-4 max-w-[72ch] leading-relaxed text-ink/70">
+                Each cell is the median of three valid runs in the same Playwright Chromium. Mobile
+                uses Lighthouse's default mobile preset; desktop uses its desktop preset. TBT is a
+                lab responsiveness proxy. Lighthouse does not provide a valid INP measurement here;
+                INP needs field data or a controlled interaction study.
+              </p>
+            </div>
+            <div class="mt-8 grid gap-10">
+              {benchmarkFormFactors.map(formFactor => (
+                <section aria-labelledby={`benchmark-${formFactor}-title`}>
+                  <h4 id={`benchmark-${formFactor}-title`} class="mb-4 text-2xl font-extrabold">
+                    {benchmarkLabels.formFactors[formFactor]}
+                  </h4>
+                  <LighthouseResultCards formFactor={formFactor} />
+                  <LighthouseResultTable formFactor={formFactor} />
+                </section>
+              ))}
+            </div>
+          </div>
+
+          <div class="mt-14 border-t-3 border-ink pt-10">
+            <div class="max-w-4xl">
+              <p class="font-bold text-cobalt">3 · App-navigation measurement</p>
+              <h3 class="mt-2 text-3xl font-extrabold sm:text-4xl">Click to destination heading</h3>
+              <p class="mt-4 max-w-[72ch] leading-relaxed text-ink/70">
+                This is not Lighthouse and not INP. A real Chromium session measured home → catalog
+                and catalog → product with <code>performance.now()</code>, then summed CDP network
+                transfer bytes. DUND kept its Router shell and used server-function/frame work;
+                Plugged completed full-document navigations. Both retained the cart draft in browser
+                storage, but only DUND retained the same shell DOM owner.
+              </p>
+            </div>
+            <div class="mt-6">
+              <NavigationResultCards />
+              <NavigationResultTable />
+            </div>
+          </div>
+
+          <div class="mt-14 grid min-w-0 gap-6 border-t-3 border-ink pt-10 lg:grid-cols-2">
+            <article class="min-w-0 border-2 border-ink bg-white p-[clamp(1rem,3vw,2rem)]">
+              <h3 class="text-2xl font-extrabold">Reproduce it</h3>
+              <ol class="mt-5 grid gap-4 pl-5 leading-relaxed marker:font-bold marker:text-cobalt">
+                <li>
+                  From the repository root, run <code>vp install</code>.
+                </li>
+                <li>
+                  Run <code>node apps/demo-solid-store/benchmark/run.mjs</code>. The script pins
+                  Lighthouse 13.4.1 through ephemeral <code>vpx</code> execution and uses the app's
+                  existing Playwright Chromium.
+                </li>
+                <li>
+                  Review <code>apps/demo-solid-store/src/benchmark/solid2-vs-plugged.json</code> for
+                  tool versions, ordering, aggregation, compact per-run results, cache headers, and
+                  exclusions.
+                </li>
+              </ol>
+              <p class="mt-6 border-t border-ink/20 pt-4 text-sm leading-relaxed text-ink/65">
+                HTTP: 10 route-grouped sequential samples plus 15 deterministically shuffled samples
+                per target and route. Plugged also received five bounded unique-query samples per
+                route as a cold-cache approximation. DUND did not: its frame documents are no-store
+                at the shared CDN, so cache busting adds no useful cache state.
+              </p>
+            </article>
+            <article class="min-w-0 border-2 border-ink bg-ink p-[clamp(1rem,3vw,2rem)] text-white">
+              <h3 class="text-2xl font-extrabold text-amber">Limits and likely influences</h3>
+              <ul class="mt-5 grid gap-4 pl-5 leading-relaxed marker:text-coral">
+                <li>
+                  This is one host and one measurement window. Network and edge conditions can
+                  change. Three Lighthouse runs expose large shifts poorly; their p95 is effectively
+                  the slowest run.
+                </li>
+                <li>
+                  Lighthouse warned that this host's CPU was slower than its expected calibration on
+                  some otherwise valid runs. {excludedLighthouseRuns} incomplete page-load
+                  attempt(s) were excluded and replaced; the raw reasons remain below.
+                </li>
+                <li>
+                  Different branding, content, media, route complexity, and development/demo
+                  deployments make this directional—not a controlled framework bake-off.
+                </li>
+                <li>
+                  Cache status, compressed document size, image bytes, server work, client
+                  JavaScript, and navigation transport can plausibly influence results. These
+                  measurements do not prove that framework choice caused a difference.
+                </li>
+                <li>
+                  Plugged can serve public document cache hits. DUND deliberately bypasses shared
+                  document storage for its frame-bearing routes. That policy difference is measured;
+                  its isolated performance effect is not.
+                </li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="mt-10 grid gap-3" aria-label="Expandable raw benchmark summaries">
+            <details class="group border-2 border-ink bg-white">
+              <summary class="flex min-h-12 cursor-pointer items-center justify-between gap-4 px-4 py-3 font-extrabold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-cobalt">
+                HTTP p75 / p95 and cache summaries
+                <span
+                  aria-hidden="true"
+                  class="text-cobalt group-open:rotate-45 motion-reduce:transform-none"
+                >
+                  +
+                </span>
+              </summary>
+              <div class="grid gap-3 border-t-2 border-ink p-4 md:grid-cols-2 xl:grid-cols-3">
+                {benchmarkTargets.flatMap(target =>
+                  benchmarkRoutes.map(route => {
+                    const result = benchmark.http[target][route].warm
+                    return (
+                      <article class="min-w-0 border border-ink/30 p-3 text-sm">
+                        <h4 class="font-extrabold">
+                          {benchmarkLabels.targets[target]} · {benchmarkLabels.routes[route]}
+                        </h4>
+                        <dl class="mt-3 grid grid-cols-2 gap-2">
+                          {(
+                            [
+                              ['DNS', result.metrics.dnsMs],
+                              ['TCP', result.metrics.tcpMs],
+                              ['TLS', result.metrics.tlsMs],
+                              ['TTFB', result.metrics.ttfbMs],
+                              ['Download', result.metrics.downloadMs],
+                              ['Total', result.metrics.totalMs],
+                            ] as const
+                          ).map(([label, metric]) => (
+                            <div class="min-w-0 border-t border-ink/15 pt-2">
+                              <dt class="font-bold text-ink/55">{label}</dt>
+                              <dd class="wrap-break-word">
+                                p75 {formatMilliseconds(metric.p75)} · p95{' '}
+                                {formatMilliseconds(metric.p95)} · max{' '}
+                                {formatMilliseconds(metric.max)}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                        <p class="mt-3 wrap-break-word text-ink/65">
+                          Wire p75 {formatBytes(result.metrics.transferredBytes.p75)} · p95{' '}
+                          {formatBytes(result.metrics.transferredBytes.p95)}; decoded p75{' '}
+                          {formatBytes(result.metrics.decodedBytes.p75)} · p95{' '}
+                          {formatBytes(result.metrics.decodedBytes.p95)}.
+                        </p>
+                        {result.excludedCount > 0 && (
+                          <p class="mt-3 font-bold text-coral">
+                            {result.excludedCount} incomplete transfer(s) excluded after bounded
+                            retry.
+                          </p>
+                        )}
+                        <p class="mt-3 wrap-break-word text-ink/65">
+                          HTTP status:{' '}
+                          {Object.entries(result.status)
+                            .map(([status, count]) => `${status} × ${count}`)
+                            .join(', ')}
+                        </p>
+                        <p class="mt-1 wrap-break-word text-ink/65">
+                          Cache status:{' '}
+                          {Object.entries(result.cache.cfCacheStatus)
+                            .map(([status, count]) => `${status} × ${count}`)
+                            .join(', ')}
+                        </p>
+                        <p class="mt-1 wrap-break-word text-ink/65">
+                          Cache-Control:{' '}
+                          {Object.entries(result.cache.cacheControl)
+                            .map(([value, count]) => `${value} × ${count}`)
+                            .join(', ')}
+                        </p>
+                        <p class="mt-1 wrap-break-word text-ink/65">
+                          Encoding / edge: {Object.keys(result.cache.contentEncoding).join(', ')} /{' '}
+                          {Object.keys(result.cache.edgeColo).join(', ')}
+                        </p>
+                      </article>
+                    )
+                  }),
+                )}
+              </div>
+            </details>
+
+            <details class="group border-2 border-ink bg-white">
+              <summary class="flex min-h-12 cursor-pointer items-center justify-between gap-4 px-4 py-3 font-extrabold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-cobalt">
+                Lighthouse valid runs and exclusions
+                <span
+                  aria-hidden="true"
+                  class="text-cobalt group-open:rotate-45 motion-reduce:transform-none"
+                >
+                  +
+                </span>
+              </summary>
+              <div class="grid gap-3 border-t-2 border-ink p-4 md:grid-cols-2 xl:grid-cols-3">
+                {benchmarkTargets.flatMap(target =>
+                  benchmarkRoutes.flatMap(route =>
+                    benchmarkFormFactors.map(formFactor => {
+                      const result = benchmark.lighthouse[target][route][formFactor]
+                      return (
+                        <article class="min-w-0 border border-ink/30 p-3 text-sm">
+                          <h4 class="font-extrabold">
+                            {benchmarkLabels.targets[target]} · {benchmarkLabels.routes[route]} ·{' '}
+                            {benchmarkLabels.formFactors[formFactor]}
+                          </h4>
+                          <p class="mt-2 text-ink/65">
+                            {result.validRuns} valid / {result.attemptedRuns} attempted;{' '}
+                            {result.excludedRuns} excluded.
+                          </p>
+                          <ol class="mt-3 grid gap-1 pl-5 font-mono text-xs wrap-break-word">
+                            {result.runs
+                              .filter(run => run.valid)
+                              .map(run => (
+                                <li>
+                                  P {formatScore(run.metrics.performance)} · FCP{' '}
+                                  {formatMilliseconds(run.metrics.fcpMs)} · LCP{' '}
+                                  {formatMilliseconds(run.metrics.lcpMs)} · SI{' '}
+                                  {formatMilliseconds(run.metrics.speedIndexMs)} · TBT{' '}
+                                  {formatMilliseconds(run.metrics.tbtMs)} · CLS{' '}
+                                  {formatCls(run.metrics.cls)}
+                                </li>
+                              ))}
+                          </ol>
+                          {result.runs.some(run => run.warnings.length > 0) && (
+                            <p class="mt-3 wrap-anywhere text-ink/65">
+                              Warnings:{' '}
+                              {result.runs
+                                .flatMap(run => run.warnings)
+                                .filter(
+                                  (warning, index, warnings) => warnings.indexOf(warning) === index,
+                                )
+                                .join('; ')}
+                            </p>
+                          )}
+                          {result.excludedRuns > 0 && (
+                            <p class="mt-3 wrap-anywhere text-coral">
+                              Excluded: {result.exclusions.join('; ')}
+                            </p>
+                          )}
+                        </article>
+                      )
+                    }),
+                  ),
+                )}
+              </div>
+            </details>
+
+            <details class="group border-2 border-ink bg-white">
+              <summary class="flex min-h-12 cursor-pointer items-center justify-between gap-4 px-4 py-3 font-extrabold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-cobalt">
+                App-navigation per-run summaries
+                <span
+                  aria-hidden="true"
+                  class="text-cobalt group-open:rotate-45 motion-reduce:transform-none"
+                >
+                  +
+                </span>
+              </summary>
+              <div class="grid gap-3 border-t-2 border-ink p-4 md:grid-cols-2">
+                {benchmarkTargets.flatMap(target =>
+                  benchmarkTransitions.map(transition => {
+                    const result = benchmark.navigation[target][transition]
+                    return (
+                      <article class="min-w-0 border border-ink/30 p-3 text-sm">
+                        <h4 class="font-extrabold">
+                          {benchmarkLabels.targets[target]} ·{' '}
+                          {benchmarkLabels.transitions[transition]}
+                        </h4>
+                        <p class="mt-2 wrap-break-word text-ink/65">
+                          Duration:{' '}
+                          {result.runs.map(run => formatMilliseconds(run.durationMs)).join(', ')}
+                        </p>
+                        <p class="mt-1 wrap-break-word text-ink/65">
+                          Requests: {result.runs.map(run => run.requestCount).join(', ')}
+                        </p>
+                        <p class="mt-1 wrap-break-word text-ink/65">
+                          Wire:{' '}
+                          {result.runs.map(run => formatBytes(run.transferredBytes)).join(', ')}
+                        </p>
+                      </article>
+                    )
+                  }),
+                )}
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section
         class="bg-surface px-[clamp(1rem,4vw,4rem)] py-[clamp(4rem,8vw,7rem)]"
         aria-labelledby="evidence-title"
       >
@@ -692,9 +1503,9 @@ export async function getArchitectureReviewFrame() {
               />
               <EvidenceCard
                 kind="Measured"
-                value="58 + 136 + 29"
+                value="64 + 136 + 29"
                 title="Current validation counts"
-                detail="Current proof: 58 built-Worker checks, 136 repository tests, and 29 commerce/API integration tests. Each suite ran against the implementation represented on this page."
+                detail="Current proof: 64 built-Worker checks, 136 repository tests, and 29 commerce/API integration tests. Each suite ran against the implementation represented on this page."
               />
               <EvidenceCard
                 kind="Measured"

@@ -451,6 +451,72 @@ const runReviewViewport = async (browser, name, viewport) => {
     })
     assert.equal(await page.title(), 'Astro vs Solid 2 architecture review · ДУНД')
 
+    const benchmarkSection = page.locator('#benchmarks')
+    await benchmarkSection
+      .getByRole('heading', {
+        level: 2,
+        name: 'Real timings, mixed results, no framework victory lap.',
+      })
+      .waitFor()
+    const benchmarkOverflow = await benchmarkSection.evaluate(element => ({
+      present: element.scrollWidth > element.clientWidth,
+      widths: `${element.clientWidth}/${element.scrollWidth}`,
+    }))
+    const benchmarkLinks = await benchmarkSection
+      .getByRole('navigation', { name: 'Benchmarked routes' })
+      .locator('a')
+      .evaluateAll(links => links.map(link => ({ href: link.href, rel: link.rel })))
+    const benchmarkDetails = benchmarkSection.locator('details')
+    const benchmarkDetailCount = await benchmarkDetails.count()
+    const firstBenchmarkSummary = benchmarkDetails.first().locator('summary')
+    assert.match((await firstBenchmarkSummary.textContent()) ?? '', /HTTP p75 \/ p95/)
+    await firstBenchmarkSummary.focus()
+    await page.keyboard.press('Enter')
+    const rawHttpOpen = await benchmarkDetails.first().evaluate(element => element.open)
+    await benchmarkDetails
+      .first()
+      .getByText(/p75 .* · p95/)
+      .first()
+      .waitFor()
+    await page.keyboard.press('Enter')
+    const rawHttpClosed = !(await benchmarkDetails.first().evaluate(element => element.open))
+    const visibleBenchmarkTables = await benchmarkSection.locator('table:visible').count()
+    const visibleBenchmarkCards = await benchmarkSection.locator('article:visible').count()
+    record(`${name}: benchmark section renders real labels, links, and native details`, () => {
+      assert.equal(benchmarkOverflow.present, false, benchmarkOverflow.widths)
+      assert.equal(benchmarkDetailCount, 3)
+      assert.equal(rawHttpOpen, true)
+      assert.equal(rawHttpClosed, true)
+      assert.ok(visibleBenchmarkCards >= 4)
+      assert.equal(
+        benchmarkLinks.some(
+          link => link.href === 'https://dund.darjs.dev/products/shiljilt-bridge-coat',
+        ),
+        true,
+      )
+      assert.equal(
+        benchmarkLinks.some(
+          link => link.href === 'https://storekit.plugged.darjs.dev/products/truthear-keyx',
+        ),
+        true,
+      )
+      assert.ok(benchmarkLinks.every(link => link.rel.includes('noreferrer')))
+      assert.equal(runtimeErrors.length, 0, runtimeErrors.join('\n'))
+    })
+    await benchmarkSection.getByText(/TBT is a lab responsiveness proxy/).waitFor()
+    await benchmarkSection.getByText(/directional—not a controlled framework bake-off/).waitFor()
+    if (name === '320px review') {
+      record(`${name}: benchmark swaps wide tables for narrow result cards`, () => {
+        assert.equal(visibleBenchmarkTables, 0)
+        assert.ok(visibleBenchmarkCards >= 20)
+      })
+    }
+    if (name === 'desktop review') {
+      record(`${name}: benchmark exposes four desktop data tables`, () => {
+        assert.equal(visibleBenchmarkTables, 4)
+      })
+    }
+
     const externalLinks = await page
       .locator('a[target="_blank"]')
       .evaluateAll(links => links.map(link => ({ href: link.href, rel: link.rel })))
@@ -712,6 +778,9 @@ try {
   )
 
   const seed = JSON.parse(await readFile(path.join(appDirectory, 'data/catalog.seed.json'), 'utf8'))
+  const benchmark = JSON.parse(
+    await readFile(path.join(appDirectory, 'src/benchmark/solid2-vs-plugged.json'), 'utf8'),
+  )
   const wranglerConfig = await readFile(path.join(appDirectory, 'wrangler.jsonc'), 'utf8')
   const mediaHashes = await Promise.all(
     seed.products.flatMap(product =>
@@ -766,6 +835,37 @@ try {
     }
     assert.ok(mediaHashes.every(media => media.sourceHash === media.keyHash))
     assert.ok(mediaHashes.every(media => media.publishedHash === media.sourceHash))
+  })
+  record('the deployed benchmark snapshot is complete, bounded, and credential-free', () => {
+    assert.equal(benchmark.schemaVersion, 1)
+    assert.equal(benchmark.tools.lighthouse, '13.4.1')
+    assert.match(benchmark.source.baselineCommit, /^8aad25d/)
+    assert.equal(benchmark.source.frameworks.dund.solid, '2.0.0-beta.26')
+    assert.equal(benchmark.source.frameworks.plugged.solid, '1.9.14')
+    assert.equal(
+      benchmark.targets.plugged.routes.product,
+      'https://storekit.plugged.darjs.dev/products/truthear-keyx',
+    )
+    for (const target of ['dund', 'plugged']) {
+      for (const route of ['home', 'catalog', 'product']) {
+        assert.ok(benchmark.http[target][route].warm.sampleCount >= 25)
+        assert.equal(benchmark.http[target][route].warm.validCount, 25)
+        for (const formFactor of ['mobile', 'desktop']) {
+          assert.equal(benchmark.lighthouse[target][route][formFactor].validRuns, 3)
+        }
+      }
+      assert.equal(benchmark.navigation[target].homeCatalog.sampleCount, 9)
+      assert.equal(benchmark.navigation[target].catalogProduct.sampleCount, 9)
+      assert.equal(benchmark.navigation[target].warmupRunsExcluded, 1)
+      assert.ok(benchmark.navigation[target].state.cartItemCountAfterFlows > 0)
+    }
+    assert.equal(benchmark.http.dund.home.cacheBusted, null)
+    assert.ok(benchmark.http.plugged.home.cacheBusted.sampleCount >= 5)
+    assert.equal(benchmark.http.plugged.home.cacheBusted.validCount, 5)
+    assert.doesNotMatch(
+      JSON.stringify(benchmark),
+      /QPAY_PASSWORD|TELEGRAM_BOT_TOKEN|database_id|namespace_id/,
+    )
   })
   record(
     'Wrangler names only isolated ДУНД data, cache, domain, and abuse-control resources',
@@ -855,6 +955,9 @@ try {
     assert.equal(review.response.status, 200)
     assert.match(review.html, /Two storefronts\. Two ownership models\./)
     assert.match(review.html, /Why ProductPurchase sits outside the details frame/)
+    assert.match(review.html, /Real timings, mixed results, no framework victory lap/)
+    assert.match(review.html, /Lighthouse 13\.4\.1 lab/)
+    assert.match(review.html, /storekit\.plugged\.darjs\.dev\/products\/truthear-keyx/)
     assert.match(review.html, /<dx-frame\b/)
     assert.equal(review.response.headers.get('cache-control'), 'no-store')
     assert.equal(review.response.headers.get('cloudflare-cdn-cache-control'), null)
