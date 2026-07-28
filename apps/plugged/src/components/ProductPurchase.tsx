@@ -106,7 +106,7 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
                   aria-hidden="true"
                 />
                 <div
-                  class="relative grid min-h-[clamp(25rem,65vw,50rem)] place-items-center max-[340px]:min-h-96 max-md:min-h-116"
+                  class="relative grid min-h-[clamp(16rem,42vh,32rem)] place-items-center max-[340px]:min-h-80 max-md:min-h-88"
                   aria-label="Бүтээгдэхүүний зураг"
                 >
                   <Show when={previousImage()}>
@@ -189,7 +189,7 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
                 >
                   <p class="text-cyan m-0 text-sm font-black">{stockText(selectedStock())}</p>
                   <div class="mt-2 flex flex-wrap items-end gap-x-4 gap-y-1">
-                    <strong class="text-[clamp(2.25rem,5vw,4rem)] leading-none font-black tabular-nums">
+                    <strong class="text-[clamp(2rem,3.6vw,3rem)] leading-none font-black tabular-nums">
                       {formatMnt(selectedPrice())}
                     </strong>
                     <Show when={compareAtPrice()}>
@@ -233,7 +233,7 @@ export function ProductPurchase(props: { product: ProductPurchaseData }) {
                   </RadioGroup>
                 </fieldset>
 
-                <div class="mt-auto pt-8">
+                <div class="pt-6 lg:mt-auto lg:pt-8">
                   <div class="mb-3 flex items-center justify-between gap-3">
                     <span class="font-black">ТОО ШИРХЭГ</span>
                     <span class="text-paper/70 text-sm">
