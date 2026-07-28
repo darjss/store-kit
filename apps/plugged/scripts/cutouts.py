@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate transparent product cutouts from white-background catalog photos.
+"""Generate transparent product cutouts from catalog photos.
 
-Flood-fills near-white pixels that are 8-connected to the image border, so
+Flood-fills background pixels that are 8-connected to the image border, so
 bright/white product details inside the silhouette are preserved.
 
 Usage: python3 scripts/cutouts.py   (run from apps/plugged)
@@ -20,14 +20,21 @@ SEED = APP_ROOT / "data" / "catalog.seed.json"
 OUT_DIR = APP_ROOT / "public" / "cut"
 
 
-def edge_connected_background(rgb: np.ndarray) -> np.ndarray:
-    whiteish = np.min(rgb.astype(np.int16), axis=2) >= 255 - WHITE_TOL
-    h, w = whiteish.shape
+def edge_connected_background(rgb: np.ndarray, edge_tolerance: int | None = None) -> np.ndarray:
+    if edge_tolerance is None:
+        candidate = np.min(rgb.astype(np.int16), axis=2) >= 255 - WHITE_TOL
+    else:
+        edge = np.concatenate(
+            [rgb[:8].reshape(-1, 3), rgb[-8:].reshape(-1, 3), rgb[:, :8].reshape(-1, 3), rgb[:, -8:].reshape(-1, 3)]
+        )
+        background = np.median(edge, axis=0)
+        candidate = np.sqrt(((rgb.astype(float) - background) ** 2).sum(axis=2)) <= edge_tolerance
+    h, w = candidate.shape
     region = np.zeros((h, w), dtype=bool)
-    region[0, :] = whiteish[0, :]
-    region[-1, :] = whiteish[-1, :]
-    region[:, 0] = whiteish[:, 0]
-    region[:, -1] = whiteish[:, -1]
+    region[0, :] = candidate[0, :]
+    region[-1, :] = candidate[-1, :]
+    region[:, 0] = candidate[:, 0]
+    region[:, -1] = candidate[:, -1]
     prev = ~region
     while not np.array_equal(prev, region):
         prev = region
@@ -37,13 +44,15 @@ def edge_connected_background(rgb: np.ndarray) -> np.ndarray:
                 if dx == 0 and dy == 0:
                     continue
                 grown |= np.roll(region, (dy, dx), axis=(0, 1))
-        region = grown & whiteish
+        region = grown & candidate
     return region
 
 
-def cutout(src: Path, dst: Path) -> None:
+def cutout(src: Path, dst: Path, crop: tuple[int, int, int, int] | None = None, edge_tolerance: int | None = None) -> None:
     im = Image.open(src).convert("RGB")
-    bg = edge_connected_background(np.asarray(im))
+    if crop is not None:
+        im = im.crop(crop)
+    bg = edge_connected_background(np.asarray(im), edge_tolerance)
     alpha = np.where(bg, 0, 255).astype(np.uint8)
     a = Image.fromarray(alpha).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
     out = im.convert("RGBA")
@@ -66,7 +75,10 @@ def main() -> None:
             continue
         src = APP_ROOT / sources[0]
         dst = OUT_DIR / f"{product['slug']}.webp"
-        cutout(src, dst)
+        if product["slug"] == "truthear-keyx":
+            cutout(src, dst, crop=(135, 864, 421, 1262), edge_tolerance=22)
+        else:
+            cutout(src, dst)
         print(f"cut {product['slug']} <- {src.name} ({dst.stat().st_size // 1024} KB)")
 
 
