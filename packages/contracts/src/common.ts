@@ -28,10 +28,17 @@ export type PublicImage = Static<typeof publicImageSchema>
 export type ValidationIssueCode = Static<typeof validationIssueCodeSchema>
 export type ValidationIssue = Static<typeof validationIssueSchema>
 const typeIdSuffixPattern = '[0-7][0-9a-hjkmnp-tv-z]{25}'
+export const productIdPattern = `^prod_${typeIdSuffixPattern}$`
 export const variantIdPattern = `^var_${typeIdSuffixPattern}$`
 export const orderIdPattern = `^ord_${typeIdSuffixPattern}$`
+export const productIdSchema = Type.String({ pattern: productIdPattern })
 export const variantIdSchema = Type.String({ pattern: variantIdPattern })
 export const orderIdSchema = Type.String({ pattern: orderIdPattern })
+export const productStatusSchema = Type.Union([
+  Type.Literal('draft'),
+  Type.Literal('active'),
+  Type.Literal('archived'),
+])
 export const orderStatusSchema = Type.Union([
   Type.Literal('new'),
   Type.Literal('confirmed'),

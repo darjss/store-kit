@@ -1,9 +1,11 @@
 import { cartOperations } from './cart/operations'
 import { catalogOperations } from './catalog/operations'
 import { checkoutOperations } from './checkout/operations'
+import { dashboardOperations } from './dashboard/operations'
 import { systemOperations } from './operations/system-status'
 import { orderOperations } from './orders/operations'
 import { paymentOperations } from './payments/operations'
+import { settingsOperations } from './settings/operations'
 
 export { getSystemStatus } from './operations/system-status'
 export type { SystemError, SystemStatus } from './operations/system-status'
@@ -13,8 +15,10 @@ export type Commerce = {
   catalog: typeof catalogOperations
   cart: typeof cartOperations
   checkout: typeof checkoutOperations
+  dashboard: typeof dashboardOperations
   orders: typeof orderOperations
   payments: typeof paymentOperations
+  settings: typeof settingsOperations
 }
 
 export const commerce: Commerce = {
@@ -22,6 +26,8 @@ export const commerce: Commerce = {
   catalog: catalogOperations,
   cart: cartOperations,
   checkout: checkoutOperations,
+  dashboard: dashboardOperations,
   orders: orderOperations,
   payments: paymentOperations,
+  settings: settingsOperations,
 }

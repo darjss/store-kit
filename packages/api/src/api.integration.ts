@@ -1,11 +1,11 @@
 import type { CartValidationError, ValidatedCart } from '@store-kit/contracts/cart'
 import type { CheckoutCreated, CheckoutError } from '@store-kit/contracts/checkout'
-import { makeSignature } from 'better-auth/crypto'
 import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
-import { app, auth } from './index'
+import { app } from './index'
+import { createAdminCookie, createAdminSession } from './test/admin-session'
 
 const entityId = (prefix: string, value: number) =>
   `${prefix}_${value.toString().padStart(26, '0')}`
@@ -75,28 +75,6 @@ const postJson = (
     }),
   )
 
-const createAdminSession = async (approved: boolean, suffix = approved ? 2 : 1) => {
-  const userId = entityId('usr', suffix)
-  const now = Date.now()
-  await env.DB.prepare(
-    `insert into user
-      (id, name, email, email_verified, approved, created_at, updated_at)
-     values (?, 'Admin User', ?, true, ?, ?, ?)`,
-  )
-    .bind(userId, `${userId}@example.com`, approved, now, now)
-    .run()
-
-  const context = await auth.$context
-  const session = await context.internalAdapter.createSession(userId)
-  const signature = await makeSignature(session.token, context.secret)
-  return {
-    cookie: `${context.authCookies.sessionToken.name}=${session.token}.${signature}`,
-    session,
-  }
-}
-
-const createAdminCookie = async (approved: boolean) => (await createAdminSession(approved)).cookie
-
 describe('admin authentication', () => {
   it('mounts the Google social sign-in handler at the default Better Auth path', async () => {
     const response = await postJson(
@@ -146,7 +124,7 @@ describe('admin authentication', () => {
   })
 
   it('stores and revokes Better Auth sessions in D1', async () => {
-    const { cookie, session } = await createAdminSession(true, 3)
+    const { cookie, session } = await createAdminSession(true)
     const persisted = await env.DB.prepare('select id, token from session where token = ?')
       .bind(session.token)
       .first<{ id: string; token: string }>()
