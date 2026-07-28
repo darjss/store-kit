@@ -53,19 +53,17 @@ const dateTime = (value: number) => new Date(value).toISOString()
 
 const columnHelper = createColumnHelper<AdminOrderListItem>()
 
-const orderColumns = (onOpenOrder: (orderId: string) => void) => [
+const orderColumns = (orderHref: (orderId: string) => string) => [
   columnHelper.accessor('number', {
     header: 'Order',
     cell: info => (
       <div class="min-w-32">
-        <Button
-          class="h-auto justify-start p-0 text-left font-medium"
-          onClick={() => onOpenOrder(info.row.original.id)}
-          type="button"
-          variant="link"
+        <a
+          class="font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          href={orderHref(info.row.original.id)}
         >
           {info.getValue()}
-        </Button>
+        </a>
         <p class="mt-0.5 text-xs text-muted-foreground">
           <time dateTime={dateTime(info.row.original.createdAt)}>
             {formatDate(info.row.original.createdAt)}
@@ -122,7 +120,7 @@ type OrderListPageProps = {
   requests: OrderRequests
   search: OrderListSearch
   onSearchChange: (search: OrderListSearch) => void
-  onOpenOrder: (orderId: string) => void
+  orderHref: (orderId: string) => string
 }
 
 export function OrderListPage(props: OrderListPageProps) {
@@ -134,7 +132,7 @@ export function OrderListPage(props: OrderListPageProps) {
     get data() {
       return data()?.items ?? []
     },
-    columns: orderColumns(orderId => props.onOpenOrder(orderId)),
+    columns: orderColumns(orderId => props.orderHref(orderId)),
     getCoreRowModel: getCoreRowModel(),
   })
   const setSearch = (patch: Partial<OrderListSearch>) =>

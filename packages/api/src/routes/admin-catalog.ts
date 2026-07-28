@@ -27,9 +27,6 @@ const variantParams = t.Object(
 )
 
 export const adminCatalogRoutes = createApprovedAdminRoutes()
-  .onError(({ set }) => {
-    set.headers['cache-control'] = 'private, no-store'
-  })
   .get(
     '/catalog/products',
     async ({ query }) => Result.serialize(await commerce.catalog.listAdminProducts(query)),

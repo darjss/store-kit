@@ -85,11 +85,9 @@ export const createOrderRoutes = (parentRoute: AnyRootRoute, requests: OrderRequ
 
     return (
       <OrderListPage
+        orderHref={orderId => `${ordersPath(router.basepath)}/${orderId}`}
         requests={requests}
         search={search()}
-        onOpenOrder={orderId =>
-          void router.navigate({ href: `${ordersPath(router.basepath)}/${orderId}` })
-        }
         onSearchChange={nextSearch =>
           void router.navigate({
             href: orderListHref(router.basepath, nextSearch),

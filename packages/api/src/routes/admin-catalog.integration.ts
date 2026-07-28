@@ -1,9 +1,9 @@
-import { commerce } from '@store-kit/commerce'
 import type {
   AdminCatalogError,
   AdminCatalogProductDetail,
   AdminCatalogProductList,
 } from '@store-kit/contracts/admin-catalog'
+import { database } from '@store-kit/db'
 import { createId } from '@store-kit/db/ids'
 import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
@@ -610,17 +610,19 @@ describe('admin catalog API', () => {
     const payable = await seedClaimedOrder(product.id, variantId)
     const approved = await createAdminSession(true)
 
-    const firstConfirmation = await commerce.payments.confirmOrderPayment(payable.orderId, {
-      paymentId: 'telegram:catalog-race-first',
+    const confirmationInput = {
+      orderId: payable.orderId,
+      providerPaymentId: 'telegram:catalog-race-first',
       amountMnt: 10_000,
-      method: 'bank_transfer',
+      method: 'bank_transfer' as const,
+      paidAt: product.updatedAt,
       telegramMessageId: payable.telegramMessageId,
-    })
-    const repeatedConfirmation = await commerce.payments.confirmOrderPayment(payable.orderId, {
-      paymentId: 'telegram:catalog-race-repeated',
-      amountMnt: 10_000,
-      method: 'bank_transfer',
-      telegramMessageId: payable.telegramMessageId,
+    }
+    const firstConfirmation =
+      await database.query.payments.confirmAndDecrementStock(confirmationInput)
+    const repeatedConfirmation = await database.query.payments.confirmAndDecrementStock({
+      ...confirmationInput,
+      providerPaymentId: 'telegram:catalog-race-repeated',
     })
     const staleResponse = await requestCatalog(
       `/api/admin/catalog/products/${product.id}/variants/${variantId}/stock`,
@@ -637,13 +639,11 @@ describe('admin catalog API', () => {
       .bind(variantId)
       .first<{ stock_quantity: number; updated_at: number }>()
 
-    expect(firstConfirmation).toMatchObject({
-      status: 'ok',
-      value: { newlyPaid: true, stockApplied: true },
-    })
-    expect(repeatedConfirmation).toMatchObject({
-      status: 'ok',
-      value: { newlyPaid: false, stockApplied: true },
+    expect(firstConfirmation).toEqual({ status: 'confirmed', orderStatus: 'confirmed' })
+    expect(repeatedConfirmation).toEqual({
+      status: 'already-paid',
+      orderStatus: 'confirmed',
+      stockApplied: true,
     })
     expect(staleResponse.status).toBe(200)
     expect(stale).toMatchObject({

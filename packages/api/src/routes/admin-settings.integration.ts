@@ -129,6 +129,9 @@ describe('admin settings API', () => {
     )
 
     expect(responses.map(response => response.status)).toEqual([422, 422, 422, 422])
+    for (const response of responses)
+      expect(response.headers.get('cache-control')).toBe('private, no-store')
+
     const persisted = await env.DB.prepare(
       `select delivery_fee_mnt, bank_name, bank_account_name, bank_account_number, updated_at
        from checkout_settings where id = ?`,

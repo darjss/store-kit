@@ -72,11 +72,9 @@ export const createCatalogRoutes = (parentRoute: AnyRootRoute, requests: Catalog
 
     return (
       <CatalogListPage
+        productHref={productId => `${catalogPath(router.basepath)}/${productId}`}
         requests={requests}
         search={search()}
-        onOpenProduct={productId =>
-          void router.navigate({ href: `${catalogPath(router.basepath)}/${productId}` })
-        }
         onSearchChange={nextSearch =>
           void router.navigate({
             href: catalogListHref(router.basepath, nextSearch),

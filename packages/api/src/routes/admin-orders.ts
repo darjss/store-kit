@@ -17,9 +17,6 @@ const orderParams = t.Object(
 )
 
 export const adminOrderRoutes = createApprovedAdminRoutes()
-  .onError(({ set }) => {
-    set.headers['cache-control'] = 'private, no-store'
-  })
   .get(
     '/orders',
     async ({ query }) => Result.serialize(await commerce.orders.listAdminOrders(query)),

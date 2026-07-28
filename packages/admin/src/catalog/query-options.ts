@@ -8,12 +8,11 @@ import type {
   AdminVariantUpdate,
 } from '@store-kit/contracts/admin-catalog'
 import { mutationOptions, queryOptions } from '@tanstack/solid-query'
-import { Result, ResultDeserializationError } from 'better-result'
-import type { SerializedResult } from 'better-result'
 
-export type CatalogResultResponse<Value> = {
-  data: SerializedResult<Value, AdminCatalogError> | null
-}
+import { deserializeResult } from '../query-options/result'
+import type { ResultResponse } from '../query-options/result'
+
+export type CatalogResultResponse<Value> = ResultResponse<Value, AdminCatalogError>
 
 export type CatalogRequests = {
   listProducts: (
@@ -36,17 +35,8 @@ export type CatalogRequests = {
   ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
 }
 
-const deserialize = async <Value>(
-  request: Promise<CatalogResultResponse<Value>>,
-): Promise<Result<Value, AdminCatalogError>> => {
-  const { data } = await request
-  if (data === null) throw new Error('The catalog response did not include result data.')
-
-  const result = Result.deserialize<Value, AdminCatalogError>(data)
-  if (result.isOk()) return Result.ok<Value, AdminCatalogError>(result.value)
-  if (ResultDeserializationError.is(result.error)) throw result.error
-  return Result.err<Value, AdminCatalogError>(result.error)
-}
+const deserialize = <Value>(request: Promise<CatalogResultResponse<Value>>) =>
+  deserializeResult(request, 'catalog')
 
 export const catalogKeys = {
   all: ['admin', 'catalog'] as const,

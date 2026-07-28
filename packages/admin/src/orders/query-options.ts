@@ -6,12 +6,11 @@ import type {
   AdminOrderStatusUpdate,
 } from '@store-kit/contracts/admin-orders'
 import { mutationOptions, queryOptions } from '@tanstack/solid-query'
-import { Result, ResultDeserializationError } from 'better-result'
-import type { SerializedResult } from 'better-result'
 
-export type OrderResultResponse<Value> = {
-  data: SerializedResult<Value, AdminOrderError> | null
-}
+import { deserializeResult } from '../query-options/result'
+import type { ResultResponse } from '../query-options/result'
+
+export type OrderResultResponse<Value> = ResultResponse<Value, AdminOrderError>
 
 export type OrderRequests = {
   listOrders: (filters: AdminOrderListFilters) => Promise<OrderResultResponse<AdminOrderList>>
@@ -22,17 +21,8 @@ export type OrderRequests = {
   ) => Promise<OrderResultResponse<AdminOrderDetail>>
 }
 
-const deserialize = async <Value>(
-  request: Promise<OrderResultResponse<Value>>,
-): Promise<Result<Value, AdminOrderError>> => {
-  const { data } = await request
-  if (data === null) throw new Error('The order response did not include result data.')
-
-  const result = Result.deserialize<Value, AdminOrderError>(data)
-  if (result.isOk()) return Result.ok<Value, AdminOrderError>(result.value)
-  if (ResultDeserializationError.is(result.error)) throw result.error
-  return Result.err<Value, AdminOrderError>(result.error)
-}
+const deserialize = <Value>(request: Promise<OrderResultResponse<Value>>) =>
+  deserializeResult(request, 'order')
 
 export const orderKeys = {
   all: ['admin', 'orders'] as const,

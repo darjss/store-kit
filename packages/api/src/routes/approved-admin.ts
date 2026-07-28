@@ -11,6 +11,9 @@ export const createApprovedAdminRoutes = () =>
     .derive(async ({ request }) => ({
       adminSession: await auth.api.getSession({ headers: request.headers }),
     }))
+    .onError(({ set }) => {
+      set.headers['cache-control'] = 'private, no-store'
+    })
     .onBeforeHandle(async ({ adminSession, set, status }) => {
       set.headers['cache-control'] = 'private, no-store'
       if (!adminSession) return status(401, unauthenticated)

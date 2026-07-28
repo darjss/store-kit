@@ -24,41 +24,11 @@ import {
   StatusBadge,
   TableSkeleton,
 } from '../components/foundation'
-import type { StatusTone, TableSkeletonColumn } from '../components/foundation'
+import type { TableSkeletonColumn } from '../components/foundation'
+import { orderStatusDisplay, paymentMethodLabel, paymentStatusDisplay } from '../orders/status'
 import { dashboardQuery } from '../query-options/dashboard'
 import type { AdminDashboardRequest } from '../query-options/dashboard'
 import { useQueryResult } from '../query-options/result'
-
-type OrderStatus = AdminOrderListItem['status']
-type PaymentStatus = AdminOrderListItem['paymentStatus']
-type PaymentMethod = AdminOrderListItem['paymentMethod']
-
-type StatusDisplay = {
-  label: string
-  tone: StatusTone
-}
-
-const orderStatusDisplay: Record<OrderStatus, StatusDisplay> = {
-  new: { label: 'New', tone: 'neutral' },
-  confirmed: { label: 'Confirmed', tone: 'information' },
-  preparing: { label: 'Preparing', tone: 'warning' },
-  delivering: { label: 'Delivering', tone: 'information' },
-  completed: { label: 'Completed', tone: 'success' },
-  cancelled: { label: 'Cancelled', tone: 'destructive' },
-}
-
-const paymentStatusDisplay: Record<PaymentStatus, StatusDisplay> = {
-  pending: { label: 'Pending', tone: 'neutral' },
-  claimed: { label: 'Claimed', tone: 'warning' },
-  confirming: { label: 'Confirming', tone: 'warning' },
-  paid: { label: 'Paid', tone: 'success' },
-  failed: { label: 'Failed', tone: 'destructive' },
-}
-
-const paymentMethodLabel: Record<PaymentMethod, string> = {
-  qpay: 'QPay',
-  bank_transfer: 'Bank transfer',
-}
 
 const summaryLabels: ReadonlyArray<{
   key: keyof AdminDashboardSummary
@@ -203,8 +173,8 @@ function RecentOrders(props: {
               <TableBody>
                 <For each={props.orders}>
                   {order => {
-                    const orderStatus = orderStatusDisplay[order.status]
-                    const paymentStatus = paymentStatusDisplay[order.paymentStatus]
+                    const orderStatus = orderStatusDisplay(order.status)
+                    const paymentStatus = paymentStatusDisplay(order.paymentStatus)
 
                     return (
                       <TableRow>
@@ -226,7 +196,7 @@ function RecentOrders(props: {
                               {paymentStatus.label}
                             </StatusBadge>
                             <span class="text-xs text-muted-foreground">
-                              {paymentMethodLabel[order.paymentMethod]}
+                              {paymentMethodLabel(order.paymentMethod)}
                             </span>
                           </div>
                         </TableCell>

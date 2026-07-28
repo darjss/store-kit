@@ -60,19 +60,17 @@ function InventoryBadge(props: { quantity: number }) {
 
 const columnHelper = createColumnHelper<AdminCatalogProductListItem>()
 
-const productColumns = (onOpenProduct: (productId: string) => void) => [
+const productColumns = (productHref: (productId: string) => string) => [
   columnHelper.accessor('name', {
     header: 'Product',
     cell: info => (
       <div class="min-w-48">
-        <Button
-          class="h-auto justify-start p-0 text-left font-medium whitespace-normal"
-          onClick={() => onOpenProduct(info.row.original.id)}
-          type="button"
-          variant="link"
+        <a
+          class="font-medium whitespace-normal text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          href={productHref(info.row.original.id)}
         >
           {info.getValue()}
-        </Button>
+        </a>
         <div class="mt-0.5 text-xs text-muted-foreground">/{info.row.original.slug}</div>
       </div>
     ),
@@ -124,7 +122,7 @@ type CatalogListPageProps = {
   requests: CatalogRequests
   search: CatalogListSearch
   onSearchChange: (search: CatalogListSearch) => void
-  onOpenProduct: (productId: string) => void
+  productHref: (productId: string) => string
 }
 
 export function CatalogListPage(props: CatalogListPageProps) {
@@ -136,7 +134,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
     get data() {
       return data()?.items ?? []
     },
-    columns: productColumns(productId => props.onOpenProduct(productId)),
+    columns: productColumns(productId => props.productHref(productId)),
     getCoreRowModel: getCoreRowModel(),
   })
   const setSearch = (patch: Partial<CatalogListSearch>) =>
