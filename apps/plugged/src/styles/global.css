@@ -15,22 +15,26 @@
 }
 
 @theme {
-  /* Warehouse-night field: ink black and deep petrol, never pure black. */
-  --color-ink: oklch(0.17 0.014 222);
-  --color-petrol: oklch(0.3 0.045 214);
+  /* Moshpit field: warm ink black and slightly lifted asphalt. */
+  --color-ink: #0d0f0d;
+  --color-petrol: #191a17;
 
-  /* Reading layer: dirty silver cut paper and clean off-white strips. */
-  --color-paper: oklch(0.88 0.014 95);
-  --color-paper-clean: oklch(0.96 0.008 95);
+  /* Reading layer: warm paper, blown flash white. */
+  --color-paper: #ede9dd;
+  --color-paper-clean: #f4f0e6;
 
-  /* Electric cyan registration accent, plus a text-safe cyan for paper. */
-  --color-cyan: oklch(0.8 0.12 205);
-  --color-cyan-deep: oklch(0.55 0.095 212);
+  /* Hyperpop accents. `cyan` remains the interactive-accent alias used across
+     commerce screens; it now resolves to signal orange. */
+  --color-signal: #e3571e;
+  --color-cyan: var(--color-signal);
+  --color-cyan-deep: #b84412;
+
+  /* Resin/venue blue and marker lime. */
+  --color-cobalt: #1354b7;
+  --color-acid: #d8db35;
 
   /* Legacy route aliases keep existing screens inside the approved palette. */
-  --color-orange: var(--color-cyan-deep);
-  --color-acid: var(--color-cyan);
-  --color-cobalt: var(--color-petrol);
+  --color-orange: var(--color-signal);
 
   /* Commerce state colors. */
   --color-warning: oklch(0.58 0.17 29);
@@ -50,6 +54,65 @@
   /* Responsive structural spacing. */
   --spacing-gutter: clamp(0.75rem, 2.4vw, 2.25rem);
   --spacing-nav-clear: calc(6rem + env(safe-area-inset-bottom));
+}
+
+/* ————— Moshpit system ————— */
+
+/* Floating product cutout: orange down-right and cobalt up-left venue light
+   casts, plus a hard contact shadow. */
+@utility moshpit-cut {
+  filter: drop-shadow(7px 9px 12px rgb(227 87 30 / 0.4))
+    drop-shadow(-7px -5px 14px rgb(19 84 183 / 0.36)) drop-shadow(6px 10px 9px rgb(0 0 0 / 0.8));
+}
+
+/* Rotated orange price chip on a hard offset shadow. */
+@utility chip-price {
+  display: inline-block;
+  rotate: -7deg;
+  border: 2px solid var(--color-ink);
+  background: var(--color-signal);
+  color: var(--color-ink);
+  padding: 0.2rem 0.65rem;
+  font-family: var(--font-body), sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0.2rem 0.25rem 0 rgb(0 0 0 / 0.65);
+}
+
+/* Scanlines rolling over a scene (HDR monitor flicker). */
+@utility scanlines {
+  background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.28) 0 1px, transparent 1px 3px);
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  animation: scan-roll 0.35s steps(1, end) infinite;
+}
+
+/* Animated photocopy grain over dark scenes. */
+@utility grain-flick {
+  background: url('/textures/xerox-dust.webp') repeat / 20rem;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+  animation: grain-flick 0.6s steps(1, end) infinite;
+}
+
+/* Thin strobing rail above moshpit scenes. */
+@utility strobe-bar {
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-paper) 0 12%,
+    var(--color-signal) 12% 24%,
+    var(--color-acid) 24% 30%,
+    var(--color-ink) 30% 55%
+  );
+  background-size: 300px 100%;
+  opacity: 0.55;
+  animation: strobe-shift 1.3s steps(1, end) infinite;
+}
+
+/* Position-locked two-step position jitter for accents. */
+@utility jitter {
+  animation: jitter 0.9s steps(1, end) infinite;
 }
 
 /* Cut-paper reading surface: merged photocopy grain over dirty silver. */
@@ -179,6 +242,140 @@
   to {
     transform: translateX(-50%);
   }
+}
+
+@keyframes ticker-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes jitter {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: 1px -1px;
+  }
+  50% {
+    translate: -1px 1px;
+  }
+  75% {
+    translate: 1px 1px;
+  }
+}
+
+@keyframes bob-a {
+  0%,
+  100% {
+    transform: rotate(-1.6deg) translateY(0);
+  }
+  50% {
+    transform: rotate(1.4deg) translateY(-1.4cqh);
+  }
+}
+
+@keyframes bob-b {
+  0%,
+  100% {
+    transform: rotate(1.8deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-1.2deg) translateY(1.1cqh);
+  }
+}
+
+@keyframes bob-c {
+  0%,
+  100% {
+    transform: rotate(-0.8deg) translateY(0.6cqh);
+  }
+  50% {
+    transform: rotate(2.1deg) translateY(-0.9cqh);
+  }
+}
+
+@keyframes grain-flick {
+  0% {
+    background-position: 0 0;
+  }
+  33% {
+    background-position: 4rem -3rem;
+  }
+  66% {
+    background-position: -3rem 5rem;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes scan-roll {
+  from {
+    background-position-y: 0;
+  }
+  to {
+    background-position-y: 9px;
+  }
+}
+
+@keyframes strobe-shift {
+  0%,
+  100% {
+    background-position: 0 0;
+  }
+  50% {
+    background-position: 100% 0;
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Slow drift bob classes pair with moshpit-cut on product cutouts. */
+.bob-a {
+  animation: bob-a 4.6s ease-in-out infinite;
+}
+.bob-b {
+  animation: bob-b 6.1s ease-in-out infinite;
+}
+.bob-c {
+  animation: bob-c 5.3s ease-in-out infinite;
+}
+
+/* RGB-split moshpit display headline: cobalt + signal echoes behind a paper
+   front copy. Place on a container that sizes the glyph box. */
+.title-stack {
+  position: relative;
+  white-space: nowrap;
+}
+.title-copy {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+.title-copy-blue {
+  color: var(--color-cobalt);
+  translate: -0.09em -0.055em;
+  animation: jitter 0.9s steps(1, end) infinite;
+}
+.title-copy-orange {
+  color: var(--color-signal);
+  translate: 0.085em 0.05em;
+  animation: jitter 0.7s steps(1, end) infinite reverse;
+}
+.title-copy-front {
+  color: var(--color-paper);
+  text-shadow: 0.045em 0.05em 0 rgb(0 0 0 / 0.9);
+  position: relative;
 }
 
 @keyframes sheet-in {
