@@ -19,6 +19,7 @@
     "@tanstack/solid-table": "^8.21.3",
     "better-auth": "^1.6.25",
     "better-result": "catalog:",
-    "solid-js": "catalog:"
+    "solid-js": "catalog:",
+    "solid-sonner": "^0.3.1"
   }
 }
