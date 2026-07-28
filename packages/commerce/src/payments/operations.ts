@@ -20,6 +20,7 @@ import {
   sendBankClaimMessage,
   sendPaidOrderMessage,
 } from '~/adapters/telegram'
+import type { OrderNotification } from '~/adapters/telegram'
 import {
   bankTransferClaimNotAllowed,
   paymentInsufficientStock,
@@ -28,6 +29,7 @@ import {
   qpayInvoiceMissing,
   staffNotificationFailed,
 } from '~/errors/payments'
+import type { TelegramError } from '~/errors/telegram'
 import { orderOperations } from '~/orders/operations'
 
 export const confirmOrderPayment = async (
@@ -93,26 +95,88 @@ export const confirmOrderPayment = async (
   })
 }
 
-export const refreshQPayPayment = async (orderId: string, statusToken: string) => {
-  const invoice = (await orderOperations.getPrivateStatus(orderId, statusToken)).andThen(order =>
-    order.payment?.providerInvoiceId
-      ? Result.ok(order.payment.providerInvoiceId)
-      : Result.err(qpayInvoiceMissing()),
-  )
+type PaymentOrder = NonNullable<Awaited<ReturnType<typeof database.query.orders.findWithPayment>>>
 
-  return invoice.match<Promise<Result<PaymentRefresh, PaymentRefreshError>>>({
-    err: async error => Result.err<PaymentRefresh, PaymentRefreshError>(error),
-    ok: async invoiceId =>
-      (await verifyQPayPayment(invoiceId))
-        .mapError(() => paymentVerificationFailed())
-        .match<Promise<Result<PaymentRefresh, PaymentRefreshError>>>({
-          err: async error => Result.err<PaymentRefresh, PaymentRefreshError>(error),
-          ok: async verifiedPayment =>
-            verifiedPayment
-              ? confirmOrderPayment(orderId, { ...verifiedPayment, method: 'qpay' })
-              : Result.ok<PaymentRefresh, PaymentRefreshError>({ paymentStatus: 'pending' }),
-        }),
+const orderNotification = (order: PaymentOrder): OrderNotification => ({
+  orderNumber: order.number,
+  customerName: order.customerName,
+  customerPhone: order.customerPhone,
+  amountMnt: order.totalMnt,
+  lines: order.lines.map(line => ({
+    productName: line.productName,
+    variantName: line.variantName,
+    quantity: line.quantity,
+  })),
+  district: order.district,
+  khoroo: order.khoroo,
+  address: order.address,
+  deliveryNotes: order.deliveryNotes,
+})
+
+const notifyPaidOrderOnce = async (
+  order: PaymentOrder,
+  needsStaffAction: boolean,
+): Promise<Result<{ notified: boolean }, TelegramError>> => {
+  const paymentId = order.payment?.id
+  if (!paymentId) return Result.ok({ notified: false })
+
+  const persistedPayment = await database.query.payments.findById(paymentId)
+  if (persistedPayment?.telegramMessageId) return Result.ok({ notified: false })
+
+  const label = needsStaffAction ? `ЯАРАЛТАЙ: үлдэгдэл хүрэлцэхгүй · ${order.number}` : order.number
+  return (await sendPaidOrderMessage({ ...orderNotification(order), orderNumber: label })).match<
+    Promise<Result<{ notified: boolean }, TelegramError>>
+  >({
+    err: async error => Result.err(error),
+    ok: async sent => {
+      await database.query.payments.storeQPayTelegramMessageId(
+        paymentId,
+        sent.messageId,
+        Date.now(),
+      )
+      return Result.ok({ notified: true })
+    },
   })
+}
+
+const refreshQPayPaymentForOrder = async (order: PaymentOrder) => {
+  const invoiceId = order.payment?.providerInvoiceId
+  if (!invoiceId) return Result.err<PaymentRefresh, PaymentRefreshError>(qpayInvoiceMissing())
+
+  return (await verifyQPayPayment(invoiceId))
+    .mapError(() => paymentVerificationFailed())
+    .match<Promise<Result<PaymentRefresh, PaymentRefreshError>>>({
+      err: async error => Result.err<PaymentRefresh, PaymentRefreshError>(error),
+      ok: async verifiedPayment => {
+        if (!verifiedPayment)
+          return Result.ok<PaymentRefresh, PaymentRefreshError>({ paymentStatus: 'pending' })
+
+        return (await confirmOrderPayment(order.id, { ...verifiedPayment, method: 'qpay' })).match<
+          Promise<Result<PaymentRefresh, PaymentRefreshError>>
+        >({
+          err: async error => Result.err<PaymentRefresh, PaymentRefreshError>(error),
+          ok: async confirmation => {
+            if (confirmation.newlyPaid)
+              // Telegram delivery failure must not fail the customer-facing refresh.
+              await notifyPaidOrderOnce(order, confirmation.needsStaffAction).catch(() => undefined)
+            return Result.ok<PaymentRefresh, PaymentRefreshError>(confirmation)
+          },
+        })
+      },
+    })
+}
+
+export const refreshQPayPayment = async (orderId: string, statusToken: string) =>
+  (await orderOperations.getPrivateStatus(orderId, statusToken)).match({
+    err: async error => Result.err<PaymentRefresh, PaymentRefreshError>(error),
+    ok: refreshQPayPaymentForOrder,
+  })
+
+export const refreshQPayPaymentByOrderNumber = async (orderNumber: string) => {
+  const order = await database.query.orders.findWithPaymentByNumber(orderNumber)
+  return order
+    ? refreshQPayPaymentForOrder(order)
+    : Result.err<PaymentRefresh, PaymentRefreshError>(qpayInvoiceMissing())
 }
 
 export type WebhookOutcome = { status: 'acknowledged' } | { status: 'retryable-failure' }
@@ -123,6 +187,9 @@ export const handleQPayCallback = async (paymentLookupId: string): Promise<Webho
   const localPayment = await database.query.payments.findById(paymentLookupId)
   if (!localPayment || localPayment.method !== 'qpay' || localPayment.providerInvoiceId === null)
     return acknowledged()
+
+  const order = await database.query.orders.findWithPayment(localPayment.orderId)
+  if (!order || order.payment?.id !== paymentLookupId) return acknowledged()
 
   return (await verifyQPayPayment(localPayment.providerInvoiceId)).match({
     err: async () => retryableFailure(),
@@ -137,25 +204,11 @@ export const handleQPayCallback = async (paymentLookupId: string): Promise<Webho
         })
       ).match({
         err: async () => acknowledged(),
-        ok: async confirmation => {
-          const persistedPayment = await database.query.payments.findById(paymentLookupId)
-          if (persistedPayment?.telegramMessageId) return acknowledged()
-
-          const label = confirmation.needsStaffAction
-            ? `ЯАРАЛТАЙ: үлдэгдэл хүрэлцэхгүй · ${localPayment.orderId}`
-            : localPayment.orderId
-          return (await sendPaidOrderMessage(label, localPayment.amountMnt)).match({
+        ok: async confirmation =>
+          (await notifyPaidOrderOnce(order, confirmation.needsStaffAction)).match({
             err: async () => retryableFailure(),
-            ok: async sent => {
-              await database.query.payments.storeQPayTelegramMessageId(
-                paymentLookupId,
-                sent.messageId,
-                Date.now(),
-              )
-              return acknowledged()
-            },
-          })
-        },
+            ok: async () => acknowledged(),
+          }),
       })
     },
   })
@@ -324,13 +377,7 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
           }
 
           const stored = await (
-            await sendBankClaimMessage({
-              orderId,
-              orderNumber: order.number,
-              customerName: order.customerName,
-              customerPhone: order.customerPhone,
-              amountMnt: order.totalMnt,
-            })
+            await sendBankClaimMessage({ ...orderNotification(order), orderId })
           ).match({
             err: async () => undefined,
             ok: async sent =>
@@ -351,6 +398,7 @@ export const claimBankTransfer = async (orderId: string, statusToken: string) =>
 export const paymentOperations = {
   confirmOrderPayment,
   refreshQPayPayment,
+  refreshQPayPaymentByOrderNumber,
   handleQPayCallback,
   claimBankTransfer,
   handleBankTransferCallback,

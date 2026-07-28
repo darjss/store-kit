@@ -5,6 +5,7 @@ import { db } from '../client'
 import { createId } from '../ids'
 import { product, productVariant } from '../schema/catalog'
 import { order, orderLine, payment } from '../schema/shopping'
+import { findWithPaymentByNumber } from './orders'
 import { confirmAndDecrementStock } from './payments'
 
 const insertOrderAggregate = async (
@@ -111,6 +112,16 @@ const readAggregateState = async (orderId: string, variantIds: string[]) => {
 
 test('payment confirmation decrements stock once and keeps the order aggregate atomic', async () => {
   const successful = await insertOrderAggregate('successful', [5, 3], [2, 3])
+  const recovered = await findWithPaymentByNumber('ORDER-successful')
+  expect(recovered).toMatchObject({
+    id: successful.orderId,
+    payment: { method: 'bank_transfer', status: 'claimed' },
+    lines: [
+      { productName: 'Product successful', variantName: 'Variant 0', quantity: 2 },
+      { productName: 'Product successful', variantName: 'Variant 1', quantity: 3 },
+    ],
+  })
+
   const paidAt = Date.now()
   const confirmation = await confirmAndDecrementStock({
     orderId: successful.orderId,
