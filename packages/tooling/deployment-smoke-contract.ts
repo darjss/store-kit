@@ -1,6 +1,7 @@
 export const moshpitHomeCopy = 'Утастай сонсгол'
 export const moshpitProductSlug = 'tangzu-waner-2-red-lion'
 export const moshpitCutoutPath = `/cut/${moshpitProductSlug}.webp`
+export const smokeCatalogLimit = 24
 
 const escapeForRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
