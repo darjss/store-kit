@@ -4,6 +4,7 @@ import { pluggedDevelopmentMediaBaseUrl } from './catalog-seed-target.ts'
 import {
   moshpitProductSlug,
   remoteCatalogImage,
+  smokeCatalogLimit,
   requiredMoshpitCutout,
 } from './deployment-smoke-contract.ts'
 
@@ -46,7 +47,7 @@ const get = async (path: string) => {
 
 await get('/api/system/status')
 await Promise.all([get('/products'), get(`/products/${moshpitProductSlug}`), get('/checkout')])
-const catalogResponse = await get('/api/products?limit=1')
+const catalogResponse = await get(`/api/products?limit=${smokeCatalogLimit}`)
 const catalogText = await catalogResponse.text()
 const homeResponse = await get('/')
 const homeHtml = await homeResponse.text()
