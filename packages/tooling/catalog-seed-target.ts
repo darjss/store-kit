@@ -5,9 +5,15 @@ export const pluggedDevelopmentMediaBucket = 'plugged-development-media'
 export const pluggedDevelopmentMediaBaseUrl = 'https://storekitcdn.plugged.darjs.dev/'
 export type CatalogSeedScope = 'data' | 'media'
 
+export const developmentMediaBuckets: Record<string, string> = {
+  'plugged': 'plugged-development-media',
+  'template-store': 'template-development-media',
+}
+
 export type CatalogSeedTarget =
-  | { environment: 'local'; scope: 'data' }
+  | { app: string; environment: 'local'; scope: 'data' }
   | {
+      app: string
       environment: CatalogSeedRemoteEnvironment
       scope: CatalogSeedScope
       bucket: string
@@ -31,7 +37,8 @@ export const catalogSeedTarget = (
 ): CatalogSeedTarget => {
   const selectedEnvironment = argumentValue(args, '--environment')
   const scope = argumentValue(args, '--only')
-  const allowedArguments = new Set(['--environment', '--only'])
+  const app = argumentValue(args, '--app') ?? 'plugged'
+  const allowedArguments = new Set(['--environment', '--only', '--app'])
   const unknown = args.filter(
     (argument, index) => !allowedArguments.has(argument) && !allowedArguments.has(args[index - 1]!),
   )
@@ -44,30 +51,42 @@ export const catalogSeedTarget = (
     (scope !== 'data' && scope !== 'media')
   ) {
     throw new Error(
-      'Usage: catalog-seed.ts --environment <local|development|production> --only <data|media>',
+      'Usage: catalog-seed.ts --environment <local|development|production> --only <data|media> [--app <name>]',
     )
+  }
+  if (!/^[a-z0-9-]+$/.test(app)) {
+    throw new Error(`--app must match apps/<name>: ${app}`)
   }
 
   if (selectedEnvironment === 'local') {
     if (scope !== 'data') throw new Error('Local catalog seeding writes D1 data only.')
-    return { environment: selectedEnvironment, scope }
+    return { app, environment: selectedEnvironment, scope }
   }
 
-  const bucket = environment.PLUGGED_MEDIA_BUCKET?.trim()
+  const variablePrefix = app.toUpperCase().replaceAll('-', '_')
+  const bucketVariable = `${variablePrefix}_MEDIA_BUCKET`
+  const bucket = environment[bucketVariable]?.trim()
   if (!bucket) {
-    throw new Error('PLUGGED_MEDIA_BUCKET must name the selected remote R2 bucket.')
+    throw new Error(`${bucketVariable} must name the selected remote R2 bucket.`)
   }
 
-  if (selectedEnvironment === 'development' && bucket !== pluggedDevelopmentMediaBucket) {
-    throw new Error(`Development media must use ${pluggedDevelopmentMediaBucket}.`)
+  const developmentBucket = developmentMediaBuckets[app]
+  if (selectedEnvironment === 'development') {
+    if (!developmentBucket) {
+      throw new Error(`No development media bucket pin for app: ${app}`)
+    }
+    if (bucket !== developmentBucket) {
+      throw new Error(`Development media must use ${developmentBucket}.`)
+    }
   }
 
   if (selectedEnvironment === 'production') {
     const expectedConfirmation = `production:${bucket}`
-    if (environment.PLUGGED_PRODUCTION_CONFIRMATION !== expectedConfirmation) {
-      throw new Error(`Production requires PLUGGED_PRODUCTION_CONFIRMATION=${expectedConfirmation}`)
+    const confirmationVariable = `${variablePrefix}_PRODUCTION_CONFIRMATION`
+    if (environment[confirmationVariable] !== expectedConfirmation) {
+      throw new Error(`Production requires ${confirmationVariable}=${expectedConfirmation}`)
     }
   }
 
-  return { environment: selectedEnvironment, scope, bucket }
+  return { app, environment: selectedEnvironment, scope, bucket }
 }

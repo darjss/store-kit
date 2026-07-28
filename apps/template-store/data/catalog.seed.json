@@ -1,0 +1,520 @@
+{
+  "brands": [
+    {
+      "id": "brd_01kyktwj0vectss6wrd1zjrfd9",
+      "slug": "ongo",
+      "name": "Өнгө",
+      "description": "Улаанбаатарын өдөр тутмын хувцас."
+    }
+  ],
+  "checkoutSettings": {
+    "id": "cfg_00000000000000000000000001",
+    "deliveryFeeMnt": 5000,
+    "bankName": "Голомт банк",
+    "bankAccountName": "ЖИШЭЭ ДАНС (ДЕМО)",
+    "bankAccountNumber": "0000000000",
+    "checkoutHelpText": "QPay-ээр шууд төлөх эсвэл банкны шилжүүлэг илгээж болно. Шилжүүлгийн утганд захиалгын дугаараа бичнэ үү.",
+    "orderConfirmationText": "Төлбөр батлагдсаны дараа барааг бэлтгэж, хүргэлтийн хуваарийг утсаар мэдэгдэнэ."
+  },
+  "categories": [
+    {
+      "id": "cat_01kyktwj0wectss6x6fsqp8jyq",
+      "slug": "tsamts",
+      "name": "Цамц",
+      "description": "Дээл бус өдөр тутмын дээд хувцас.",
+      "sortOrder": 10,
+      "active": true
+    },
+    {
+      "id": "cat_01kyktwj0wectss6xd01hychsv",
+      "slug": "gaduur",
+      "name": "Гадуур хувцас",
+      "description": "Улирлын хөнгөн ба дулаахан гадуур хувцас.",
+      "sortOrder": 20,
+      "active": true
+    },
+    {
+      "id": "cat_01kyktwj0wectss6xqgcxyg35p",
+      "slug": "umd",
+      "name": "Өмд",
+      "description": "Өдөр тутмын өмд.",
+      "sortOrder": 30,
+      "active": true
+    },
+    {
+      "id": "cat_01kyktwj0wectss6xs92mwcwj0",
+      "slug": "dagaldakh",
+      "name": "Дагалдах",
+      "description": "Малгай, бүс, гоёл.",
+      "sortOrder": 40,
+      "active": true
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_01kyktwj0wectss6ybxgwhb0v9",
+      "slug": "oversize-tsamts",
+      "brandSlug": "ongo",
+      "categorySlug": "tsamts",
+      "name": "Хүнд жинтэй сул цамц",
+      "shortDescription": "240 GSM хөвөн даавуу, дарагдахгүй экрю өнгө.",
+      "description": "Зузаан хөвөн даавуугаар хийсэн уналттай мөртэй сул цамц. Угаалгын дараа хэлбэрээ хадгалдаг бөгөөд ганцхан дээр эсвэл хүрэмний доор хослуулахад аль алинд нь тохирно.",
+      "status": "active",
+      "featured": true,
+      "useCases": [],
+      "details": {
+        "material": "100% хөвөн, 240 GSM",
+        "fit": "Сул (oversize)",
+        "care": "Хүйтэн устайгаар угаана",
+        "madeIn": "Улаанбаатар"
+      },
+      "images": [
+        {
+          "id": "img_01kyktwj0wectss6yh5q1za6ta",
+          "source": "data/images/catalog/oversize-tsamts.webp",
+          "r2Key": "products/oversize-tsamts/022c980d78592313737a4f26ae3eccc60224118a58e18b82f7ffe41dd23d6c32.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Хүнд жинтэй сул цамц, экрю өнгө",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01kyktwj0wectss6yvtdv7rtrm",
+          "sku": "ONGO-TEE-ECRU-S",
+          "name": "Хэмжээ S",
+          "options": {
+            "Хэмжээ": "S"
+          },
+          "priceMnt": 89000,
+          "stockQuantity": 8,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": [
+            "products/oversize-tsamts/022c980d78592313737a4f26ae3eccc60224118a58e18b82f7ffe41dd23d6c32.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0wectss6z49t6t58q4",
+          "sku": "ONGO-TEE-ECRU-M",
+          "name": "Хэмжээ M",
+          "options": {
+            "Хэмжээ": "M"
+          },
+          "priceMnt": 89000,
+          "stockQuantity": 10,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": [
+            "products/oversize-tsamts/022c980d78592313737a4f26ae3eccc60224118a58e18b82f7ffe41dd23d6c32.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss6zfwmmh2pmq",
+          "sku": "ONGO-TEE-ECRU-L",
+          "name": "Хэмжээ L",
+          "options": {
+            "Хэмжээ": "L"
+          },
+          "priceMnt": 89000,
+          "stockQuantity": 10,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": [
+            "products/oversize-tsamts/022c980d78592313737a4f26ae3eccc60224118a58e18b82f7ffe41dd23d6c32.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss6zqdfxbae50",
+          "sku": "ONGO-TEE-ECRU-XL",
+          "name": "Хэмжээ XL",
+          "options": {
+            "Хэмжээ": "XL"
+          },
+          "priceMnt": 89000,
+          "stockQuantity": 6,
+          "active": true,
+          "sortOrder": 40,
+          "imageKeys": [
+            "products/oversize-tsamts/022c980d78592313737a4f26ae3eccc60224118a58e18b82f7ffe41dd23d6c32.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyktwj0xectss6zv2yybfsyf",
+      "slug": "coach-jacket",
+      "brandSlug": "ongo",
+      "categorySlug": "gaduur",
+      "name": "Цааш хүрэм",
+      "shortDescription": "Ус тусгаарлах торстой, хаврын хөнгөн хүрэм.",
+      "description": "Саарал цэнхэр өнгийн цааш хүрэм — салхи болон борооны эсрэг хөнгөн торстой, урд нь төхөөрөмж товчтой. Намар, хаврын давхаргад тохирно.",
+      "status": "active",
+      "featured": true,
+      "useCases": [],
+      "details": {
+        "material": "Полиэстер тор, уран зах",
+        "fit": "Хэвийн",
+        "care": "30°C устай угаана, төмөөр тавьж болохгүй",
+        "madeIn": "Улаанбаатар"
+      },
+      "images": [
+        {
+          "id": "img_01kyktwj0xectss704b56pgzda",
+          "source": "data/images/catalog/coach-jacket.webp",
+          "r2Key": "products/coach-jacket/b455aa00604707067273298846610eb1dc0cdd325194e56dc34fac5319968e45.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Цааш хүрэм, саарал цэнхэр",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01kyktwj0xectss70ffepwp6f1",
+          "sku": "ONGO-COACH-SLATE-S",
+          "name": "Хэмжээ S",
+          "options": {
+            "Хэмжээ": "S"
+          },
+          "priceMnt": 249000,
+          "stockQuantity": 6,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": [
+            "products/coach-jacket/b455aa00604707067273298846610eb1dc0cdd325194e56dc34fac5319968e45.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss70krgh7kzr6",
+          "sku": "ONGO-COACH-SLATE-M",
+          "name": "Хэмжээ M",
+          "options": {
+            "Хэмжээ": "M"
+          },
+          "priceMnt": 249000,
+          "stockQuantity": 8,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": [
+            "products/coach-jacket/b455aa00604707067273298846610eb1dc0cdd325194e56dc34fac5319968e45.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss70wra8we5h9",
+          "sku": "ONGO-COACH-SLATE-L",
+          "name": "Хэмжээ L",
+          "options": {
+            "Хэмжээ": "L"
+          },
+          "priceMnt": 249000,
+          "stockQuantity": 2,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": [
+            "products/coach-jacket/b455aa00604707067273298846610eb1dc0cdd325194e56dc34fac5319968e45.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyktwj0xectss713027dvjbr",
+      "slug": "charcoal-hoodie",
+      "brandSlug": "ongo",
+      "categorySlug": "tsamts",
+      "name": "Юүдэн цамц",
+      "shortDescription": "Дотор нь нооцтой, өдөр тутмын нүүрстөрөгч саарал.",
+      "description": "Дотогш нооцтой зузаан юүдэн цамц. Кенгоруу халтууц, татлагатай угаар болон хошуу. Өвлийн давхарганд зохицно.",
+      "status": "active",
+      "featured": false,
+      "useCases": [],
+      "details": {
+        "material": "80% хөвөн, 20% полиэстер",
+        "fit": "Хэвийн",
+        "care": "Урдааж залгаж буцаан, хүйтэн угаана",
+        "madeIn": "Улаанбаатар"
+      },
+      "images": [
+        {
+          "id": "img_01kyktwj0xectss71bzyvf1rpk",
+          "source": "data/images/catalog/charcoal-hoodie.webp",
+          "r2Key": "products/charcoal-hoodie/774ef4ab4557f026045c5074a62ed6d237713959fe2dcb829da0372c3227b681.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Юүдэн цамц, нүүрстөрөгч саарал",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01kyktwj0xectss71hmfcpqvaj",
+          "sku": "ONGO-HOODIE-CHAR-S",
+          "name": "Хэмжээ S",
+          "options": {
+            "Хэмжээ": "S"
+          },
+          "priceMnt": 159000,
+          "stockQuantity": 5,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": [
+            "products/charcoal-hoodie/774ef4ab4557f026045c5074a62ed6d237713959fe2dcb829da0372c3227b681.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss71y6s8zjg9f",
+          "sku": "ONGO-HOODIE-CHAR-M",
+          "name": "Хэмжээ M",
+          "options": {
+            "Хэмжээ": "M"
+          },
+          "priceMnt": 159000,
+          "stockQuantity": 8,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": [
+            "products/charcoal-hoodie/774ef4ab4557f026045c5074a62ed6d237713959fe2dcb829da0372c3227b681.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss726b0mya3e6",
+          "sku": "ONGO-HOODIE-CHAR-L",
+          "name": "Хэмжээ L",
+          "options": {
+            "Хэмжээ": "L"
+          },
+          "priceMnt": 159000,
+          "stockQuantity": 8,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": [
+            "products/charcoal-hoodie/774ef4ab4557f026045c5074a62ed6d237713959fe2dcb829da0372c3227b681.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss72feh4wy0tq",
+          "sku": "ONGO-HOODIE-CHAR-XL",
+          "name": "Хэмжээ XL",
+          "options": {
+            "Хэмжээ": "XL"
+          },
+          "priceMnt": 159000,
+          "stockQuantity": 4,
+          "active": true,
+          "sortOrder": 40,
+          "imageKeys": [
+            "products/charcoal-hoodie/774ef4ab4557f026045c5074a62ed6d237713959fe2dcb829da0372c3227b681.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyktwj0xectss72gx092ynp9",
+      "slug": "urgul-umd",
+      "brandSlug": "ongo",
+      "categorySlug": "umd",
+      "name": "Өргөн өмд",
+      "shortDescription": "Өндөр бүсэлхий, шингэдэг сул хэм",
+      "description": "Өндөр бүсэлхийтэй, ажил болон амралтад аль алинд зохицдог беж өнгийн өргөн өмд. Угаасны дараа бас хайлшдаггүй материалтай.",
+      "status": "active",
+      "featured": true,
+      "useCases": [],
+      "details": {
+        "material": "Вискоз хайлш",
+        "fit": "Өргөн",
+        "care": "Хүйтэн устайгаар угаана",
+        "madeIn": "Улаанбаатар"
+      },
+      "images": [
+        {
+          "id": "img_01kyktwj0xectss72wgkvrd8ae",
+          "source": "data/images/catalog/urgul-umd.webp",
+          "r2Key": "products/urgul-umd/908ea95a4bef4542a7979a876ae9ab7af1054e3846f3a468f3efdb125e2f40ef.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Өргөн өмд, беж өнгө",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01kyktwj0xectss730dzenf2hm",
+          "sku": "ONGO-TROUSER-BEIGE-S",
+          "name": "Хэмжээ S",
+          "options": {
+            "Хэмжээ": "S"
+          },
+          "priceMnt": 189000,
+          "stockQuantity": 6,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": [
+            "products/urgul-umd/908ea95a4bef4542a7979a876ae9ab7af1054e3846f3a468f3efdb125e2f40ef.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss73811gc52w4",
+          "sku": "ONGO-TROUSER-BEIGE-M",
+          "name": "Хэмжээ M",
+          "options": {
+            "Хэмжээ": "M"
+          },
+          "priceMnt": 189000,
+          "stockQuantity": 8,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": [
+            "products/urgul-umd/908ea95a4bef4542a7979a876ae9ab7af1054e3846f3a468f3efdb125e2f40ef.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss73nkmx8v1ze",
+          "sku": "ONGO-TROUSER-BEIGE-L",
+          "name": "Хэмжээ L",
+          "options": {
+            "Хэмжээ": "L"
+          },
+          "priceMnt": 189000,
+          "stockQuantity": 7,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": [
+            "products/urgul-umd/908ea95a4bef4542a7979a876ae9ab7af1054e3846f3a468f3efdb125e2f40ef.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyktwj0xectss73w27cjhfkx",
+      "slug": "kardigan",
+      "brandSlug": "ongo",
+      "categorySlug": "gaduur",
+      "name": "Ноосон кардиган",
+      "shortDescription": "Зузаан сүлжээс, байгалын товчтой овсгэл өнгө.",
+      "description": "Овсгэл өнгийн зузаан сүлжээст кардиган — өвлийн давхаргын гол хувцас. Байгалын товчтой, тайван дулаахан мэдрэмж.",
+      "status": "active",
+      "featured": true,
+      "useCases": [],
+      "details": {
+        "material": "Ноос-хөвөн хайлш",
+        "fit": "Хэвийн",
+        "care": "Гараар зөөлөн угаана",
+        "madeIn": "Улаанбаатар"
+      },
+      "images": [
+        {
+          "id": "img_01kyktwj0xectss7433n39q5dd",
+          "source": "data/images/catalog/kardigan.webp",
+          "r2Key": "products/kardigan/613cabea68683c1798b373799cd5ad090adcf6047ef84783a2117abeafbe2e3a.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Ноосон кардиган, овсгэл өнгө",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01kyktwj0xectss7497dtfzyfv",
+          "sku": "ONGO-CARDIGAN-OAT-S",
+          "name": "Хэмжээ S",
+          "options": {
+            "Хэмжээ": "S"
+          },
+          "priceMnt": 219000,
+          "compareAtPriceMnt": 259000,
+          "stockQuantity": 4,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": [
+            "products/kardigan/613cabea68683c1798b373799cd5ad090adcf6047ef84783a2117abeafbe2e3a.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss74pp16xsxsf",
+          "sku": "ONGO-CARDIGAN-OAT-M",
+          "name": "Хэмжээ M",
+          "options": {
+            "Хэмжээ": "M"
+          },
+          "priceMnt": 219000,
+          "compareAtPriceMnt": 259000,
+          "stockQuantity": 3,
+          "active": true,
+          "sortOrder": 20,
+          "imageKeys": [
+            "products/kardigan/613cabea68683c1798b373799cd5ad090adcf6047ef84783a2117abeafbe2e3a.webp"
+          ]
+        },
+        {
+          "id": "var_01kyktwj0xectss74szdbtxsq1",
+          "sku": "ONGO-CARDIGAN-OAT-L",
+          "name": "Хэмжээ L",
+          "options": {
+            "Хэмжээ": "L"
+          },
+          "priceMnt": 219000,
+          "compareAtPriceMnt": 259000,
+          "stockQuantity": 5,
+          "active": true,
+          "sortOrder": 30,
+          "imageKeys": [
+            "products/kardigan/613cabea68683c1798b373799cd5ad090adcf6047ef84783a2117abeafbe2e3a.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prod_01kyktwj0xectss752xm946q75",
+      "slug": "nogoon-malgai",
+      "brandSlug": "ongo",
+      "categorySlug": "dagaldakh",
+      "name": "Нөхсөн малгай",
+      "shortDescription": "Уураг илгэмтгий ноос, тайган ногоон.",
+      "description": "Тайган ногоон өнгийн нөхсөн малгай. Зөөлхөн бөгөөд чихийг бүрэн тагладаг.",
+      "status": "active",
+      "featured": false,
+      "useCases": [],
+      "details": {
+        "material": "100% ноос",
+        "fit": "Нэг хэмжээ",
+        "care": "Гараар угаана",
+        "madeIn": "Улаанбаатар"
+      },
+      "images": [
+        {
+          "id": "img_01kyktwj0xectss758cn4c1vqv",
+          "source": "data/images/catalog/nogoon-malgai.webp",
+          "r2Key": "products/nogoon-malgai/77e08806f5bc2ad937087b99e9de1f1d4b90a6cbe633f0b484f770ba2a205a40.webp",
+          "contentType": "image/webp",
+          "width": 1122,
+          "height": 1402,
+          "alt": "Нөхсөн малгай, ногоон",
+          "sortOrder": 10
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_01kyktwj0xectss75hhhds2e5z",
+          "sku": "ONGO-BEANIE-GREEN-OS",
+          "name": "Нэг хэмжээ",
+          "options": {
+            "Хэмжээ": "Нэг"
+          },
+          "priceMnt": 59000,
+          "stockQuantity": 0,
+          "active": true,
+          "sortOrder": 10,
+          "imageKeys": [
+            "products/nogoon-malgai/77e08806f5bc2ad937087b99e9de1f1d4b90a6cbe633f0b484f770ba2a205a40.webp"
+          ]
+        }
+      ]
+    }
+  ]
+}

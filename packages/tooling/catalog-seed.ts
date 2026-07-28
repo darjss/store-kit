@@ -27,16 +27,29 @@ import { Type } from 'typebox'
 import type { Static } from 'typebox'
 import { Value } from 'typebox/value'
 
-import { catalogSeedTarget, pluggedDevelopmentMediaBaseUrl } from './catalog-seed-target.ts'
+import { catalogSeedTarget } from './catalog-seed-target.ts'
 import type { CatalogSeedEnvironment, CatalogSeedRemoteEnvironment } from './catalog-seed-target.ts'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-const pluggedDirectory = resolve(projectRoot, 'apps/plugged')
-const seedPath = resolve(pluggedDirectory, 'data/catalog.seed.json')
-const wranglerConfigPath = resolve(pluggedDirectory, 'wrangler.jsonc')
-const generatedSqlPath = resolve(pluggedDirectory, '.wrangler/catalog.seed.sql')
+
+// Media origins each storefront may seed. Unknown app/environment pairs must
+// be pinned here before remote seeding is possible.
+const mediaOriginPins: Record<string, Partial<Record<CatalogSeedEnvironment, string>>> = {
+  'plugged': {
+    development: 'https://storekitcdn.plugged.darjs.dev/',
+    production: 'https://plugged.storekitcdn.darjs.dev/',
+  },
+  'template-store': {
+    development: 'https://template-store.storekitcdn.darjs.dev/',
+  },
+}
 
 const d1Binding = 'DB'
+let appName = 'plugged'
+let appDirectory = resolve(projectRoot, 'apps/plugged')
+let seedPath = resolve(appDirectory, 'data/catalog.seed.json')
+let wranglerConfigPath = resolve(appDirectory, 'wrangler.jsonc')
+let generatedSqlPath = resolve(appDirectory, '.wrangler/catalog.seed.sql')
 const nonEmptyStringSchema = Type.String({ minLength: 1 })
 const nullableStringSchema = Type.Optional(Type.Union([nonEmptyStringSchema, Type.Null()]))
 const imageContentTypeSchema = Type.Union([
@@ -118,14 +131,14 @@ const checkoutSettingsSeedSchema = strictObject({
   orderConfirmationText: nullableStringSchema,
 })
 
-const pluggedCatalogSeedSchema = strictObject({
+const catalogSeedSchema = strictObject({
   checkoutSettings: Type.Optional(checkoutSettingsSeedSchema),
   brands: Type.Array(brandSeedSchema),
   categories: Type.Array(categorySeedSchema),
   products: Type.Array(productSeedSchema),
 })
 
-type CatalogSeed = Static<typeof pluggedCatalogSeedSchema>
+type CatalogSeed = Static<typeof catalogSeedSchema>
 type SeedWranglerConfig = {
   env?: Record<
     string,
@@ -240,16 +253,17 @@ const parseSeed = async () => {
     )
   }
 
-  if (!Value.Check(pluggedCatalogSeedSchema, input)) {
-    const errors = Value.Errors(pluggedCatalogSeedSchema, input).map(
-      ({ instancePath, message }) => ({ path: instancePath, message }),
-    )
+  if (!Value.Check(catalogSeedSchema, input)) {
+    const errors = Value.Errors(catalogSeedSchema, input).map(({ instancePath, message }) => ({
+      path: instancePath,
+      message,
+    }))
     throw new Error(
       `Catalog seed does not match the required shape:\n${JSON.stringify(errors, null, 2)}`,
     )
   }
 
-  const seed = Value.Parse(pluggedCatalogSeedSchema, input)
+  const seed = Value.Parse(catalogSeedSchema, input)
   for (const product of seed.products) {
     for (const image of product.images) {
       if (isAbsolute(image.source) || image.source.split(/[\\/]/).includes('..')) {
@@ -278,10 +292,14 @@ const parseSeed = async () => {
 }
 
 const assetPath = (source: string) => {
-  const path = resolve(pluggedDirectory, source)
-  const fromPlugged = relative(pluggedDirectory, path)
-  if (fromPlugged === '..' || fromPlugged.startsWith(`..${sep}`) || isAbsolute(fromPlugged)) {
-    throw new Error(`Image source escapes apps/plugged: ${source}`)
+  const path = resolve(appDirectory, source)
+  const fromApplication = relative(appDirectory, path)
+  if (
+    fromApplication === '..' ||
+    fromApplication.startsWith(`..${sep}`) ||
+    isAbsolute(fromApplication)
+  ) {
+    throw new Error(`Image source escapes apps/${appName}: ${source}`)
   }
   return path
 }
@@ -302,7 +320,7 @@ const validateAssets = async (seed: CatalogSeed) => {
 const runWrangler = (args: string[]) =>
   new Promise<void>((resolvePromise, reject) => {
     const child = spawn('vp', ['exec', 'wrangler', ...args], {
-      cwd: pluggedDirectory,
+      cwd: appDirectory,
       stdio: 'inherit',
     })
     child.once('error', reject)
@@ -354,7 +372,7 @@ const verifyImages = async (
   bucket: string,
   environment?: CatalogSeedRemoteEnvironment,
 ) => {
-  const directory = await mkdtemp(join(tmpdir(), 'plugged-media-verification-'))
+  const directory = await mkdtemp(join(tmpdir(), `${appName}-media-verification-`))
   try {
     const images = seed.products.flatMap(product => product.images)
     await images.reduce(async (previousVerification, image, index) => {
@@ -675,11 +693,21 @@ const printCounts = (seed: CatalogSeed, scope: 'data' | 'media') => {
 
 const main = async () => {
   const target = catalogSeedTarget(process.argv.slice(2), process.env)
+  appName = target.app
+  appDirectory = resolve(projectRoot, 'apps', target.app)
+  try {
+    if (!(await stat(appDirectory)).isDirectory()) throw new Error('App directory is missing')
+  } catch {
+    throw new Error(`Unknown app: ${target.app} (apps/${target.app} does not exist).`)
+  }
+  seedPath = resolve(appDirectory, 'data/catalog.seed.json')
+  wranglerConfigPath = resolve(appDirectory, 'wrangler.jsonc')
+  generatedSqlPath = resolve(appDirectory, '.wrangler/catalog.seed.sql')
   const seed = await parseSeed()
   await validateAssets(seed)
 
   if (target.environment === 'local') {
-    process.stdout.write('Preparing local Plugged data seed. Catalog media remains remote.\n')
+    process.stdout.write(`Preparing local ${appName} data seed. Catalog media remains remote.\n`)
     await importRows(seed, target.environment)
     printCounts(seed, target.scope)
     return
@@ -687,7 +715,7 @@ const main = async () => {
 
   if (target.environment === 'development' && target.scope === 'media') {
     process.stdout.write(
-      `Preparing remote Plugged media seed for development (${target.bucket}).\n`,
+      `Preparing remote ${appName} media seed for development (${target.bucket}).\n`,
     )
     await runWrangler(['r2', 'bucket', 'info', target.bucket])
     await uploadImages(seed, target.bucket)
@@ -708,11 +736,11 @@ const main = async () => {
     )
   }
   const mediaBaseUrl = remoteMediaBaseUrl(environmentConfig.vars.PUBLIC_MEDIA_BASE_URL)
-  if (
-    (target.environment === 'production' &&
-      mediaBaseUrl !== 'https://plugged.storekitcdn.darjs.dev/') ||
-    (target.environment === 'development' && mediaBaseUrl !== pluggedDevelopmentMediaBaseUrl)
-  ) {
+  const pinnedMediaOrigin = mediaOriginPins[target.app]?.[target.environment]
+  if (!pinnedMediaOrigin) {
+    throw new Error(`No media origin pin for apps/${target.app} (${target.environment}).`)
+  }
+  if (mediaBaseUrl !== pinnedMediaOrigin) {
     throw new Error(`env.${target.environment} has an invalid media origin: ${mediaBaseUrl}`)
   }
   if (target.scope === 'data') {
@@ -725,7 +753,7 @@ const main = async () => {
   }
 
   process.stdout.write(
-    `Preparing remote Plugged ${target.scope} seed for ${target.environment} (${target.bucket}).\n`,
+    `Preparing remote ${appName} ${target.scope} seed for ${target.environment} (${target.bucket}).\n`,
   )
 
   if (target.scope === 'media') {

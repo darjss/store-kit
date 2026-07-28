@@ -1,0 +1,50 @@
+{
+  "charcoal-hoodie": {
+    "source": "data/images/catalog/charcoal-hoodie.webp",
+    "r2Key": "products/charcoal-hoodie/774ef4ab4557f026045c5074a62ed6d237713959fe2dcb829da0372c3227b681.webp",
+    "contentType": "image/webp",
+    "width": 1122,
+    "height": 1402,
+    "checksumSha256": "774ef4ab4557f026045c5074a62ed6d237713959fe2dcb829da0372c3227b681"
+  },
+  "coach-jacket": {
+    "source": "data/images/catalog/coach-jacket.webp",
+    "r2Key": "products/coach-jacket/b455aa00604707067273298846610eb1dc0cdd325194e56dc34fac5319968e45.webp",
+    "contentType": "image/webp",
+    "width": 1122,
+    "height": 1402,
+    "checksumSha256": "b455aa00604707067273298846610eb1dc0cdd325194e56dc34fac5319968e45"
+  },
+  "kardigan": {
+    "source": "data/images/catalog/kardigan.webp",
+    "r2Key": "products/kardigan/613cabea68683c1798b373799cd5ad090adcf6047ef84783a2117abeafbe2e3a.webp",
+    "contentType": "image/webp",
+    "width": 1122,
+    "height": 1402,
+    "checksumSha256": "613cabea68683c1798b373799cd5ad090adcf6047ef84783a2117abeafbe2e3a"
+  },
+  "nogoon-malgai": {
+    "source": "data/images/catalog/nogoon-malgai.webp",
+    "r2Key": "products/nogoon-malgai/77e08806f5bc2ad937087b99e9de1f1d4b90a6cbe633f0b484f770ba2a205a40.webp",
+    "contentType": "image/webp",
+    "width": 1122,
+    "height": 1402,
+    "checksumSha256": "77e08806f5bc2ad937087b99e9de1f1d4b90a6cbe633f0b484f770ba2a205a40"
+  },
+  "oversize-tsamts": {
+    "source": "data/images/catalog/oversize-tsamts.webp",
+    "r2Key": "products/oversize-tsamts/022c980d78592313737a4f26ae3eccc60224118a58e18b82f7ffe41dd23d6c32.webp",
+    "contentType": "image/webp",
+    "width": 1122,
+    "height": 1402,
+    "checksumSha256": "022c980d78592313737a4f26ae3eccc60224118a58e18b82f7ffe41dd23d6c32"
+  },
+  "urgul-umd": {
+    "source": "data/images/catalog/urgul-umd.webp",
+    "r2Key": "products/urgul-umd/908ea95a4bef4542a7979a876ae9ab7af1054e3846f3a468f3efdb125e2f40ef.webp",
+    "contentType": "image/webp",
+    "width": 1122,
+    "height": 1402,
+    "checksumSha256": "908ea95a4bef4542a7979a876ae9ab7af1054e3846f3a468f3efdb125e2f40ef"
+  }
+}

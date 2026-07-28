@@ -1,0 +1,12 @@
+DEPLOYMENT_ENV=development
+PUBLIC_APP_URL=http://127.0.0.1:8787
+# Development R2 custom-domain origin for this store. Never use the production origin.
+PUBLIC_MEDIA_BASE_URL=https://template-store-demo.storekitcdn.darjs.dev/
+QPAY_BASE_URL=https://merchant-sandbox.qpay.mn
+QPAY_USERNAME=
+QPAY_PASSWORD=
+QPAY_INVOICE_CODE=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+TELEGRAM_WEBHOOK_SECRET=
+TELEGRAM_ADMIN_USER_ID=

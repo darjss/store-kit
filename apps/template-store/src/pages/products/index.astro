@@ -1,0 +1,118 @@
+---
+import { commerce } from '@store-kit/commerce'
+import type { ProductListFilters } from '@store-kit/contracts/catalog'
+import { cn } from '@store-kit/ui/utils'
+
+import ProductCard from '~/components/ProductCard.astro'
+import Layout from '~/layouts/Layout.astro'
+import { catalogHref } from '~/lib/catalog-links'
+import { toPublicImage } from '~/public-image'
+
+const params = Astro.url.searchParams
+const filters: ProductListFilters = {
+  ...(params.get('category') ? { category: params.get('category')! } : {}),
+  ...(params.get('query')?.trim() ? { query: params.get('query')!.trim() } : {}),
+  limit: 50,
+}
+const [result, categories] = await Promise.all([
+  commerce.catalog.listProducts(filters),
+  commerce.catalog.listCategories(),
+])
+if (result.status === 'error') throw new Error('Catalog could not be loaded.')
+const products = result.value.items.map(product => ({
+  ...product,
+  images: product.images.map(toPublicImage),
+}))
+const activeCategory = filters.category
+  ? categories.find(category => category.slug === filters.category)
+  : undefined
+---
+
+<Layout
+  title={activeCategory ? `${activeCategory.name} · Бараа` : 'Бүх бараа'}
+  description="Бүх бараа, ангилал болон хайлтаар."
+>
+  <div class="mx-auto max-w-6xl px-gutter pt-8">
+    <h1 class="m-0 text-3xl font-extrabold tracking-tight md:text-4xl">
+      {activeCategory?.name ?? 'Бүх бараа'}
+    </h1>
+    <p class="text-muted m-0 mt-1 text-sm">{result.value.total} бараа</p>
+
+    <form action="/products" method="get" role="search" class="mt-5 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+      {filters.category && <input type="hidden" name="category" value={filters.category} />}
+      <label class="sr-only" for="catalog-search">Бараа хайх</label>
+      <input
+        class="border-line bg-panel rounded-action min-h-12 min-w-0 border px-4 text-base font-medium placeholder:text-muted"
+        id="catalog-search"
+        name="query"
+        value={filters.query ?? ''}
+        placeholder="Нэр, тайлбараар хайх…"
+        autocomplete="off"
+      />
+      <button
+        class="bg-accent text-on-accent hover:bg-accent-strong rounded-action min-h-12 cursor-pointer border-0 px-6 font-bold"
+        type="submit"
+      >
+        Хайх
+      </button>
+    </form>
+
+    <nav class="mt-4 flex flex-wrap gap-2" aria-label="Ангиллаар шүүх">
+      <a
+        class={cn(
+          'border-line rounded-action border px-4 py-2 text-sm font-bold no-underline',
+          !filters.category ? 'bg-accent text-on-accent border-accent' : 'bg-panel hover:border-ink/40',
+        )}
+        href={catalogHref(params, { category: undefined })}
+        aria-current={!filters.category ? 'page' : undefined}
+      >
+        Бүгд
+      </a>
+      {categories.map(category => (
+        <a
+          class={cn(
+            'border-line rounded-action border px-4 py-2 text-sm font-bold no-underline',
+            filters.category === category.slug
+              ? 'bg-accent text-on-accent border-accent'
+              : 'bg-panel hover:border-ink/40',
+          )}
+          href={catalogHref(params, { category: category.slug })}
+          aria-current={filters.category === category.slug ? 'page' : undefined}
+        >
+          {category.name}
+        </a>
+      ))}
+    </nav>
+
+    {
+      filters.query && (
+        <p class="text-muted mt-4 text-sm">
+          {`“${filters.query}” хайлт · `}
+          <a class="text-accent font-bold" href={catalogHref(params, { query: undefined })}>
+            арилгах
+          </a>
+        </p>
+      )
+    }
+
+    {
+      products.length === 0 ? (
+        <div class="border-line bg-panel mt-8 grid place-items-center gap-3 rounded-action border p-12 text-center">
+          <p class="m-0 text-lg font-bold">Тохирох бараа олдсонгүй.</p>
+          <a
+            href="/products"
+            class="bg-accent text-on-accent rounded-action min-h-11 px-5 py-2.5 text-sm font-bold no-underline"
+          >
+            Бүх барааг үзэх
+          </a>
+        </div>
+      ) : (
+        <div class="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+          {products.map((product, index) => (
+            <ProductCard product={product} index={index} />
+          ))}
+        </div>
+      )
+    }
+  </div>
+</Layout>

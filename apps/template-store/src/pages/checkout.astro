@@ -1,0 +1,11 @@
+---
+import { CheckoutView } from '~/components/CheckoutView'
+import Layout from '~/layouts/Layout.astro'
+---
+
+<Layout title="Захиалга" description="Хүргэлтийн мэдээлэл ба төлбөр." cacheHeader="private" noIndex>
+  <div class="mx-auto max-w-5xl px-gutter pt-8 pb-24">
+    <h1 class="m-0 text-3xl font-extrabold tracking-tight">Захиалга</h1>
+    <CheckoutView client:only="solid-js" />
+  </div>
+</Layout>

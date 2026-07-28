@@ -1,0 +1,155 @@
+---
+import { STORE_LOCALE } from '@store-kit/config'
+import '~/styles/global.css'
+
+import { StoreChrome } from '~/components/StoreChrome'
+import { radiusValues, store, theme } from '~/lib/store'
+import { onAccentColor } from '~/lib/theme'
+
+interface Props {
+  title: string
+  description: string
+  imagePath?: string
+  cacheHeader?: 'public' | 'private' | 'none'
+  noIndex?: boolean
+}
+
+const { title, description, imagePath, cacheHeader = 'public', noIndex = false } = Astro.props
+
+if (cacheHeader === 'public') {
+  Astro.response.headers.set('Cloudflare-CDN-Cache-Control', 'max-age=3600, stale-while-revalidate=60')
+  Astro.response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate')
+}
+
+const canonicalUrl = new URL(Astro.url.pathname, store.publicBaseUrl)
+const onAccent = onAccentColor(theme.accent, theme.ink)
+
+const themeStyle = [
+  `:root{--accent:${theme.accent};--ink:${theme.ink};--surface:${theme.surface};--on-accent:${onAccent};--radius:${radiusValues[theme.radius]}}`,
+].join('')
+---
+
+<!doctype html>
+<html lang={STORE_LOCALE}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalUrl} />
+  {noIndex && <meta name="robots" content="noindex, nofollow" />}
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonicalUrl} />
+  <meta property="og:type" content="website" />
+  {imagePath && <meta property="og:image" content={new URL(imagePath, store.publicBaseUrl)} />}
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style is:inline set:html={themeStyle} />
+</head>
+<body class="font-body text-ink bg-surface min-h-screen antialiased max-md:pb-[--spacing-nav-clear]">
+  <a
+    href="#main"
+    class="bg-ink text-surface sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:px-4 focus-visible:py-3 focus-visible:font-extrabold"
+  >
+    Үндсэн хэсэг рүү шилжих
+  </a>
+  {
+    store.footer?.tagline && (
+      <div class="bg-accent text-on-accent px-gutter py-1.5 text-center text-[0.8rem] font-bold tracking-wide">
+        {store.footer.tagline}
+      </div>
+    )
+  }
+  <header class="bg-panel border-line sticky top-0 z-40 border-b">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-gutter md:h-16">
+      <a href="/" class="text-xl font-extrabold tracking-tight md:text-2xl" aria-label={store.name}>
+        {
+          store.brand?.logoAsset ? (
+            <img src={store.brand.logoAsset} alt={store.name} class="h-7 w-auto" />
+          ) : (
+            (store.brand?.wordmark ?? store.name)
+          )
+        }
+      </a>
+      <nav class="flex items-center gap-5 text-sm font-bold" aria-label="Цэс">
+        <a class="hover:text-accent max-md:hidden" href="/products">Бүх бараа</a>
+        {
+          store.contact?.instagram && (
+            <a
+              class="hover:text-accent max-md:hidden"
+              href={store.contact.instagram}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Instagram
+            </a>
+          )
+        }
+        <StoreChrome client:load />
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <slot />
+  </main>
+  <footer class="border-line mt-20 border-t">
+    <div
+      class="mx-auto grid max-w-6xl gap-8 px-gutter py-10 text-sm md:grid-cols-[1.5fr_1fr_1fr]"
+    >
+      <div>
+        <p class="text-lg font-extrabold">{store.brand?.wordmark ?? store.name}</p>
+        {store.footer?.tagline && <p class="text-muted mt-2 max-w-xs">{store.footer.tagline}</p>}
+      </div>
+      <div>
+        <p class="font-extrabold">Холбоо барих</p>
+        <ul class="text-muted mt-3 space-y-1.5">
+          {
+            store.contact?.phone && (
+              <li>
+                <a class="hover:text-accent" href={`tel:${store.contact.phone.replaceAll(' ', '')}`}>
+                  {store.contact.phone}
+                </a>
+              </li>
+            )
+          }
+          {
+            store.contact?.instagram && (
+              <li>
+                <a
+                  class="hover:text-accent"
+                  href={store.contact.instagram}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Instagram
+                </a>
+              </li>
+            )
+          }
+          {
+            store.contact?.facebook && (
+              <li>
+                <a
+                  class="hover:text-accent"
+                  href={store.contact.facebook}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Facebook
+                </a>
+              </li>
+            )
+          }
+        </ul>
+      </div>
+      <div>
+        <p class="font-extrabold">Төлбөр ба хүргэлт</p>
+        <ul class="text-muted mt-3 space-y-1.5">
+          <li>QPay · Банкны шилжүүлэг</li>
+          <li>Хүргэлт хот дотор</li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
