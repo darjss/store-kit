@@ -183,6 +183,9 @@ importers:
       better-result:
         specifier: 'catalog:'
         version: 2.10.0
+      dismatch:
+        specifier: ^2.6.0
+        version: 2.6.0
       solid-js:
         specifier: 'catalog:'
         version: 1.9.14
