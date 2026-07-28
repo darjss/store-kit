@@ -1,9 +1,12 @@
 import {
+  Box,
+  ClipboardList,
   DangerTriangle,
   HamburgerMenu,
   Home2,
   Login3,
   Logout2,
+  Settings,
   ShieldCheck,
 } from '@solar-icons/solid/Linear'
 import type { AdminSession } from '@store-kit/contracts/admin'
@@ -100,17 +103,32 @@ function ApprovalRequired() {
   )
 }
 
+const navigationLinkClass =
+  'flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-sidebar-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring/50 data-[status=active]:bg-sidebar-accent data-[status=active]:text-sidebar-accent-foreground'
+
 function AdminNavigation(props: { onNavigate?: () => void }) {
   return (
-    <nav aria-label="Admin navigation" class="p-3">
+    <nav aria-label="Admin navigation" class="space-y-1 p-3">
       <Link
         activeOptions={{ exact: true }}
-        class="flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-sidebar-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring/50 data-[status=active]:bg-sidebar-accent data-[status=active]:text-sidebar-accent-foreground"
+        class={navigationLinkClass}
         onClick={() => props.onNavigate?.()}
         to="/"
       >
         <Home2 aria-hidden="true" size={16} />
         Dashboard
+      </Link>
+      <Link class={navigationLinkClass} onClick={() => props.onNavigate?.()} to="/catalog">
+        <Box aria-hidden="true" size={16} />
+        Catalog
+      </Link>
+      <Link class={navigationLinkClass} onClick={() => props.onNavigate?.()} to="/orders">
+        <ClipboardList aria-hidden="true" size={16} />
+        Orders
+      </Link>
+      <Link class={navigationLinkClass} onClick={() => props.onNavigate?.()} to="/settings">
+        <Settings aria-hidden="true" size={16} />
+        Settings
       </Link>
     </nav>
   )
