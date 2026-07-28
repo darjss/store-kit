@@ -5,16 +5,16 @@
    injects from store.json. Tailwind tokens below only reference them, so a
    store clone never edits this file or any component source. */
 @theme inline {
-  --color-accent: var(--accent);
-  --color-on-accent: var(--on-accent);
-  --color-ink: var(--ink);
-  --color-surface: var(--surface);
-  --color-panel: color-mix(in oklch, var(--surface) 38%, white);
-  --color-line: color-mix(in oklch, var(--ink) 14%, transparent);
-  --color-muted: color-mix(in oklch, var(--ink) 62%, var(--surface));
-  --color-accent-strong: color-mix(in oklch, var(--accent) 86%, var(--ink));
+  --color-accent: var(--store-accent);
+  --color-on-accent: var(--store-on-accent);
+  --color-ink: var(--store-ink);
+  --color-surface: var(--store-surface);
+  --color-panel: color-mix(in oklch, var(--store-surface) 38%, white);
+  --color-line: color-mix(in oklch, var(--store-ink) 14%, transparent);
+  --color-muted: color-mix(in oklch, var(--store-ink) 62%, var(--store-surface));
+  --color-accent-strong: color-mix(in oklch, var(--store-accent) 86%, var(--store-ink));
 
-  --radius-action: var(--radius);
+  --radius-action: var(--store-radius);
 
   --font-body: 'Golos Text Variable', 'Helvetica Neue', Arial, sans-serif;
 
@@ -28,20 +28,20 @@
   }
 
   body {
-    background: var(--surface);
-    color: var(--ink);
+    background: var(--store-surface);
+    color: var(--store-ink);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
   }
 
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--store-accent);
     outline-offset: 2px;
   }
 
   ::selection {
-    background: var(--accent);
-    color: var(--on-accent);
+    background: var(--store-accent);
+    color: var(--store-on-accent);
   }
 }
 

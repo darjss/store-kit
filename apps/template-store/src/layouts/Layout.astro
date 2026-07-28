@@ -25,7 +25,7 @@ const canonicalUrl = new URL(Astro.url.pathname, store.publicBaseUrl)
 const onAccent = onAccentColor(theme.accent, theme.ink)
 
 const themeStyle = [
-  `:root{--accent:${theme.accent};--ink:${theme.ink};--surface:${theme.surface};--on-accent:${onAccent};--radius:${radiusValues[theme.radius]}}`,
+  `:root{--store-accent:${theme.accent};--store-ink:${theme.ink};--store-surface:${theme.surface};--store-on-accent:${onAccent};--store-radius:${radiusValues[theme.radius]}}`,
 ].join('')
 ---
 
