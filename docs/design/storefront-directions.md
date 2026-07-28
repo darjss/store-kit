@@ -41,7 +41,6 @@ survives mixed photo quality.
 | Site | Link | What to take |
 | ---- | ---- | ------------ |
 | 29CM | <https://www.29cm.co.kr> | Home as a curation, not a grid. Editorial headlines next to products. |
-| Musinsa | <https://www.musinsa.com> | Catalog density, filter UX, brand chips. |
 | SSENSE | <https://www.ssense.com> | Oversized product imagery with small precise type. |
 
 Use as the template default. Mobile-first, bottom navigation on phones.
@@ -63,10 +62,12 @@ Use when the store has real styled photography. Skip when it does not.
 ## Direction C — Precise minimal catalog
 
 Strict grid discipline, generous whitespace, one brand accent. The safe
-fallback. Easiest direction to retheme by color alone.
+fallback. Easiest direction to retheme by color alone. A dense variant covers
+high-SKU stores that want marketplace-like fullness.
 
 | Site | Link | What to take |
 | ---- | ---- | ------------ |
+| Musinsa | <https://www.musinsa.com> | Dense marketplace-style catalog, strong filter UX, brand chips. For stores with many SKUs. |
 | Stüssy | <https://www.stussy.com> | A plain grid stays interesting when type and one accent are right. |
 | COS | <https://www.cos.com> | Spacing rhythm and calm product pages. |
 | Dover Street Market | <https://shop.doverstreetmarket.com> | Asymmetric index layouts with structure. |
