@@ -32,18 +32,36 @@ import { CatalogFailure, OptionRows, transportMessage, validationMessages } from
 import type { CatalogRequests } from './query-options'
 import { catalogKeys, catalogMutation, catalogQuery } from './query-options'
 
-const slugFromName = (name: string) =>
-  name
+const acceptedImageTypes = 'image/jpeg,image/png,image/webp,image/avif'
+
+const nameHash = (name: string) => {
+  let hash = 2_166_136_261
+  for (const character of name) {
+    hash ^= character.codePointAt(0) ?? 0
+    hash = Math.imul(hash, 16_777_619)
+  }
+  return (hash >>> 0).toString(36)
+}
+
+const slugFromName = (name: string) => {
+  const ascii = name
     .normalize('NFKD')
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
-    .slice(0, 160)
+    .slice(0, 150)
+  return ascii || `baraa-${nameHash(name.trim() || 'baraa')}`
+}
+
+const skuFromName = (name: string) => {
+  const readable = slugFromName(name).replaceAll('-', '').slice(0, 12).toUpperCase()
+  return `SKU-${readable}`
+}
 
 const defaultValues: AdminProductCreate = {
   name: '',
-  slug: '',
+  slug: slugFromName(''),
   shortDescription: null,
   description: null,
   status: 'draft',
@@ -51,8 +69,8 @@ const defaultValues: AdminProductCreate = {
   brandId: null,
   categoryId: null,
   initialVariant: {
-    sku: '',
-    name: 'Default',
+    sku: skuFromName(''),
+    name: 'Үндсэн',
     options: {},
     priceMnt: 0,
     compareAtPriceMnt: null,
@@ -77,16 +95,21 @@ export function CatalogCreatePage(props: CatalogCreatePageProps) {
     })
 
   return (
-    <section class="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-7">
+    <section class="mx-auto w-full max-w-4xl px-4 py-5 sm:px-6 lg:px-7">
       <div class="mb-3">
-        <Button onClick={() => props.onBack()} size="sm" type="button" variant="ghost">
+        <Button
+          class="min-h-11! px-2! md:h-8!"
+          onClick={() => props.onBack()}
+          type="button"
+          variant="ghost"
+        >
           <ArrowLeft aria-hidden="true" />
-          Back to catalog
+          Барааны жагсаалт руу буцах
         </Button>
       </div>
       <PageHeader
-        description="Create the product and its required first variant in one atomic save."
-        title="New product"
+        description="Эхлээд худалдахад хэрэгтэй үндсэн мэдээллээ оруулна уу."
+        title="Шинэ бараа"
         titleId="new-product-title"
       />
 
@@ -95,10 +118,10 @@ export function CatalogCreatePage(props: CatalogCreatePageProps) {
           when={!selectorsQuery.isPending}
           fallback={
             <div aria-busy="true" class="space-y-5" role="status">
-              <span class="sr-only">Loading product form…</span>
-              <Skeleton class="h-8 w-40" />
-              <Skeleton class="h-32 w-full" />
-              <Skeleton class="h-32 w-full" />
+              <span class="sr-only">Барааны маягтыг ачаалж байна…</span>
+              <Skeleton class="h-12 w-full" />
+              <Skeleton class="h-40 w-full" />
+              <Skeleton class="h-40 w-full" />
             </div>
           }
         >
@@ -106,7 +129,7 @@ export function CatalogCreatePage(props: CatalogCreatePageProps) {
             when={!selectorsQuery.isError}
             fallback={
               <RetryState
-                message="The product form could not load its brand and category choices."
+                message="Брэнд, ангиллын сонголтыг ачаалж чадсангүй."
                 onRetry={() => void selectorsQuery.refetch()}
                 pending={selectorsQuery.isFetching}
               />
@@ -115,8 +138,8 @@ export function CatalogCreatePage(props: CatalogCreatePageProps) {
             <Show
               when={!expectedError()}
               fallback={
-                <InlineAlert title="Could not load product form" tone="destructive">
-                  {expectedError()?.message ?? 'The selector request failed.'}
+                <InlineAlert title="Маягт нээгдсэнгүй" tone="destructive">
+                  {expectedError()?.message ?? 'Сонголтуудыг ачаалж чадсангүй.'}
                 </InlineAlert>
               }
             >
@@ -146,10 +169,14 @@ type CreateProductFormProps = {
 function CreateProductForm(props: CreateProductFormProps) {
   const queryClient = useQueryClient()
   const mutation = useMutation(() => catalogMutation.createProduct(props.requests))
+  const uploadMutation = useMutation(() => catalogMutation.uploadImage(props.requests))
   const [failure, setFailure] = createSignal<AdminCatalogError>()
   const [requestError, setRequestError] = createSignal<string>()
   const [slugEdited, setSlugEdited] = createSignal(false)
+  const [skuEdited, setSkuEdited] = createSignal(false)
   const [created, setCreated] = createSignal(false)
+  const [image, setImage] = createSignal<File>()
+  const [imageAlt, setImageAlt] = createSignal('')
   const form = createForm(() => ({
     defaultValues,
     validators: {
@@ -165,15 +192,44 @@ function CreateProductForm(props: CreateProductFormProps) {
           setFailure(result.error)
           return
         }
-        queryClient.setQueryData(catalogKeys.detail(result.value.id), result)
+
+        setCreated(true)
+        let product = result.value
+        const selectedImage = image()
+        if (selectedImage) {
+          try {
+            const uploadResult = await uploadMutation.mutateAsync({
+              productId: product.id,
+              input: {
+                file: selectedImage,
+                alt: imageAlt().trim() || value.name,
+                variantIds: [],
+                expectedUpdatedAt: product.updatedAt,
+              },
+            })
+            if (uploadResult.isOk()) product = uploadResult.value
+            else
+              toast.warning(
+                'Барааг хадгалсан ч зургийг оруулж чадсангүй. Засах хэсгээс дахин оруулна уу.',
+              )
+          } catch {
+            toast.warning(
+              'Барааг хадгалсан ч зургийг оруулж чадсангүй. Засах хэсгээс дахин оруулна уу.',
+            )
+          }
+        }
+
+        queryClient.setQueryData(
+          catalogKeys.detail(product.id),
+          result.map(() => product),
+        )
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: catalogKeys.lists() }),
           queryClient.invalidateQueries({ queryKey: catalogKeys.publicProducts }),
           queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
         ])
-        toast.success('Product created.')
-        setCreated(true)
-        props.onCreated(result.value.id)
+        toast.success('Бараа үүслээ.')
+        props.onCreated(product.id)
       } catch (error) {
         setRequestError(transportMessage(error))
       }
@@ -182,7 +238,7 @@ function CreateProductForm(props: CreateProductFormProps) {
 
   return (
     <form
-      aria-label="Create product"
+      aria-label="Шинэ бараа үүсгэх"
       class="pb-20"
       noValidate
       onSubmit={event => {
@@ -191,23 +247,54 @@ function CreateProductForm(props: CreateProductFormProps) {
         void form.handleSubmit()
       }}
     >
-      <UnsavedChangesGuard isDirty={() => form.state.isDirty && !created()} />
-      <section aria-labelledby="new-product-section" class="border-b pb-5">
-        <div class="mb-4 grid gap-1 sm:grid-cols-[11rem_1fr] sm:gap-5">
-          <h2 class="text-sm font-semibold" id="new-product-section">
-            Product
+      <UnsavedChangesGuard isDirty={() => (form.state.isDirty || Boolean(image())) && !created()} />
+
+      <section aria-labelledby="new-product-essential-title" class="border-b pb-6">
+        <div class="mb-5">
+          <h2 class="text-base font-semibold" id="new-product-essential-title">
+            Үндсэн мэдээлэл
           </h2>
-          <p class="text-xs text-muted-foreground">Name, URL, and storefront copy.</p>
+          <p class="mt-1 text-sm text-muted-foreground">
+            Барааг ноорог төлөвөөр хадгална. Дараа нь хүссэн үедээ нийтэлж болно.
+          </p>
         </div>
-        <div class="grid gap-4 sm:grid-cols-2 sm:pl-48">
+        <div class="grid gap-5 sm:grid-cols-2">
+          <Field class="sm:col-span-2">
+            <FieldLabel for="new-product-image">Барааны зураг</FieldLabel>
+            <Input
+              accept={acceptedImageTypes}
+              class="min-h-12! text-base!"
+              id="new-product-image"
+              type="file"
+              onChange={event => setImage(event.currentTarget.files?.[0])}
+            />
+            <FieldDescription>
+              JPEG, PNG, WebP эсвэл AVIF. 10 MiB хүртэл. Зургийг бараатай хамт оруулна.
+            </FieldDescription>
+          </Field>
+          <Show when={image()}>
+            <Field class="sm:col-span-2">
+              <FieldLabel for="new-product-image-alt">Зургийн тайлбар</FieldLabel>
+              <Input
+                class="min-h-12! text-base!"
+                id="new-product-image-alt"
+                maxlength="300"
+                placeholder="Хоосон орхивол барааны нэрийг ашиглана"
+                value={imageAlt()}
+                onInput={event => setImageAlt(event.currentTarget.value)}
+              />
+            </Field>
+          </Show>
+
           <form.Field name="name">
             {field => (
-              <Field>
-                <FieldLabel for="new-product-name">Name</FieldLabel>
+              <Field class="sm:col-span-2">
+                <FieldLabel for="new-product-name">Барааны нэр</FieldLabel>
                 <Input
                   autofocus
+                  class="min-h-12! text-base!"
                   id="new-product-name"
-                  placeholder="Tanchjim Bunny"
+                  placeholder="Жишээ: Tanchjim Bunny"
                   value={field().state.value}
                   aria-invalid={!field().state.meta.isValid}
                   onBlur={() => field().handleBlur()}
@@ -215,20 +302,145 @@ function CreateProductForm(props: CreateProductFormProps) {
                     const name = event.currentTarget.value
                     field().handleChange(name)
                     if (!slugEdited()) form.setFieldValue('slug', slugFromName(name))
+                    if (!skuEdited()) form.setFieldValue('initialVariant.sku', skuFromName(name))
                   }}
                 />
                 <FieldError errors={validationMessages(field().state.meta.errors)} />
               </Field>
             )}
           </form.Field>
-          <form.Field name="slug">
+
+          <form.Field name="initialVariant.priceMnt">
             {field => (
               <Field>
-                <FieldLabel for="new-product-slug">Slug</FieldLabel>
+                <FieldLabel for="new-variant-price">Үнэ (₮)</FieldLabel>
                 <Input
-                  class="font-mono"
+                  class="min-h-12! text-base! tabular-nums"
+                  id="new-variant-price"
+                  inputmode="numeric"
+                  min="0"
+                  step="1"
+                  type="number"
+                  value={Number.isNaN(field().state.value) ? '' : field().state.value}
+                  onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
+                />
+                <FieldError errors={validationMessages(field().state.meta.errors)} />
+              </Field>
+            )}
+          </form.Field>
+          <form.Field name="initialVariant.stockQuantity">
+            {field => (
+              <Field>
+                <FieldLabel for="new-variant-stock">Эхний үлдэгдэл</FieldLabel>
+                <Input
+                  class="min-h-12! text-base! tabular-nums"
+                  id="new-variant-stock"
+                  inputmode="numeric"
+                  min="0"
+                  step="1"
+                  type="number"
+                  value={Number.isNaN(field().state.value) ? '' : field().state.value}
+                  onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
+                />
+                <FieldError errors={validationMessages(field().state.meta.errors)} />
+              </Field>
+            )}
+          </form.Field>
+
+          <form.Field name="initialVariant.sku">
+            {field => (
+              <Field>
+                <FieldLabel for="new-variant-sku">Барааны код</FieldLabel>
+                <Input
+                  class="min-h-12! font-mono text-base!"
+                  id="new-variant-sku"
+                  value={field().state.value}
+                  aria-invalid={!field().state.meta.isValid}
+                  onBlur={() => field().handleBlur()}
+                  onInput={event => {
+                    setSkuEdited(true)
+                    field().handleChange(event.currentTarget.value)
+                  }}
+                />
+                <FieldDescription>
+                  Нэрээс автоматаар үүснэ. Шаардлагатай бол засаж болно.
+                </FieldDescription>
+                <FieldError errors={validationMessages(field().state.meta.errors)} />
+              </Field>
+            )}
+          </form.Field>
+
+          <form.Field name="categoryId">
+            {field => (
+              <Field>
+                <FieldLabel for="new-product-category">Ангилал</FieldLabel>
+                <NativeSelect
+                  class="min-h-12! w-full text-base!"
+                  id="new-product-category"
+                  value={field().state.value ?? ''}
+                  onChange={event => field().handleChange(event.currentTarget.value || null)}
+                >
+                  <NativeSelectOption value="">Ангилалгүй</NativeSelectOption>
+                  <For each={props.selectors.categories.filter(category => category.active)}>
+                    {category => (
+                      <NativeSelectOption value={category.id}>{category.name}</NativeSelectOption>
+                    )}
+                  </For>
+                </NativeSelect>
+              </Field>
+            )}
+          </form.Field>
+        </div>
+      </section>
+
+      <div class="my-5 flex items-center gap-3 border-y bg-background py-3">
+        <form.Subscribe selector={state => state.isDirty}>
+          {dirty => (
+            <p class="mr-auto text-sm text-muted-foreground">
+              {dirty() || image() ? 'Хадгалаагүй өөрчлөлттэй' : 'Мэдээллээ оруулна уу'}
+            </p>
+          )}
+        </form.Subscribe>
+        <form.Subscribe
+          selector={state => ({ canSubmit: state.canSubmit, pending: state.isSubmitting })}
+        >
+          {state => (
+            <Button
+              class="min-h-12! min-w-36 px-5! md:h-9!"
+              disabled={!state().canSubmit || state().pending}
+              type="submit"
+            >
+              <Show when={state().pending}>
+                <Spinner aria-hidden="true" />
+              </Show>
+              {state().pending
+                ? uploadMutation.isPending
+                  ? 'Зураг оруулж байна…'
+                  : 'Хадгалж байна…'
+                : 'Бараа үүсгэх'}
+            </Button>
+          )}
+        </form.Subscribe>
+      </div>
+
+      <details class="group border-b py-2">
+        <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between py-2 text-base font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          Дэлгэрэнгүй мэдээлэл
+          <span aria-hidden="true" class="text-muted-foreground group-open:rotate-180">
+            ▾
+          </span>
+        </summary>
+        <p class="mb-5 text-sm text-muted-foreground">
+          Дэлгүүрт харагдах тайлбар, холбоос, брэнд болон онцлох тохиргоо.
+        </p>
+        <div class="grid gap-5 pb-5 sm:grid-cols-2">
+          <form.Field name="slug">
+            {field => (
+              <Field class="sm:col-span-2">
+                <FieldLabel for="new-product-slug">Үүсгэсэн холбоос</FieldLabel>
+                <Input
+                  class="min-h-12! font-mono text-base!"
                   id="new-product-slug"
-                  placeholder="tanchjim-bunny"
                   value={field().state.value}
                   aria-invalid={!field().state.meta.isValid}
                   onBlur={() => field().handleBlur()}
@@ -237,19 +449,59 @@ function CreateProductForm(props: CreateProductFormProps) {
                     field().handleChange(event.currentTarget.value)
                   }}
                 />
-                <FieldDescription>Filled from the name until you edit it.</FieldDescription>
+                <FieldDescription>Нэрээс автоматаар үүснэ.</FieldDescription>
                 <FieldError errors={validationMessages(field().state.meta.errors)} />
+              </Field>
+            )}
+          </form.Field>
+          <form.Field name="brandId">
+            {field => (
+              <Field>
+                <FieldLabel for="new-product-brand">Брэнд</FieldLabel>
+                <NativeSelect
+                  class="min-h-12! w-full text-base!"
+                  id="new-product-brand"
+                  value={field().state.value ?? ''}
+                  onChange={event => field().handleChange(event.currentTarget.value || null)}
+                >
+                  <NativeSelectOption value="">Брэндгүй</NativeSelectOption>
+                  <For each={props.selectors.brands}>
+                    {brand => (
+                      <NativeSelectOption value={brand.id}>{brand.name}</NativeSelectOption>
+                    )}
+                  </For>
+                </NativeSelect>
+              </Field>
+            )}
+          </form.Field>
+          <form.Field name="status">
+            {field => (
+              <Field>
+                <FieldLabel for="new-product-status">Нийтлэх төлөв</FieldLabel>
+                <NativeSelect
+                  class="min-h-12! w-full text-base!"
+                  id="new-product-status"
+                  value={field().state.value}
+                  onChange={event =>
+                    field().handleChange(
+                      event.currentTarget.value === 'active' ? 'active' : 'draft',
+                    )
+                  }
+                >
+                  <NativeSelectOption value="draft">Ноорог</NativeSelectOption>
+                  <NativeSelectOption value="active">Идэвхтэй</NativeSelectOption>
+                </NativeSelect>
               </Field>
             )}
           </form.Field>
           <form.Field name="shortDescription">
             {field => (
               <Field class="sm:col-span-2">
-                <FieldLabel for="new-product-short-description">Short description</FieldLabel>
+                <FieldLabel for="new-product-short-description">Товч тайлбар</FieldLabel>
                 <Textarea
-                  class="min-h-20 resize-y"
+                  class="min-h-24 resize-y text-base!"
                   id="new-product-short-description"
-                  placeholder="A concise catalog summary"
+                  placeholder="Жагсаалтад харагдах товч тайлбар"
                   value={field().state.value ?? ''}
                   onBlur={() => field().handleBlur()}
                   onInput={event =>
@@ -265,11 +517,11 @@ function CreateProductForm(props: CreateProductFormProps) {
           <form.Field name="description">
             {field => (
               <Field class="sm:col-span-2">
-                <FieldLabel for="new-product-description">Description</FieldLabel>
+                <FieldLabel for="new-product-description">Дэлгэрэнгүй тайлбар</FieldLabel>
                 <Textarea
-                  class="min-h-32 resize-y"
+                  class="min-h-36 resize-y text-base!"
                   id="new-product-description"
-                  placeholder="Full product description"
+                  placeholder="Барааны онцлог, хэрэглээний мэдээлэл"
                   value={field().state.value ?? ''}
                   onBlur={() => field().handleBlur()}
                   onInput={event =>
@@ -282,138 +534,43 @@ function CreateProductForm(props: CreateProductFormProps) {
               </Field>
             )}
           </form.Field>
-        </div>
-      </section>
-
-      <section aria-labelledby="new-organization-section" class="border-b py-5">
-        <div class="mb-4 grid gap-1 sm:grid-cols-[11rem_1fr] sm:gap-5">
-          <h2 class="text-sm font-semibold" id="new-organization-section">
-            Organization
-          </h2>
-          <p class="text-xs text-muted-foreground">Optional existing catalog references.</p>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2 sm:pl-48">
-          <form.Field name="brandId">
-            {field => (
-              <Field>
-                <FieldLabel for="new-product-brand">Brand</FieldLabel>
-                <NativeSelect
-                  class="w-full"
-                  id="new-product-brand"
-                  value={field().state.value ?? ''}
-                  onChange={event => field().handleChange(event.currentTarget.value || null)}
-                >
-                  <NativeSelectOption value="">No brand</NativeSelectOption>
-                  <For each={props.selectors.brands}>
-                    {brand => (
-                      <NativeSelectOption value={brand.id}>{brand.name}</NativeSelectOption>
-                    )}
-                  </For>
-                </NativeSelect>
-              </Field>
-            )}
-          </form.Field>
-          <form.Field name="categoryId">
-            {field => (
-              <Field>
-                <FieldLabel for="new-product-category">Category</FieldLabel>
-                <NativeSelect
-                  class="w-full"
-                  id="new-product-category"
-                  value={field().state.value ?? ''}
-                  onChange={event => field().handleChange(event.currentTarget.value || null)}
-                >
-                  <NativeSelectOption value="">No category</NativeSelectOption>
-                  <For each={props.selectors.categories.filter(category => category.active)}>
-                    {category => (
-                      <NativeSelectOption value={category.id}>{category.name}</NativeSelectOption>
-                    )}
-                  </For>
-                </NativeSelect>
-              </Field>
-            )}
-          </form.Field>
-        </div>
-      </section>
-
-      <section aria-labelledby="new-publishing-section" class="border-b py-5">
-        <div class="mb-4 grid gap-1 sm:grid-cols-[11rem_1fr] sm:gap-5">
-          <h2 class="text-sm font-semibold" id="new-publishing-section">
-            Publishing
-          </h2>
-          <p class="text-xs text-muted-foreground">Draft is the safe default.</p>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2 sm:pl-48">
-          <form.Field name="status">
-            {field => (
-              <Field>
-                <FieldLabel for="new-product-status">Status</FieldLabel>
-                <NativeSelect
-                  class="w-full"
-                  id="new-product-status"
-                  value={field().state.value}
-                  onChange={event =>
-                    field().handleChange(
-                      event.currentTarget.value === 'active' ? 'active' : 'draft',
-                    )
-                  }
-                >
-                  <NativeSelectOption value="draft">Draft</NativeSelectOption>
-                  <NativeSelectOption value="active">Active</NativeSelectOption>
-                </NativeSelect>
-              </Field>
-            )}
-          </form.Field>
           <form.Field name="featured">
             {field => (
-              <Field>
-                <div class="flex h-8 items-center justify-between border-y px-1">
-                  <FieldLabel for="new-product-featured">Featured</FieldLabel>
+              <Field class="sm:col-span-2">
+                <div class="flex min-h-12 items-center justify-between gap-3 border-y py-2">
+                  <div>
+                    <FieldLabel for="new-product-featured">Онцлох бараа</FieldLabel>
+                    <FieldDescription>Дэлгүүрийн онцлох хэсэгт харуулна.</FieldDescription>
+                  </div>
                   <Switch
                     checked={field().state.value}
                     id="new-product-featured"
                     onChange={checked => field().handleChange(checked)}
                   />
                 </div>
-                <FieldDescription>
-                  Use only for deliberate storefront merchandising.
-                </FieldDescription>
               </Field>
             )}
           </form.Field>
         </div>
-      </section>
+      </details>
 
-      <section aria-labelledby="new-variant-section" class="py-5">
-        <div class="mb-4 grid gap-1 sm:grid-cols-[11rem_1fr] sm:gap-5">
-          <h2 class="text-sm font-semibold" id="new-variant-section">
-            Initial variant
-          </h2>
-          <p class="text-xs text-muted-foreground">Required and created active with the product.</p>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2 sm:pl-48">
-          <form.Field name="initialVariant.sku">
-            {field => (
-              <Field>
-                <FieldLabel for="new-variant-sku">SKU</FieldLabel>
-                <Input
-                  class="font-mono"
-                  id="new-variant-sku"
-                  placeholder="BUNNY-BLACK"
-                  value={field().state.value}
-                  aria-invalid={!field().state.meta.isValid}
-                  onBlur={() => field().handleBlur()}
-                  onInput={event => field().handleChange(event.currentTarget.value)}
-                />
-                <FieldError errors={validationMessages(field().state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
+      <details class="group border-b py-2">
+        <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between py-2 text-base font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          Үнэ ба хувилбарын нэмэлт тохиргоо
+          <span aria-hidden="true" class="text-muted-foreground group-open:rotate-180">
+            ▾
+          </span>
+        </summary>
+        <p class="mb-5 text-sm text-muted-foreground">
+          Хямдралын өмнөх үнэ, сонголт, харагдах дарааллыг шаардлагатай үед тохируулна.
+        </p>
+        <div class="grid gap-5 pb-5 sm:grid-cols-2">
           <form.Field name="initialVariant.name">
             {field => (
               <Field>
-                <FieldLabel for="new-variant-name">Display name</FieldLabel>
+                <FieldLabel for="new-variant-name">Хувилбарын нэр</FieldLabel>
                 <Input
+                  class="min-h-12! text-base!"
                   id="new-variant-name"
                   value={field().state.value}
                   aria-invalid={!field().state.meta.isValid}
@@ -424,30 +581,16 @@ function CreateProductForm(props: CreateProductFormProps) {
               </Field>
             )}
           </form.Field>
-          <form.Field name="initialVariant.priceMnt">
-            {field => (
-              <Field>
-                <FieldLabel for="new-variant-price">Price (MNT)</FieldLabel>
-                <Input
-                  id="new-variant-price"
-                  min="0"
-                  step="1"
-                  type="number"
-                  value={Number.isNaN(field().state.value) ? '' : field().state.value}
-                  onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
-                />
-                <FieldError errors={validationMessages(field().state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
           <form.Field name="initialVariant.compareAtPriceMnt">
             {field => (
               <Field>
-                <FieldLabel for="new-variant-compare-price">Compare-at price (MNT)</FieldLabel>
+                <FieldLabel for="new-variant-compare-price">Өмнөх үнэ (₮)</FieldLabel>
                 <Input
+                  class="min-h-12! text-base! tabular-nums"
                   id="new-variant-compare-price"
+                  inputmode="numeric"
                   min="0"
-                  placeholder="None"
+                  placeholder="Байхгүй"
                   step="1"
                   type="number"
                   value={field().state.value ?? ''}
@@ -461,28 +604,14 @@ function CreateProductForm(props: CreateProductFormProps) {
               </Field>
             )}
           </form.Field>
-          <form.Field name="initialVariant.stockQuantity">
-            {field => (
-              <Field>
-                <FieldLabel for="new-variant-stock">Stock quantity</FieldLabel>
-                <Input
-                  id="new-variant-stock"
-                  min="0"
-                  step="1"
-                  type="number"
-                  value={Number.isNaN(field().state.value) ? '' : field().state.value}
-                  onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
-                />
-                <FieldError errors={validationMessages(field().state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
           <form.Field name="initialVariant.sortOrder">
             {field => (
               <Field>
-                <FieldLabel for="new-variant-sort">Sort order</FieldLabel>
+                <FieldLabel for="new-variant-sort">Харагдах дараалал</FieldLabel>
                 <Input
+                  class="min-h-12! text-base! tabular-nums"
                   id="new-variant-sort"
+                  inputmode="numeric"
                   min="0"
                   step="1"
                   type="number"
@@ -496,41 +625,25 @@ function CreateProductForm(props: CreateProductFormProps) {
           <form.Field name="initialVariant.options">
             {field => (
               <Field class="sm:col-span-2">
-                <FieldLabel>Options</FieldLabel>
+                <FieldLabel>Сонголтууд</FieldLabel>
                 <OptionRows
                   value={field().state.value}
                   onChange={value => field().handleChange(value)}
                 />
-                <FieldDescription>Simple key/value pairs such as size and color.</FieldDescription>
+                <FieldDescription>Жишээ: хэмжээ — M, өнгө — хар.</FieldDescription>
                 <FieldError errors={validationMessages(field().state.meta.errors)} />
               </Field>
             )}
           </form.Field>
         </div>
-      </section>
+      </details>
 
-      <CatalogFailure
-        failure={failure()}
-        title="Could not create product"
-        transportError={requestError()}
-      />
-
-      <div class="sticky bottom-0 mt-5 flex flex-col gap-2 border-t bg-background/95 py-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-end">
-        <p class="mr-auto text-xs text-muted-foreground">
-          Product and initial variant are saved together.
-        </p>
-        <form.Subscribe
-          selector={state => ({ canSubmit: state.canSubmit, pending: state.isSubmitting })}
-        >
-          {state => (
-            <Button disabled={!state().canSubmit || state().pending} type="submit">
-              <Show when={state().pending}>
-                <Spinner aria-hidden="true" />
-              </Show>
-              {state().pending ? 'Creating product…' : 'Create product'}
-            </Button>
-          )}
-        </form.Subscribe>
+      <div class="mt-5">
+        <CatalogFailure
+          failure={failure()}
+          title="Барааг үүсгэж чадсангүй"
+          transportError={requestError()}
+        />
       </div>
     </form>
   )

@@ -10,6 +10,11 @@ import {
   Input,
   NativeSelect,
   NativeSelectOption,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
   Table,
   TableBody,
   TableCell,
@@ -28,7 +33,6 @@ import { For, Show, createSignal } from 'solid-js'
 import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
 import {
-  AdminEmptyState,
   InlineAlert,
   PageHeader,
   RetryState,
@@ -47,44 +51,38 @@ const mnt = new Intl.NumberFormat('mn-MN', {
 })
 
 const priceRange = (product: AdminCatalogProductListItem) => {
-  if (product.minimumPriceMnt === null || product.maximumPriceMnt === null) return 'No active price'
+  if (product.minimumPriceMnt === null || product.maximumPriceMnt === null)
+    return 'Идэвхтэй үнэ байхгүй'
   if (product.minimumPriceMnt === product.maximumPriceMnt)
     return mnt.format(product.minimumPriceMnt)
   return `${mnt.format(product.minimumPriceMnt)} – ${mnt.format(product.maximumPriceMnt)}`
 }
 
-const titleCase = (value: string) => `${value.charAt(0).toUpperCase()}${value.slice(1)}`
+const productStatusLabel = (status: AdminCatalogProductListItem['status']) => {
+  if (status === 'active') return 'Идэвхтэй'
+  if (status === 'archived') return 'Архивласан'
+  return 'Ноорог'
+}
 
-const updatedTime = new Intl.DateTimeFormat('mn-MN', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
+const inventoryLabel = (quantity: number) => {
+  if (quantity === 0) return 'Дууссан'
+  if (quantity <= 3) return `Цөөн · ${quantity}`
+  return `Бэлэн · ${quantity}`
+}
 
 function InventoryBadge(props: { quantity: number }) {
-  if (props.quantity === 0) return <StatusBadge tone="destructive">Out of stock</StatusBadge>
-  if (props.quantity <= 3) return <StatusBadge tone="warning">Low · {props.quantity}</StatusBadge>
-  return <StatusBadge>Available · {props.quantity}</StatusBadge>
+  if (props.quantity === 0)
+    return <StatusBadge tone="destructive">{inventoryLabel(props.quantity)}</StatusBadge>
+  if (props.quantity <= 3)
+    return <StatusBadge tone="warning">{inventoryLabel(props.quantity)}</StatusBadge>
+  return <StatusBadge>{inventoryLabel(props.quantity)}</StatusBadge>
 }
 
 const columnHelper = createColumnHelper<AdminCatalogProductListItem>()
 
-const productColumnLabel: Record<string, string> = {
-  status: 'Status',
-  activeVariantCount: 'Variants',
-  totalStockQuantity: 'Inventory',
-  price: 'Active price',
-  featured: 'Featured',
-  updatedAt: 'Updated',
-}
-
-const mobileCellClass = (columnId: string) =>
-  columnId === 'name' || columnId === 'classification'
-    ? 'max-md:col-span-2 max-md:block max-md:px-3 max-md:py-2'
-    : `${columnId === 'totalStockQuantity' || columnId === 'price' ? 'max-md:col-span-2' : ''} max-md:flex max-md:min-h-9 max-md:items-center max-md:justify-between max-md:gap-3 max-md:px-3 max-md:py-2`
-
 const productColumns = (productHref: (productId: string) => string) => [
   columnHelper.accessor('name', {
-    header: 'Product',
+    header: 'Бараа',
     cell: info => (
       <div class="flex min-w-52 items-center gap-2.5">
         <Show
@@ -108,64 +106,44 @@ const productColumns = (productHref: (productId: string) => string) => [
             />
           )}
         </Show>
-        <div class="min-w-0">
-          <a
-            class="font-medium whitespace-normal text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            href={productHref(info.row.original.id)}
-          >
-            {info.getValue()}
-          </a>
-          <div class="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-            /{info.row.original.slug}
-          </div>
-        </div>
+        <a
+          class="min-w-0 font-medium whitespace-normal text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          href={productHref(info.row.original.id)}
+        >
+          {info.getValue()}
+        </a>
       </div>
     ),
   }),
   columnHelper.display({
     id: 'classification',
-    header: 'Brand / category',
+    header: 'Брэнд / ангилал',
     cell: info => (
       <div class="min-w-36 text-sm">
-        <div>{info.row.original.brandName ?? 'No brand'}</div>
+        <div>{info.row.original.brandName ?? 'Брэндгүй'}</div>
         <div class="text-xs text-muted-foreground">
-          {info.row.original.categoryName ?? 'No category'}
+          {info.row.original.categoryName ?? 'Ангилалгүй'}
         </div>
       </div>
     ),
   }),
   columnHelper.accessor('status', {
-    header: 'Status',
-    cell: info => <StatusBadge>{titleCase(info.getValue())}</StatusBadge>,
+    header: 'Төлөв',
+    cell: info => <StatusBadge>{productStatusLabel(info.getValue())}</StatusBadge>,
   }),
   columnHelper.accessor('activeVariantCount', {
-    header: 'Variants',
+    header: 'Хувилбар',
     cell: info => <span class="tabular-nums">{info.getValue()}</span>,
   }),
   columnHelper.accessor('totalStockQuantity', {
-    header: 'Inventory',
+    header: 'Үлдэгдэл',
     cell: info => <InventoryBadge quantity={info.getValue()} />,
   }),
   columnHelper.display({
     id: 'price',
-    header: 'Active price',
+    header: 'Үнэ',
     cell: info => (
       <span class="whitespace-nowrap tabular-nums">{priceRange(info.row.original)}</span>
-    ),
-  }),
-  columnHelper.accessor('featured', {
-    header: 'Featured',
-    cell: info => <span class="text-sm">{info.getValue() ? 'Yes' : '—'}</span>,
-  }),
-  columnHelper.accessor('updatedAt', {
-    header: 'Updated',
-    cell: info => (
-      <time
-        class="text-xs whitespace-nowrap text-muted-foreground tabular-nums"
-        datetime={new Date(info.getValue()).toISOString()}
-      >
-        {updatedTime.format(info.getValue())}
-      </time>
     ),
   }),
 ]
@@ -190,6 +168,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
   const expectedError = () =>
     query.data?.match<AdminCatalogError | undefined>({ ok: () => undefined, err: error => error })
   const [activeRow, setActiveRow] = createSignal(0)
+  const [filtersOpen, setFiltersOpen] = createSignal(false)
   const table = createSolidTable({
     get data() {
       return data()?.items ?? []
@@ -200,7 +179,17 @@ export function CatalogListPage(props: CatalogListPageProps) {
   const setSearch = (patch: Partial<CatalogListSearch>) =>
     props.onSearchChange({ ...props.search, ...patch, offset: patch.offset ?? 0 })
   const clearFilters = () =>
+    props.onSearchChange({
+      ...(props.search.query ? { query: props.search.query } : {}),
+      inventory: 'all',
+      limit: props.search.limit,
+      offset: 0,
+    })
+  const clearSearchAndFilters = () =>
     props.onSearchChange({ inventory: 'all', limit: props.search.limit, offset: 0 })
+  const hasFilters = () => Boolean(props.search.status || props.search.inventory !== 'all')
+  const activeFilterCount = () =>
+    Number(Boolean(props.search.status)) + Number(props.search.inventory !== 'all')
   const rowIds = () => table.getRowModel().rows.map(row => row.original.id)
   const onTableKeyDown = (
     event: KeyboardEvent & { currentTarget: HTMLDivElement; target: Element },
@@ -209,167 +198,318 @@ export function CatalogListPage(props: CatalogListPageProps) {
       window.location.assign(props.productHref(productId)),
     )
 
-  return (
-    <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
-      <PageHeader
-        actions={
-          <Button onClick={() => props.onNewProduct()} type="button">
-            <AddCircle aria-hidden="true" />
-            New product
-          </Button>
-        }
-        description="Review product visibility, commercial details, and current inventory."
-        title="Catalog"
-        titleId="catalog-title"
-      />
+  const statusFilter = (id: string) => (
+    <label class="flex flex-col gap-1.5 text-sm font-medium" for={id}>
+      Төлөв
+      <NativeSelect
+        class="min-h-12! w-full md:h-8! md:w-40"
+        id={id}
+        value={props.search.status ?? 'all'}
+        onChange={event => {
+          const value = event.currentTarget.value
+          setSearch({
+            status:
+              value === 'draft' || value === 'active' || value === 'archived' ? value : undefined,
+          })
+        }}
+      >
+        <NativeSelectOption value="all">Бүх төлөв</NativeSelectOption>
+        <NativeSelectOption value="draft">Ноорог</NativeSelectOption>
+        <NativeSelectOption value="active">Идэвхтэй</NativeSelectOption>
+        <NativeSelectOption value="archived">Архивласан</NativeSelectOption>
+      </NativeSelect>
+    </label>
+  )
 
-      <div class="mt-4 flex flex-col gap-2 border-y bg-card px-3 py-3 sm:px-4 lg:flex-row lg:items-end">
-        <label class="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium" for="catalog-search">
-          Search catalog
-          <div class="relative">
-            <span
-              aria-hidden="true"
-              class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+  const inventoryFilter = (id: string) => (
+    <label class="flex flex-col gap-1.5 text-sm font-medium" for={id}>
+      Үлдэгдэл
+      <NativeSelect
+        class="min-h-12! w-full md:h-8! md:w-40"
+        id={id}
+        value={props.search.inventory}
+        onChange={event => {
+          const value = event.currentTarget.value
+          setSearch({ inventory: value === 'low' || value === 'out' ? value : 'all' })
+        }}
+      >
+        <NativeSelectOption value="all">Бүх үлдэгдэл</NativeSelectOption>
+        <NativeSelectOption value="low">Цөөн үлдсэн</NativeSelectOption>
+        <NativeSelectOption value="out">Дууссан</NativeSelectOption>
+      </NativeSelect>
+    </label>
+  )
+
+  return (
+    <section class="mx-auto w-full max-w-7xl pb-28 md:px-6 md:py-5 md:pb-6 lg:px-7">
+      <div class="px-4 pt-5 md:px-0 md:pt-0">
+        <PageHeader
+          actions={
+            <Button
+              class="fixed right-4 bottom-20 z-30 min-h-12! px-5! shadow-sm md:static md:h-8! md:shadow-none"
+              onClick={() => props.onNewProduct()}
+              type="button"
             >
-              <Magnifer size={16} />
-            </span>
-            <Input
-              class="pl-9!"
-              data-admin-list-search
-              id="catalog-search"
-              placeholder="Product, slug, brand, or SKU"
-              type="search"
-              value={props.search.query ?? ''}
-              onInput={event => setSearch({ query: event.currentTarget.value || undefined })}
-            />
-          </div>
-        </label>
-        <label class="flex flex-col gap-1 text-xs font-medium" for="catalog-status-filter">
-          Status
-          <NativeSelect
-            class="w-full lg:w-40"
-            id="catalog-status-filter"
-            value={props.search.status ?? 'all'}
-            onChange={event => {
-              const value = event.currentTarget.value
-              setSearch({
-                status:
-                  value === 'draft' || value === 'active' || value === 'archived'
-                    ? value
-                    : undefined,
-              })
-            }}
-          >
-            <NativeSelectOption value="all">All statuses</NativeSelectOption>
-            <NativeSelectOption value="draft">Draft</NativeSelectOption>
-            <NativeSelectOption value="active">Active</NativeSelectOption>
-            <NativeSelectOption value="archived">Archived</NativeSelectOption>
-          </NativeSelect>
-        </label>
-        <label class="flex flex-col gap-1 text-xs font-medium" for="catalog-inventory-filter">
-          Inventory
-          <NativeSelect
-            class="w-full lg:w-40"
-            id="catalog-inventory-filter"
-            value={props.search.inventory}
-            onChange={event => {
-              const value = event.currentTarget.value
-              setSearch({ inventory: value === 'low' || value === 'out' ? value : 'all' })
-            }}
-          >
-            <NativeSelectOption value="all">All inventory</NativeSelectOption>
-            <NativeSelectOption value="low">Low stock</NativeSelectOption>
-            <NativeSelectOption value="out">Out of stock</NativeSelectOption>
-          </NativeSelect>
-        </label>
-        <Button onClick={clearFilters} type="button" variant="outline">
-          Clear filters
-        </Button>
+              <AddCircle aria-hidden="true" />
+              Шинэ бараа
+            </Button>
+          }
+          description="Үнэ, төлөв, үлдэгдлээ нэг дороос удирдана."
+          title="Бараа"
+          titleId="catalog-title"
+        />
       </div>
+
+      <div class="mt-4 px-4 md:px-0">
+        <label class="sr-only" for="catalog-search">
+          Бараа хайх
+        </label>
+        <div class="relative">
+          <span
+            aria-hidden="true"
+            class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+          >
+            <Magnifer size={18} />
+          </span>
+          <Input
+            class="min-h-12! pl-10! text-base! md:h-8! md:text-sm!"
+            data-admin-list-search
+            id="catalog-search"
+            placeholder="Нэр, брэнд эсвэл барааны кодоор хайх"
+            type="search"
+            value={props.search.query ?? ''}
+            onInput={event => setSearch({ query: event.currentTarget.value || undefined })}
+          />
+        </div>
+      </div>
+
+      <div class="mt-3 px-4 md:hidden">
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+          <Button
+            class="min-h-11! shrink-0"
+            onClick={() => setFiltersOpen(true)}
+            type="button"
+            variant="outline"
+          >
+            Шүүлтүүр{activeFilterCount() > 0 ? ` · ${activeFilterCount()}` : ''}
+          </Button>
+          <Show when={props.search.status}>
+            {status => (
+              <Button
+                aria-label="Төлөвийн шүүлтүүрийг арилгах"
+                class="min-h-11! shrink-0"
+                onClick={() => setSearch({ status: undefined })}
+                type="button"
+                variant="secondary"
+              >
+                {productStatusLabel(status())} ×
+              </Button>
+            )}
+          </Show>
+          <Show when={props.search.inventory !== 'all'}>
+            <Button
+              aria-label="Үлдэгдлийн шүүлтүүрийг арилгах"
+              class="min-h-11! shrink-0"
+              onClick={() => setSearch({ inventory: 'all' })}
+              type="button"
+              variant="secondary"
+            >
+              {props.search.inventory === 'low' ? 'Цөөн үлдсэн' : 'Дууссан'} ×
+            </Button>
+          </Show>
+        </div>
+      </div>
+
+      <div class="mt-3 hidden items-end gap-2 border-y bg-card px-4 py-3 md:flex">
+        {statusFilter('catalog-status-filter')}
+        {inventoryFilter('catalog-inventory-filter')}
+        <Show when={hasFilters()}>
+          <Button onClick={clearFilters} type="button" variant="outline">
+            Арилгах
+          </Button>
+        </Show>
+      </div>
+
+      <Sheet.Root open={filtersOpen()} onOpenChange={setFiltersOpen}>
+        <SheetContent class="max-h-[85dvh] gap-0 rounded-t-xl p-0" side="bottom">
+          <SheetHeader class="border-b px-4 py-4 text-left">
+            <SheetTitle>Бараа шүүх</SheetTitle>
+            <SheetDescription>Харах барааныхаа төлөв, үлдэгдлийг сонгоно уу.</SheetDescription>
+          </SheetHeader>
+          <div class="space-y-5 overflow-y-auto px-4 py-5">
+            {statusFilter('catalog-status-filter-sheet')}
+            {inventoryFilter('catalog-inventory-filter-sheet')}
+          </div>
+          <div class="flex gap-2 border-t px-4 py-4">
+            <Button
+              class="min-h-12! flex-1"
+              disabled={!hasFilters()}
+              onClick={clearFilters}
+              type="button"
+              variant="outline"
+            >
+              Шүүлтүүр арилгах
+            </Button>
+            <Button class="min-h-12! flex-1" onClick={() => setFiltersOpen(false)} type="button">
+              Барааг харах
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet.Root>
 
       <div class="mt-4">
         <Show
           when={!query.isPending}
           fallback={
-            <TableSkeleton
-              columns={[
-                { label: 'Product' },
-                { label: 'Brand / category' },
-                { label: 'Status' },
-                { label: 'Variants' },
-                { label: 'Inventory' },
-                { label: 'Active price' },
-                { label: 'Featured' },
-                { label: 'Updated' },
-              ]}
-              rows={8}
-            />
+            <div class="px-4 md:px-0">
+              <TableSkeleton
+                columns={[
+                  { label: 'Бараа' },
+                  { label: 'Брэнд / ангилал' },
+                  { label: 'Төлөв' },
+                  { label: 'Хувилбар' },
+                  { label: 'Үлдэгдэл' },
+                  { label: 'Үнэ' },
+                ]}
+                rows={8}
+              />
+            </div>
           }
         >
           <Show
             when={!query.isError}
             fallback={
-              <RetryState
-                message="The catalog could not be loaded."
-                onRetry={() => void query.refetch()}
-                pending={query.isFetching}
-              />
+              <div class="px-4 md:px-0">
+                <RetryState
+                  message="Барааны жагсаалтыг ачаалж чадсангүй."
+                  onRetry={() => void query.refetch()}
+                  pending={query.isFetching}
+                />
+              </div>
             }
           >
             <Show
               when={!expectedError()}
               fallback={
-                <InlineAlert title="Could not load catalog" tone="destructive">
-                  {expectedError()?.message ?? 'The catalog request failed.'}
-                </InlineAlert>
+                <div class="px-4 md:px-0">
+                  <InlineAlert title="Барааны жагсаалт нээгдсэнгүй" tone="destructive">
+                    {expectedError()?.message ?? 'Хүсэлтийг гүйцэтгэж чадсангүй.'}
+                  </InlineAlert>
+                </div>
               }
             >
               <Show
                 when={(data()?.items.length ?? 0) > 0}
                 fallback={
-                  <Show
-                    when={Boolean(
-                      props.search.query || props.search.status || props.search.inventory !== 'all',
-                    )}
-                    fallback={
-                      <AdminEmptyState
-                        action={
-                          <Button onClick={() => props.onNewProduct()} type="button">
-                            <AddCircle aria-hidden="true" />
-                            New product
-                          </Button>
-                        }
-                        description="Create the first product with its required initial variant."
-                        title="No products yet"
-                      />
-                    }
-                  >
-                    <AdminEmptyState
-                      action={
-                        <Button onClick={clearFilters} type="button" variant="outline">
-                          Clear filters
-                        </Button>
+                  <div class="px-4 md:px-0">
+                    <Show
+                      when={Boolean(props.search.query || hasFilters())}
+                      fallback={
+                        <div class="border-y py-10 text-center">
+                          <h2 class="text-base font-semibold">Одоогоор бараа алга</h2>
+                          <p class="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                            Анхны бараагаа нэмээд үнэ, үлдэгдлээ тохируулна уу.
+                          </p>
+                        </div>
                       }
-                      description="No products match the current search and filters."
-                      title="No catalog results"
-                    />
-                  </Show>
+                    >
+                      <div class="border-y py-10 text-center">
+                        <h2 class="text-base font-semibold">Тохирох бараа олдсонгүй</h2>
+                        <p class="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                          Хайлт эсвэл шүүлтүүрээ өөрчлөөд дахин оролдоно уу.
+                        </p>
+                        <Button
+                          class="mt-4 min-h-11!"
+                          onClick={clearSearchAndFilters}
+                          type="button"
+                          variant="outline"
+                        >
+                          Хайлт, шүүлтүүр арилгах
+                        </Button>
+                      </div>
+                    </Show>
+                  </div>
                 }
               >
+                <ul aria-label="Барааны жагсаалт" class="divide-y border-y md:hidden">
+                  <For each={data()!.items}>
+                    {product => (
+                      <li>
+                        <a
+                          class="grid min-h-24 grid-cols-[4rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset active:bg-muted"
+                          href={props.productHref(product.id)}
+                        >
+                          <Show
+                            when={product.primaryImage}
+                            fallback={
+                              <div aria-hidden="true" class="size-16 rounded-md border bg-muted" />
+                            }
+                          >
+                            {image => (
+                              <Image
+                                alt=""
+                                breakpoints={[64, 128]}
+                                class="size-16 rounded-md bg-muted object-cover"
+                                height={image().height}
+                                layout="fixed"
+                                operations={{ quality: 78, format: 'auto', fit: 'cover' }}
+                                options={{ domain: new URL(image().url).hostname }}
+                                sizes="64px"
+                                src={image().url}
+                                transformer={cloudflare}
+                                unstyled
+                                width={image().width}
+                              />
+                            )}
+                          </Show>
+                          <div class="min-w-0">
+                            <div class="line-clamp-2 text-base leading-5 font-semibold">
+                              {product.name}
+                            </div>
+                            <div class="mt-1 text-sm font-medium tabular-nums">
+                              {priceRange(product)}
+                            </div>
+                            <div class="mt-1 text-sm text-muted-foreground">
+                              {productStatusLabel(product.status)}
+                            </div>
+                          </div>
+                          <div class="min-w-16 text-right">
+                            <div class="text-xs text-muted-foreground">Үлдэгдэл</div>
+                            <div
+                              class={`mt-1 text-lg font-semibold tabular-nums ${
+                                product.totalStockQuantity === 0
+                                  ? 'text-destructive'
+                                  : product.totalStockQuantity <= 3
+                                    ? 'text-(--admin-warning-foreground)'
+                                    : ''
+                              }`}
+                            >
+                              {product.totalStockQuantity}
+                            </div>
+                            <div class="mt-0.5 text-xs text-muted-foreground">
+                              {inventoryLabel(product.totalStockQuantity).split(' · ')[0]}
+                            </div>
+                          </div>
+                        </a>
+                      </li>
+                    )}
+                  </For>
+                </ul>
+
                 <div
                   aria-activedescendant={activeTableRowId(
                     'catalog-products',
                     rowIds(),
                     activeRow(),
                   )}
-                  aria-label="Catalog products. Use Up and Down arrow keys to select a row and Enter to open it."
-                  class="rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                  aria-label="Барааны хүснэгт. Сумтай товчоор мөр сонгож, Enter товчоор нээнэ."
+                  class="hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 md:block"
                   onKeyDown={onTableKeyDown}
                   role="group"
                   tabIndex={0}
                 >
-                  <Table aria-label="Catalog products" class="max-md:block">
-                    <TableHeader class="max-md:hidden">
+                  <Table aria-label="Барааны хүснэгт">
+                    <TableHeader>
                       <For each={table.getHeaderGroups()}>
                         {headerGroup => (
                           <TableRow>
@@ -397,12 +537,11 @@ export function CatalogListPage(props: CatalogListPageProps) {
                         )}
                       </For>
                     </TableHeader>
-                    <TableBody class="max-md:block">
+                    <TableBody>
                       <For each={table.getRowModel().rows}>
                         {(row, index) => (
                           <TableRow
                             aria-selected={activeRow() === index()}
-                            class="max-md:grid max-md:grid-cols-2 max-md:py-1"
                             data-state={activeRow() === index() ? 'selected' : undefined}
                             id={tableRowId('catalog-products', row.original.id)}
                             onMouseEnter={() => setActiveRow(index())}
@@ -410,21 +549,14 @@ export function CatalogListPage(props: CatalogListPageProps) {
                             <For each={row.getVisibleCells()}>
                               {cell => (
                                 <TableCell
-                                  class={`${mobileCellClass(cell.column.id)} ${
+                                  class={
                                     cell.column.id === 'activeVariantCount' ||
                                     cell.column.id === 'totalStockQuantity' ||
                                     cell.column.id === 'price'
-                                      ? 'md:text-right'
-                                      : ''
-                                  }`}
+                                      ? 'text-right'
+                                      : undefined
+                                  }
                                 >
-                                  <Show when={productColumnLabel[cell.column.id]}>
-                                    {label => (
-                                      <span class="text-xs text-muted-foreground md:hidden">
-                                        {label()}
-                                      </span>
-                                    )}
-                                  </Show>
                                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </TableCell>
                               )}
@@ -435,34 +567,35 @@ export function CatalogListPage(props: CatalogListPageProps) {
                     </TableBody>
                   </Table>
                 </div>
-                <div class="mt-3 flex flex-col gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-                  <p>
-                    Showing {data()!.offset + 1}–
-                    {Math.min(data()!.offset + data()!.items.length, data()!.total)} of{' '}
+
+                <div class="mt-4 flex items-center justify-between gap-3 px-4 text-sm text-muted-foreground md:px-0">
+                  <p class="tabular-nums">
+                    {data()!.offset + 1}–
+                    {Math.min(data()!.offset + data()!.items.length, data()!.total)} /{' '}
                     {data()!.total}
                   </p>
                   <div class="flex gap-2">
                     <Button
+                      class="min-h-11! md:h-8!"
                       disabled={data()!.offset === 0 || query.isFetching}
                       onClick={() =>
                         setSearch({ offset: Math.max(0, data()!.offset - data()!.limit) })
                       }
-                      size="sm"
                       type="button"
                       variant="outline"
                     >
-                      Previous
+                      Өмнөх
                     </Button>
                     <Button
+                      class="min-h-11! md:h-8!"
                       disabled={
                         data()!.offset + data()!.items.length >= data()!.total || query.isFetching
                       }
                       onClick={() => setSearch({ offset: data()!.offset + data()!.limit })}
-                      size="sm"
                       type="button"
                       variant="outline"
                     >
-                      Next
+                      Дараах
                     </Button>
                   </div>
                 </div>

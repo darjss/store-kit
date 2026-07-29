@@ -49,7 +49,7 @@ type VariantInput = AdminVariantCreate | AdminVariantUpdate
 const createValues = (product: AdminCatalogProductDetail): AdminVariantCreate => ({
   expectedProductUpdatedAt: product.updatedAt,
   sku: '',
-  name: 'Default',
+  name: 'Үндсэн',
   options: {},
   priceMnt: 0,
   compareAtPriceMnt: null,
@@ -93,20 +93,24 @@ export function VariantInspector(props: VariantInspectorProps) {
           when={creating() || variant()}
           fallback={
             <div class="flex min-h-0 flex-1 flex-col p-4 pt-14">
-              <InlineAlert title="Variant unavailable" tone="destructive">
-                This variant is no longer in the current product record.
+              <InlineAlert title="Хувилбар олдсонгүй" tone="destructive">
+                Энэ хувилбар барааны одоогийн мэдээлэлд байхгүй байна.
               </InlineAlert>
-              <Button class="mt-4 self-start" onClick={() => props.onClose()} variant="outline">
-                Close inspector
+              <Button
+                class="mt-4 min-h-11! self-start"
+                onClick={() => props.onClose()}
+                variant="outline"
+              >
+                Хаах
               </Button>
             </div>
           }
         >
           <SheetHeader class="border-b pr-14">
-            <SheetTitle>{creating() ? 'Create variant' : 'Edit variant'}</SheetTitle>
+            <SheetTitle>{creating() ? 'Хувилбар нэмэх' : 'Хувилбар засах'}</SheetTitle>
             <SheetDescription>
               {creating()
-                ? 'Add a sellable option to this product.'
+                ? 'Өөр үнэ, үлдэгдэл эсвэл сонголттой хувилбар нэмнэ.'
                 : `${variant()?.name ?? ''} · ${variant()?.sku ?? ''}`}
             </SheetDescription>
           </SheetHeader>
@@ -193,7 +197,7 @@ function VariantForm(props: VariantFormProps) {
           setFailure(result.error)
           return
         }
-        toast.success(props.variant ? 'Variant saved.' : 'Variant created.')
+        toast.success(props.variant ? 'Хувилбарыг хадгаллаа.' : 'Хувилбар үүслээ.')
         setSaved(true)
         props.onClose()
         installProduct(result.value)
@@ -235,7 +239,7 @@ function VariantForm(props: VariantFormProps) {
       }
       const updated = result.value.variants.find(variant => variant.id === props.variant!.id)
       if (updated) form.reset(updateValues(updated))
-      toast.success(updated?.active ? 'Variant activated.' : 'Variant deactivated.')
+      toast.success(updated?.active ? 'Хувилбарыг идэвхжүүллээ.' : 'Хувилбарыг идэвхгүй болголоо.')
       installProduct(result.value)
     } catch (error) {
       setRequestError(transportMessage(error))
@@ -267,7 +271,7 @@ function VariantForm(props: VariantFormProps) {
         queryClient.invalidateQueries({ queryKey: catalogKeys.publicProducts }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
       ])
-      toast.success('Variant permanently deleted.')
+      toast.success('Хувилбарыг бүрмөсөн устгалаа.')
       setSaved(true)
       props.onClose()
     } catch (error) {
@@ -278,7 +282,7 @@ function VariantForm(props: VariantFormProps) {
 
   return (
     <form
-      aria-label={props.variant ? `Edit ${props.variant.name}` : 'Create variant'}
+      aria-label={props.variant ? `${props.variant.name} хувилбарыг засах` : 'Хувилбар нэмэх'}
       class="flex min-h-0 flex-1 flex-col"
       noValidate
       onSubmit={event => {
@@ -294,11 +298,11 @@ function VariantForm(props: VariantFormProps) {
           fallback={
             <form.Field name="active">
               {field => (
-                <div class="flex items-center justify-between border-y py-2">
+                <div class="flex min-h-12 items-center justify-between gap-3 border-y py-2">
                   <div>
-                    <FieldLabel for="new-variant-active">Active on creation</FieldLabel>
-                    <div class="mt-0.5 text-xs text-muted-foreground">
-                      Active variants can be sold when their product is active.
+                    <FieldLabel for="new-variant-active">Шууд борлуулах</FieldLabel>
+                    <div class="mt-1 text-sm text-muted-foreground">
+                      Бараа идэвхтэй үед энэ хувилбарыг борлуулж болно.
                     </div>
                   </div>
                   <Switch
@@ -312,25 +316,25 @@ function VariantForm(props: VariantFormProps) {
           }
         >
           {variant => (
-            <div class="flex items-center justify-between border-y py-2">
+            <div class="flex min-h-12 items-center justify-between gap-3 border-y py-2">
               <div>
-                <div class="text-xs font-medium">Availability</div>
-                <div class="mt-0.5 text-xs text-muted-foreground">
-                  Active variants can be sold when their product is active.
+                <div class="text-sm font-medium">Борлуулах төлөв</div>
+                <div class="mt-1 text-sm text-muted-foreground">
+                  Бараа идэвхтэй үед энэ хувилбарыг борлуулж болно.
                 </div>
               </div>
-              <StatusBadge>{variant().active ? 'Active' : 'Inactive'}</StatusBadge>
+              <StatusBadge>{variant().active ? 'Идэвхтэй' : 'Идэвхгүй'}</StatusBadge>
             </div>
           )}
         </Show>
 
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-5 sm:grid-cols-2">
           <form.Field name="sku">
             {field => (
               <Field>
-                <FieldLabel for="variant-sku">SKU</FieldLabel>
+                <FieldLabel for="variant-sku">Барааны код</FieldLabel>
                 <Input
-                  class="font-mono"
+                  class="min-h-12! font-mono text-base! sm:h-8! sm:text-sm!"
                   id="variant-sku"
                   value={field().state.value}
                   aria-invalid={!field().state.meta.isValid}
@@ -344,8 +348,9 @@ function VariantForm(props: VariantFormProps) {
           <form.Field name="name">
             {field => (
               <Field>
-                <FieldLabel for="variant-name">Display name</FieldLabel>
+                <FieldLabel for="variant-name">Хувилбарын нэр</FieldLabel>
                 <Input
+                  class="min-h-12! text-base! sm:h-8! sm:text-sm!"
                   id="variant-name"
                   value={field().state.value}
                   aria-invalid={!field().state.meta.isValid}
@@ -359,35 +364,16 @@ function VariantForm(props: VariantFormProps) {
           <form.Field name="priceMnt">
             {field => (
               <Field>
-                <FieldLabel for="variant-price">Price (MNT)</FieldLabel>
+                <FieldLabel for="variant-price">Үнэ (₮)</FieldLabel>
                 <Input
+                  class="min-h-12! text-base! tabular-nums sm:h-8! sm:text-sm!"
                   id="variant-price"
+                  inputmode="numeric"
                   min="0"
                   step="1"
                   type="number"
                   value={Number.isNaN(field().state.value) ? '' : field().state.value}
                   onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
-                />
-                <FieldError errors={validationMessages(field().state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
-          <form.Field name="compareAtPriceMnt">
-            {field => (
-              <Field>
-                <FieldLabel for="variant-compare-price">Compare-at price (MNT)</FieldLabel>
-                <Input
-                  id="variant-compare-price"
-                  min="0"
-                  placeholder="None"
-                  step="1"
-                  type="number"
-                  value={field().state.value ?? ''}
-                  onInput={event =>
-                    field().handleChange(
-                      event.currentTarget.value === '' ? null : event.currentTarget.valueAsNumber,
-                    )
-                  }
                 />
                 <FieldError errors={validationMessages(field().state.meta.errors)} />
               </Field>
@@ -396,49 +382,92 @@ function VariantForm(props: VariantFormProps) {
           <form.Field name="stockQuantity">
             {field => (
               <Field>
-                <FieldLabel for="variant-stock">Stock quantity</FieldLabel>
+                <FieldLabel for="variant-stock">Үлдэгдэл</FieldLabel>
                 <Input
+                  class="min-h-12! text-base! tabular-nums sm:h-8! sm:text-sm!"
                   id="variant-stock"
+                  inputmode="numeric"
                   min="0"
                   step="1"
                   type="number"
                   value={Number.isNaN(field().state.value) ? '' : field().state.value}
                   onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
                 />
-                <FieldError errors={validationMessages(field().state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
-          <form.Field name="sortOrder">
-            {field => (
-              <Field>
-                <FieldLabel for="variant-sort">Sort order</FieldLabel>
-                <Input
-                  id="variant-sort"
-                  min="0"
-                  step="1"
-                  type="number"
-                  value={Number.isNaN(field().state.value) ? '' : field().state.value}
-                  onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
-                />
-                <FieldError errors={validationMessages(field().state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
-          <form.Field name="options">
-            {field => (
-              <Field class="sm:col-span-2">
-                <FieldLabel>Options</FieldLabel>
-                <OptionRows
-                  value={field().state.value}
-                  onChange={value => field().handleChange(value)}
-                />
-                <FieldDescription>Up to 20 simple key/value pairs.</FieldDescription>
                 <FieldError errors={validationMessages(field().state.meta.errors)} />
               </Field>
             )}
           </form.Field>
         </div>
+
+        <details class="group border-y py-1">
+          <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between py-2 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            Нэмэлт тохиргоо
+            <span aria-hidden="true" class="text-muted-foreground group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <p class="mb-4 text-sm text-muted-foreground">
+            Өмнөх үнэ, сонголт болон харагдах дарааллыг шаардлагатай үед тохируулна.
+          </p>
+          <div class="grid gap-5 pb-4 sm:grid-cols-2">
+            <form.Field name="compareAtPriceMnt">
+              {field => (
+                <Field>
+                  <FieldLabel for="variant-compare-price">Өмнөх үнэ (₮)</FieldLabel>
+                  <Input
+                    class="min-h-12! text-base! tabular-nums sm:h-8! sm:text-sm!"
+                    id="variant-compare-price"
+                    inputmode="numeric"
+                    min="0"
+                    placeholder="Байхгүй"
+                    step="1"
+                    type="number"
+                    value={field().state.value ?? ''}
+                    onInput={event =>
+                      field().handleChange(
+                        event.currentTarget.value === '' ? null : event.currentTarget.valueAsNumber,
+                      )
+                    }
+                  />
+                  <FieldError errors={validationMessages(field().state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="sortOrder">
+              {field => (
+                <Field>
+                  <FieldLabel for="variant-sort">Харагдах дараалал</FieldLabel>
+                  <Input
+                    class="min-h-12! text-base! tabular-nums sm:h-8! sm:text-sm!"
+                    id="variant-sort"
+                    inputmode="numeric"
+                    min="0"
+                    step="1"
+                    type="number"
+                    value={Number.isNaN(field().state.value) ? '' : field().state.value}
+                    onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
+                  />
+                  <FieldError errors={validationMessages(field().state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="options">
+              {field => (
+                <Field class="sm:col-span-2">
+                  <FieldLabel>Сонголтууд</FieldLabel>
+                  <OptionRows
+                    value={field().state.value}
+                    onChange={value => field().handleChange(value)}
+                  />
+                  <FieldDescription>
+                    20 хүртэлх хэмжээ, өнгө зэрэг сонголт оруулж болно.
+                  </FieldDescription>
+                  <FieldError errors={validationMessages(field().state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
+          </div>
+        </details>
 
         <CatalogFailure
           failure={failure()}
@@ -451,40 +480,40 @@ function VariantForm(props: VariantFormProps) {
             <form.Subscribe selector={state => state.isDirty}>
               {dirty => (
                 <section aria-labelledby="variant-actions-title" class="border-t pt-4">
-                  <h3 class="text-xs font-medium" id="variant-actions-title">
-                    Variant actions
+                  <h3 class="text-sm font-medium" id="variant-actions-title">
+                    Хувилбарын үйлдэл
                   </h3>
-                  <p class="mt-1 text-xs text-muted-foreground">
-                    Deactivate before permanent deletion. Active products must keep one active
-                    variant.
+                  <p class="mt-1 text-sm text-muted-foreground">
+                    Бүрмөсөн устгахаас өмнө идэвхгүй болгоно. Идэвхтэй бараа дор хаяж нэг идэвхтэй
+                    хувилбартай байна.
                   </p>
                   <Show when={dirty()}>
-                    <p class="mt-2 text-xs text-(--admin-warning-foreground)">
-                      Save or discard local edits before changing activation or deleting.
+                    <p class="mt-2 text-sm text-(--admin-warning-foreground)">
+                      Төлөв өөрчлөх эсвэл устгахаас өмнө засвараа хадгална уу.
                     </p>
                   </Show>
                   <div class="mt-3 flex flex-wrap gap-2">
                     <Button
+                      class="min-h-11! sm:h-8!"
                       disabled={dirty() || activationMutation.isPending}
                       onClick={() => void changeActivation()}
-                      size="sm"
                       type="button"
                       variant="outline"
                     >
                       {activationMutation.isPending
-                        ? 'Updating…'
+                        ? 'Шинэчилж байна…'
                         : variant().active
-                          ? 'Deactivate'
-                          : 'Activate'}
+                          ? 'Идэвхгүй болгох'
+                          : 'Идэвхжүүлэх'}
                     </Button>
                     <Button
+                      class="min-h-11! sm:h-8!"
                       disabled={dirty() || variant().active || deleteMutation.isPending}
                       onClick={() => setDeleteOpen(true)}
-                      size="sm"
                       type="button"
                       variant="destructive"
                     >
-                      Delete permanently
+                      Бүрмөсөн устгах
                     </Button>
                   </div>
                 </section>
@@ -495,8 +524,13 @@ function VariantForm(props: VariantFormProps) {
       </div>
 
       <div class="flex shrink-0 items-center justify-end gap-2 border-t p-4">
-        <Button onClick={() => props.onClose()} type="button" variant="outline">
-          Cancel
+        <Button
+          class="min-h-12! sm:h-9!"
+          onClick={() => props.onClose()}
+          type="button"
+          variant="outline"
+        >
+          Болих
         </Button>
         <form.Subscribe
           selector={state => ({
@@ -507,6 +541,7 @@ function VariantForm(props: VariantFormProps) {
         >
           {state => (
             <Button
+              class="min-h-12! sm:h-9!"
               disabled={
                 !state().canSubmit ||
                 state().pending ||
@@ -517,7 +552,11 @@ function VariantForm(props: VariantFormProps) {
               <Show when={state().pending}>
                 <Spinner aria-hidden="true" />
               </Show>
-              {state().pending ? 'Saving…' : props.variant ? 'Save variant' : 'Create variant'}
+              {state().pending
+                ? 'Хадгалж байна…'
+                : props.variant
+                  ? 'Хувилбар хадгалах'
+                  : 'Хувилбар нэмэх'}
             </Button>
           )}
         </form.Subscribe>
@@ -526,14 +565,14 @@ function VariantForm(props: VariantFormProps) {
       <Dialog open={deleteOpen()} onOpenChange={setDeleteOpen}>
         <DialogContent class="max-w-md rounded-lg border bg-popover p-4">
           <DialogHeader>
-            <DialogTitle>Delete variant permanently?</DialogTitle>
+            <DialogTitle>Хувилбарыг бүрмөсөн устгах уу?</DialogTitle>
             <DialogDescription>
-              This removes {props.variant?.name}. Historical order snapshots remain unchanged.
+              {props.variant?.name} устна. Өмнөх захиалгын мэдээлэл хэвээр үлдэнэ.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter class="mt-5">
             <DialogClose as={Button} type="button" variant="outline">
-              Cancel
+              Болих
             </DialogClose>
             <Button
               disabled={deleteMutation.isPending}
@@ -541,7 +580,7 @@ function VariantForm(props: VariantFormProps) {
               type="button"
               variant="destructive"
             >
-              {deleteMutation.isPending ? 'Deleting…' : 'Delete permanently'}
+              {deleteMutation.isPending ? 'Устгаж байна…' : 'Бүрмөсөн устгах'}
             </Button>
           </DialogFooter>
         </DialogContent>

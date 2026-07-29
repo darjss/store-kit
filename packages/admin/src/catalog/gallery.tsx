@@ -41,9 +41,9 @@ const sameVariantIds = (left: string[], right: string[]) =>
 
 const cleanupMessage = (cleanup: MediaCleanup) => {
   if (cleanup === 'pending')
-    return 'The catalog record was removed, but media cleanup is pending operator attention.'
+    return 'Барааны бүртгэл устсан боловч зургийн файлыг цэвэрлэх шаардлагатай байна.'
   if (cleanup === 'retained-for-orders')
-    return 'The image file was retained because historical orders still reference it.'
+    return 'Өмнөх захиалгад ашигласан тул зургийн файлыг хадгалж үлдээлээ.'
   return undefined
 }
 
@@ -124,7 +124,7 @@ export function ProductGallery(props: ProductGalleryProps) {
     const imageAlt = alt().trim()
     if (!selected || !imageAlt) {
       setFailure()
-      setRequestError('Choose an image and enter alt text before uploading.')
+      setRequestError('Зураг сонгож, зургийн тайлбар оруулна уу.')
       return
     }
     setFailure()
@@ -145,7 +145,7 @@ export function ProductGallery(props: ProductGalleryProps) {
       }
       installProduct(result.value)
       clearUploadDraft()
-      toast.success('Product image uploaded.')
+      toast.success('Барааны зураг орлоо.')
     } catch (error) {
       setRequestError(transportMessage(error))
     }
@@ -174,7 +174,7 @@ export function ProductGallery(props: ProductGalleryProps) {
         return
       }
       installProduct(result.value)
-      toast.success('Image details saved.')
+      toast.success('Зургийн мэдээллийг хадгаллаа.')
       return result.value
     } catch (error) {
       setRequestError(transportMessage(error))
@@ -203,7 +203,7 @@ export function ProductGallery(props: ProductGalleryProps) {
         return
       }
       installProduct(result.value)
-      toast.success('Gallery order updated.')
+      toast.success('Зургийн дарааллыг шинэчиллээ.')
     } catch (error) {
       setRequestError(transportMessage(error))
     } finally {
@@ -229,7 +229,7 @@ export function ProductGallery(props: ProductGalleryProps) {
       if (message) props.onCleanupWarning(message)
       installProduct(result.value.product)
       if (message) toast.warning(message)
-      else toast.success('Image removed.')
+      else toast.success('Зургийг хаслаа.')
       return true
     } catch (error) {
       setRequestError(transportMessage(error))
@@ -243,23 +243,24 @@ export function ProductGallery(props: ProductGalleryProps) {
     <section aria-labelledby="gallery-title" class="border-b py-6">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 class="text-sm font-semibold" id="gallery-title">
-            Gallery
+          <h2 class="text-base font-semibold" id="gallery-title">
+            Зураг
           </h2>
-          <p class="mt-0.5 text-xs text-muted-foreground">
-            JPEG, PNG, WebP, or AVIF. Maximum 10 MiB per image.
+          <p class="mt-1 text-sm text-muted-foreground">
+            JPEG, PNG, WebP эсвэл AVIF. Нэг зураг 10 MiB хүртэл.
           </p>
         </div>
         <span class="text-xs text-muted-foreground tabular-nums">
-          {props.product.images.length} {props.product.images.length === 1 ? 'image' : 'images'}
+          {props.product.images.length} зураг
         </span>
       </div>
 
       <div class="mt-4 grid gap-3 border-y bg-card px-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,1fr)_auto] md:items-end">
         <Field>
-          <FieldLabel for="catalog-image-file">Image file</FieldLabel>
+          <FieldLabel for="catalog-image-file">Зургийн файл</FieldLabel>
           <Input
             accept={acceptedImageTypes}
+            class="min-h-12! text-base! md:h-8! md:text-sm!"
             id="catalog-image-file"
             ref={element => {
               fileInput = element
@@ -273,11 +274,12 @@ export function ProductGallery(props: ProductGalleryProps) {
           />
         </Field>
         <Field>
-          <FieldLabel for="catalog-image-alt">Alt text</FieldLabel>
+          <FieldLabel for="catalog-image-alt">Зургийн тайлбар</FieldLabel>
           <Input
+            class="min-h-12! text-base! md:h-8! md:text-sm!"
             id="catalog-image-alt"
             maxlength="300"
-            placeholder="Describe the product image"
+            placeholder="Зураг дээрх барааг товч тайлбарлана уу"
             value={alt()}
             onInput={event => {
               beginUploadDraft()
@@ -287,6 +289,7 @@ export function ProductGallery(props: ProductGalleryProps) {
         </Field>
         <div class="flex gap-1.5">
           <Button
+            class="min-h-11! md:h-8!"
             disabled={uploadMutation.isPending || !file() || !alt().trim()}
             onClick={() => void upload()}
             type="button"
@@ -294,17 +297,22 @@ export function ProductGallery(props: ProductGalleryProps) {
             <Show when={uploadMutation.isPending} fallback={<GalleryAdd aria-hidden="true" />}>
               <Spinner aria-hidden="true" />
             </Show>
-            {uploadMutation.isPending ? 'Uploading…' : 'Upload image'}
+            {uploadMutation.isPending ? 'Оруулж байна…' : 'Зураг оруулах'}
           </Button>
           <Show when={uploadExpectedUpdatedAt() !== undefined}>
-            <Button onClick={clearUploadDraft} type="button" variant="ghost">
-              Clear
+            <Button
+              class="min-h-11! md:h-8!"
+              onClick={clearUploadDraft}
+              type="button"
+              variant="ghost"
+            >
+              Цэвэрлэх
             </Button>
           </Show>
         </div>
         <Show when={props.product.variants.length > 0}>
           <div class="md:col-span-3">
-            <FieldLabel>Assign upload to variants</FieldLabel>
+            <FieldLabel>Хувилбарт холбох</FieldLabel>
             <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
               <For each={props.product.variants}>
                 {variant => (
@@ -318,7 +326,7 @@ export function ProductGallery(props: ProductGalleryProps) {
               </For>
             </div>
             <FieldDescription class="mt-1">
-              Leave clear to use this image in the shared product gallery.
+              Сонгохгүй бол зураг бүх хувилбарт харагдана.
             </FieldDescription>
           </div>
         </Show>
@@ -329,7 +337,7 @@ export function ProductGallery(props: ProductGalleryProps) {
           <CatalogFailure
             failure={failure()}
             onReload={() => void reload()}
-            title="Gallery action failed"
+            title="Зургийн үйлдлийг гүйцэтгэж чадсангүй"
             transportError={requestError()}
           />
         </div>
@@ -340,8 +348,8 @@ export function ProductGallery(props: ProductGalleryProps) {
           when={props.product.images.length > 0}
           fallback={
             <AdminEmptyState
-              description="Upload the first product image with descriptive alt text."
-              title="No product images"
+              description="Анхны зургаа тайлбарын хамт оруулна уу."
+              title="Барааны зураг алга"
             />
           }
         >
@@ -477,8 +485,9 @@ function ImageEditor(props: ImageEditorProps) {
       <div class="min-w-0">
         <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <Field>
-            <FieldLabel for={`${props.image.id}-alt`}>Alt text</FieldLabel>
+            <FieldLabel for={`${props.image.id}-alt`}>Зургийн тайлбар</FieldLabel>
             <Input
+              class="min-h-12! text-base! md:h-8! md:text-sm!"
               id={`${props.image.id}-alt`}
               maxlength="300"
               value={alt()}
@@ -487,7 +496,8 @@ function ImageEditor(props: ImageEditorProps) {
           </Field>
           <div class="flex flex-wrap gap-1.5">
             <Button
-              aria-label="Move image previous"
+              aria-label="Зургийг урагш зөөх"
+              class="min-h-11! min-w-11! md:size-8!"
               disabled={dirty() || props.index === 0 || props.pendingMove}
               onClick={() => props.onMove(-1)}
               size="icon-sm"
@@ -497,7 +507,8 @@ function ImageEditor(props: ImageEditorProps) {
               <AltArrowLeft aria-hidden="true" />
             </Button>
             <Button
-              aria-label="Move image next"
+              aria-label="Зургийг хойш зөөх"
+              class="min-h-11! min-w-11! md:size-8!"
               disabled={dirty() || props.index === props.imageCount - 1 || props.pendingMove}
               onClick={() => props.onMove(1)}
               size="icon-sm"
@@ -507,16 +518,18 @@ function ImageEditor(props: ImageEditorProps) {
               <AltArrowRight aria-hidden="true" />
             </Button>
             <Button
+              class="min-h-11! md:h-8!"
               disabled={!dirty() || !alt().trim() || saving()}
               onClick={() => void save()}
               size="sm"
               type="button"
               variant="outline"
             >
-              {saving() ? 'Saving…' : 'Save image'}
+              {saving() ? 'Хадгалж байна…' : 'Зураг хадгалах'}
             </Button>
             <Button
-              aria-label="Remove image"
+              aria-label="Зураг хасах"
+              class="min-h-11! min-w-11! md:size-8!"
               disabled={dirty() || props.pendingRemove}
               onClick={() => setRemoveOpen(true)}
               size="icon-sm"
@@ -529,7 +542,7 @@ function ImageEditor(props: ImageEditorProps) {
         </div>
         <Show when={props.variants.length > 0}>
           <div class="mt-3 border-t pt-3">
-            <FieldLabel>Variant assignments</FieldLabel>
+            <FieldLabel>Холбосон хувилбар</FieldLabel>
             <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
               <For each={props.variants}>
                 {variant => (
@@ -545,12 +558,16 @@ function ImageEditor(props: ImageEditorProps) {
           </div>
         </Show>
         <div class="mt-2 flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular-nums">
-          <span>Position {props.index + 1}</span>
+          <span>Байрлал {props.index + 1}</span>
           <span>
             {props.image.width} × {props.image.height}
           </span>
-          <button class="underline underline-offset-2" onClick={() => void reload()} type="button">
-            Reset local image edits
+          <button
+            class="min-h-11 underline underline-offset-2 md:min-h-8"
+            onClick={() => void reload()}
+            type="button"
+          >
+            Зургийн засварыг буцаах
           </button>
         </div>
       </div>
@@ -558,14 +575,14 @@ function ImageEditor(props: ImageEditorProps) {
       <Dialog open={removeOpen()} onOpenChange={setRemoveOpen}>
         <DialogContent class="max-w-md rounded-lg border bg-popover p-4">
           <DialogHeader>
-            <DialogTitle>Remove image?</DialogTitle>
+            <DialogTitle>Зургийг хасах уу?</DialogTitle>
             <DialogDescription>
-              The catalog image will be removed. Files used by historical orders are retained.
+              Зураг бараанаас хасагдана. Өмнөх захиалгад ашигласан файл хэвээр үлдэнэ.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter class="mt-5">
             <DialogClose as={Button} type="button" variant="outline">
-              Cancel
+              Болих
             </DialogClose>
             <Button
               disabled={props.pendingRemove}
@@ -575,7 +592,7 @@ function ImageEditor(props: ImageEditorProps) {
               type="button"
               variant="destructive"
             >
-              {props.pendingRemove ? 'Removing…' : 'Remove image'}
+              {props.pendingRemove ? 'Хасаж байна…' : 'Зураг хасах'}
             </Button>
           </DialogFooter>
         </DialogContent>

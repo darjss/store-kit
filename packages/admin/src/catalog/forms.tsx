@@ -33,13 +33,13 @@ export const validationMessages = (errors: readonly unknown[]) =>
         ? error
         : typeof error === 'object' && error !== null && 'message' in error
           ? String(error.message)
-          : 'Enter a valid value.',
+          : 'Зөв утга оруулна уу.',
   }))
 
 export const transportMessage = (error: unknown) =>
   error instanceof Error
     ? error.message
-    : 'The request failed. Check your connection and try again.'
+    : 'Хүсэлтийг илгээж чадсангүй. Холболтоо шалгаад дахин оролдоно уу.'
 
 type CatalogFailureProps = {
   failure: AdminCatalogError | undefined
@@ -58,15 +58,27 @@ export function CatalogFailure(props: CatalogFailureProps) {
         <InlineAlert
           action={
             <Show when={conflict() && props.onReload}>
-              <Button onClick={() => props.onReload?.()} size="sm" type="button" variant="outline">
-                Reload current record — local edits will be discarded
+              <Button
+                class="min-h-11 md:min-h-8"
+                onClick={() => props.onReload?.()}
+                type="button"
+                variant="outline"
+              >
+                Одоогийн мэдээллийг дахин ачаалах
               </Button>
             </Show>
           }
-          title={conflict() ? 'Catalog data changed' : (props.title ?? 'Could not save changes')}
+          title={
+            conflict()
+              ? 'Барааны мэдээлэл өөрчлөгдсөн байна'
+              : (props.title ?? 'Өөрчлөлтийг хадгалж чадсангүй')
+          }
           tone="destructive"
         >
           {text()}
+          <Show when={conflict()}>
+            <span class="mt-1 block">Дахин ачаалбал таны хадгалаагүй өөрчлөлт арилна.</span>
+          </Show>
         </InlineAlert>
       )}
     </Show>
@@ -168,7 +180,7 @@ export function ProductEditor(props: ProductEditorProps) {
 
   return (
     <form
-      aria-label="Product editor"
+      aria-label="Бараа засах"
       noValidate
       onSubmit={event => {
         event.preventDefault()
@@ -177,111 +189,125 @@ export function ProductEditor(props: ProductEditorProps) {
       }}
     >
       <div class="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-7">
-        <main class="min-w-0">
-          <section aria-labelledby="product-fields-title" class="border-b pb-6">
-            <div class="mb-4">
-              <h2 class="text-sm font-semibold" id="product-fields-title">
-                Product
-              </h2>
-              <p class="mt-0.5 text-xs text-muted-foreground">
-                Storefront identity and customer-facing product copy.
-              </p>
-            </div>
-            <div class="grid gap-4 sm:grid-cols-2">
-              <form.Field name="name">
-                {field => (
-                  <Field>
-                    <FieldLabel for={`${props.product.id}-name`}>Name</FieldLabel>
-                    <Input
-                      id={`${props.product.id}-name`}
-                      value={field().state.value}
-                      aria-invalid={!field().state.meta.isValid}
-                      onBlur={() => field().handleBlur()}
-                      onInput={event => field().handleChange(event.currentTarget.value)}
-                    />
-                    <FieldError errors={validationMessages(field().state.meta.errors)} />
-                  </Field>
-                )}
-              </form.Field>
-              <form.Field name="slug">
-                {field => (
-                  <Field>
-                    <FieldLabel for={`${props.product.id}-slug`}>Slug</FieldLabel>
-                    <Input
-                      class="font-mono"
-                      id={`${props.product.id}-slug`}
-                      value={field().state.value}
-                      aria-invalid={!field().state.meta.isValid}
-                      onBlur={() => field().handleBlur()}
-                      onInput={event => field().handleChange(event.currentTarget.value)}
-                    />
-                    <FieldDescription>Lowercase letters, numbers, and hyphens.</FieldDescription>
-                    <FieldError errors={validationMessages(field().state.meta.errors)} />
-                  </Field>
-                )}
-              </form.Field>
-              <form.Field name="shortDescription">
-                {field => (
-                  <Field class="sm:col-span-2">
-                    <FieldLabel for={`${props.product.id}-short-description`}>
-                      Short description
-                    </FieldLabel>
-                    <Textarea
-                      class="min-h-20 resize-y"
-                      id={`${props.product.id}-short-description`}
-                      placeholder="A concise catalog summary"
-                      value={field().state.value ?? ''}
-                      aria-invalid={!field().state.meta.isValid}
-                      onBlur={() => field().handleBlur()}
-                      onInput={event =>
-                        field().handleChange(
-                          event.currentTarget.value.trim() ? event.currentTarget.value : null,
-                        )
-                      }
-                    />
-                    <FieldError errors={validationMessages(field().state.meta.errors)} />
-                  </Field>
-                )}
-              </form.Field>
-              <form.Field name="description">
-                {field => (
-                  <Field class="sm:col-span-2">
-                    <FieldLabel for={`${props.product.id}-description`}>Description</FieldLabel>
-                    <Textarea
-                      class="min-h-40 resize-y"
-                      id={`${props.product.id}-description`}
-                      placeholder="Full product description"
-                      value={field().state.value ?? ''}
-                      aria-invalid={!field().state.meta.isValid}
-                      onBlur={() => field().handleBlur()}
-                      onInput={event =>
-                        field().handleChange(
-                          event.currentTarget.value.trim() ? event.currentTarget.value : null,
-                        )
-                      }
-                    />
-                    <FieldError errors={validationMessages(field().state.meta.errors)} />
-                  </Field>
-                )}
-              </form.Field>
-            </div>
-          </section>
-          {props.mainAfter}
-        </main>
+        <section
+          aria-labelledby="product-fields-title"
+          class="min-w-0 border-b pb-6 lg:col-start-1"
+        >
+          <div class="mb-4">
+            <h2 class="text-base font-semibold" id="product-fields-title">
+              Барааны мэдээлэл
+            </h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Худалдан авагчид харагдах нэр, тайлбарыг энд засна.
+            </p>
+          </div>
+          <div class="grid gap-5">
+            <form.Field name="name">
+              {field => (
+                <Field>
+                  <FieldLabel for={`${props.product.id}-name`}>Барааны нэр</FieldLabel>
+                  <Input
+                    class="min-h-12! text-base! md:h-8! md:text-sm!"
+                    id={`${props.product.id}-name`}
+                    value={field().state.value}
+                    aria-invalid={!field().state.meta.isValid}
+                    onBlur={() => field().handleBlur()}
+                    onInput={event => field().handleChange(event.currentTarget.value)}
+                  />
+                  <FieldError errors={validationMessages(field().state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
 
-        <aside class="min-w-0 border-t pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+            <details class="group border-y py-1">
+              <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between py-2 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                Тайлбар ба холбоос
+                <span aria-hidden="true" class="text-muted-foreground group-open:rotate-180">
+                  ▾
+                </span>
+              </summary>
+              <div class="grid gap-5 pb-4">
+                <form.Field name="slug">
+                  {field => (
+                    <Field>
+                      <FieldLabel for={`${props.product.id}-slug`}>Үүсгэсэн холбоос</FieldLabel>
+                      <Input
+                        class="min-h-12! font-mono text-base! md:h-8! md:text-sm!"
+                        id={`${props.product.id}-slug`}
+                        value={field().state.value}
+                        aria-invalid={!field().state.meta.isValid}
+                        onBlur={() => field().handleBlur()}
+                        onInput={event => field().handleChange(event.currentTarget.value)}
+                      />
+                      <FieldDescription>Жижиг латин үсэг, тоо, зураас ашиглана.</FieldDescription>
+                      <FieldError errors={validationMessages(field().state.meta.errors)} />
+                    </Field>
+                  )}
+                </form.Field>
+                <form.Field name="shortDescription">
+                  {field => (
+                    <Field>
+                      <FieldLabel for={`${props.product.id}-short-description`}>
+                        Товч тайлбар
+                      </FieldLabel>
+                      <Textarea
+                        class="min-h-24 resize-y text-base! md:text-sm!"
+                        id={`${props.product.id}-short-description`}
+                        placeholder="Жагсаалтад харагдах товч тайлбар"
+                        value={field().state.value ?? ''}
+                        aria-invalid={!field().state.meta.isValid}
+                        onBlur={() => field().handleBlur()}
+                        onInput={event =>
+                          field().handleChange(
+                            event.currentTarget.value.trim() ? event.currentTarget.value : null,
+                          )
+                        }
+                      />
+                      <FieldError errors={validationMessages(field().state.meta.errors)} />
+                    </Field>
+                  )}
+                </form.Field>
+                <form.Field name="description">
+                  {field => (
+                    <Field>
+                      <FieldLabel for={`${props.product.id}-description`}>
+                        Дэлгэрэнгүй тайлбар
+                      </FieldLabel>
+                      <Textarea
+                        class="min-h-40 resize-y text-base! md:text-sm!"
+                        id={`${props.product.id}-description`}
+                        placeholder="Барааны онцлог, хэрэглээний мэдээлэл"
+                        value={field().state.value ?? ''}
+                        aria-invalid={!field().state.meta.isValid}
+                        onBlur={() => field().handleBlur()}
+                        onInput={event =>
+                          field().handleChange(
+                            event.currentTarget.value.trim() ? event.currentTarget.value : null,
+                          )
+                        }
+                      />
+                      <FieldError errors={validationMessages(field().state.meta.errors)} />
+                    </Field>
+                  )}
+                </form.Field>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <aside class="min-w-0 border-b pb-1 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-b-0 lg:border-l lg:pl-6">
           <div class="space-y-5 lg:sticky lg:top-16">
             <section aria-labelledby="publishing-title" class="border-b pb-5">
-              <h2 class="mb-3 text-sm font-semibold" id="publishing-title">
-                Publishing
+              <h2 class="mb-3 text-base font-semibold" id="publishing-title">
+                Төлөв ба ангилал
               </h2>
-              <div class="space-y-4">
+              <div class="space-y-5">
                 <form.Field name="status">
                   {field => (
                     <Field>
-                      <FieldLabel for={`${props.product.id}-status`}>Status</FieldLabel>
+                      <FieldLabel for={`${props.product.id}-status`}>Нийтлэх төлөв</FieldLabel>
                       <NativeSelect
-                        class="w-full"
+                        class="min-h-12! w-full text-base! md:h-8! md:text-sm!"
                         id={`${props.product.id}-status`}
                         value={field().state.value}
                         aria-invalid={!field().state.meta.isValid}
@@ -292,55 +318,8 @@ export function ProductEditor(props: ProductEditorProps) {
                           )
                         }
                       >
-                        <NativeSelectOption value="draft">Draft</NativeSelectOption>
-                        <NativeSelectOption value="active">Active</NativeSelectOption>
-                      </NativeSelect>
-                      <FieldError errors={validationMessages(field().state.meta.errors)} />
-                    </Field>
-                  )}
-                </form.Field>
-                <form.Field name="featured">
-                  {field => (
-                    <Field>
-                      <div class="flex min-h-8 items-center justify-between gap-3 border-y py-2">
-                        <FieldLabel for={`${props.product.id}-featured`}>Featured</FieldLabel>
-                        <Switch
-                          checked={field().state.value}
-                          id={`${props.product.id}-featured`}
-                          onChange={checked => field().handleChange(checked)}
-                        />
-                      </div>
-                      <FieldDescription>
-                        Include in deliberate storefront merchandising.
-                      </FieldDescription>
-                    </Field>
-                  )}
-                </form.Field>
-              </div>
-            </section>
-
-            <section aria-labelledby="organization-title" class="border-b pb-5">
-              <h2 class="mb-3 text-sm font-semibold" id="organization-title">
-                Organization
-              </h2>
-              <div class="space-y-4">
-                <form.Field name="brandId">
-                  {field => (
-                    <Field>
-                      <FieldLabel for={`${props.product.id}-brand`}>Brand</FieldLabel>
-                      <NativeSelect
-                        class="w-full"
-                        id={`${props.product.id}-brand`}
-                        value={field().state.value ?? ''}
-                        onBlur={() => field().handleBlur()}
-                        onChange={event => field().handleChange(event.currentTarget.value || null)}
-                      >
-                        <NativeSelectOption value="">No brand</NativeSelectOption>
-                        <For each={props.selectors.brands}>
-                          {brand => (
-                            <NativeSelectOption value={brand.id}>{brand.name}</NativeSelectOption>
-                          )}
-                        </For>
+                        <NativeSelectOption value="draft">Ноорог</NativeSelectOption>
+                        <NativeSelectOption value="active">Идэвхтэй</NativeSelectOption>
                       </NativeSelect>
                       <FieldError errors={validationMessages(field().state.meta.errors)} />
                     </Field>
@@ -349,20 +328,20 @@ export function ProductEditor(props: ProductEditorProps) {
                 <form.Field name="categoryId">
                   {field => (
                     <Field>
-                      <FieldLabel for={`${props.product.id}-category`}>Category</FieldLabel>
+                      <FieldLabel for={`${props.product.id}-category`}>Ангилал</FieldLabel>
                       <NativeSelect
-                        class="w-full"
+                        class="min-h-12! w-full text-base! md:h-8! md:text-sm!"
                         id={`${props.product.id}-category`}
                         value={field().state.value ?? ''}
                         onBlur={() => field().handleBlur()}
                         onChange={event => field().handleChange(event.currentTarget.value || null)}
                       >
-                        <NativeSelectOption value="">No category</NativeSelectOption>
+                        <NativeSelectOption value="">Ангилалгүй</NativeSelectOption>
                         <For each={props.selectors.categories}>
                           {category => (
                             <NativeSelectOption value={category.id}>
                               {category.name}
-                              {category.active ? '' : ' (inactive)'}
+                              {category.active ? '' : ' (идэвхгүй)'}
                             </NativeSelectOption>
                           )}
                         </For>
@@ -373,6 +352,56 @@ export function ProductEditor(props: ProductEditorProps) {
                 </form.Field>
               </div>
             </section>
+
+            <details class="group border-b pb-2">
+              <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between py-2 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                Нэмэлт тохиргоо
+                <span aria-hidden="true" class="text-muted-foreground group-open:rotate-180">
+                  ▾
+                </span>
+              </summary>
+              <div class="space-y-5 pb-3">
+                <form.Field name="brandId">
+                  {field => (
+                    <Field>
+                      <FieldLabel for={`${props.product.id}-brand`}>Брэнд</FieldLabel>
+                      <NativeSelect
+                        class="min-h-12! w-full text-base! md:h-8! md:text-sm!"
+                        id={`${props.product.id}-brand`}
+                        value={field().state.value ?? ''}
+                        onBlur={() => field().handleBlur()}
+                        onChange={event => field().handleChange(event.currentTarget.value || null)}
+                      >
+                        <NativeSelectOption value="">Брэндгүй</NativeSelectOption>
+                        <For each={props.selectors.brands}>
+                          {brand => (
+                            <NativeSelectOption value={brand.id}>{brand.name}</NativeSelectOption>
+                          )}
+                        </For>
+                      </NativeSelect>
+                      <FieldError errors={validationMessages(field().state.meta.errors)} />
+                    </Field>
+                  )}
+                </form.Field>
+                <form.Field name="featured">
+                  {field => (
+                    <Field>
+                      <div class="flex min-h-12 items-center justify-between gap-3 border-y py-2">
+                        <div>
+                          <FieldLabel for={`${props.product.id}-featured`}>Онцлох бараа</FieldLabel>
+                          <FieldDescription>Онцлох хэсэгт харуулна.</FieldDescription>
+                        </div>
+                        <Switch
+                          checked={field().state.value}
+                          id={`${props.product.id}-featured`}
+                          onChange={checked => field().handleChange(checked)}
+                        />
+                      </div>
+                    </Field>
+                  )}
+                </form.Field>
+              </div>
+            </details>
 
             <CatalogFailure
               failure={failure()}
@@ -389,8 +418,8 @@ export function ProductEditor(props: ProductEditorProps) {
             >
               {state => (
                 <div class="border-b pb-5">
-                  <div class="mb-2 flex items-center justify-between gap-3 text-xs">
-                    <span class="text-muted-foreground">Save state</span>
+                  <div class="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <span class="text-muted-foreground">Хадгалалт</span>
                     <span
                       class={
                         state().dirty
@@ -398,18 +427,22 @@ export function ProductEditor(props: ProductEditorProps) {
                           : 'text-muted-foreground'
                       }
                     >
-                      {state().pending ? 'Saving…' : state().dirty ? 'Unsaved changes' : 'Saved'}
+                      {state().pending
+                        ? 'Хадгалж байна…'
+                        : state().dirty
+                          ? 'Хадгалаагүй өөрчлөлттэй'
+                          : 'Хадгалсан'}
                     </span>
                   </div>
                   <Button
-                    class="w-full"
+                    class="min-h-12! w-full md:h-9!"
                     disabled={!state().canSubmit || !state().dirty || state().pending}
                     type="submit"
                   >
                     <Show when={state().pending}>
                       <Spinner aria-hidden="true" />
                     </Show>
-                    {state().pending ? 'Saving product…' : 'Save product'}
+                    {state().pending ? 'Хадгалж байна…' : 'Өөрчлөлт хадгалах'}
                   </Button>
                 </div>
               )}
@@ -420,6 +453,8 @@ export function ProductEditor(props: ProductEditorProps) {
             </form.Subscribe>
           </div>
         </aside>
+
+        <div class="min-w-0 lg:col-start-1">{props.mainAfter}</div>
       </div>
     </form>
   )
@@ -436,20 +471,20 @@ export function OptionRows(props: OptionRowsProps) {
   const [keyErrors, setKeyErrors] = createSignal<Record<string, string>>({})
   const addOption = () => {
     let index = 1
-    let key = 'Option'
+    let key = 'Сонголт'
     while (key in props.value) {
       index += 1
-      key = `Option ${index}`
+      key = `Сонголт ${index}`
     }
     props.onChange({ ...props.value, [key]: '' })
   }
   const updateKey = (oldKey: string, key: string) => {
     if (!key) {
-      setKeyErrors(errors => ({ ...errors, [oldKey]: 'Option names cannot be empty.' }))
+      setKeyErrors(errors => ({ ...errors, [oldKey]: 'Сонголтын нэрийг оруулна уу.' }))
       return false
     }
     if (key !== oldKey && key in props.value) {
-      setKeyErrors(errors => ({ ...errors, [oldKey]: 'Option names must be unique.' }))
+      setKeyErrors(errors => ({ ...errors, [oldKey]: 'Сонголтын нэр давхардаж болохгүй.' }))
       return false
     }
     setKeyErrors(errors =>
@@ -463,20 +498,21 @@ export function OptionRows(props: OptionRowsProps) {
   }
 
   return (
-    <div class="space-y-2">
+    <div class="space-y-3">
       <Show
         when={entries().length > 0}
         fallback={
-          <p class="text-xs text-muted-foreground">No options. Use this for a default variant.</p>
+          <p class="text-sm text-muted-foreground">Сонголтгүй бол үндсэн хувилбарыг ашиглана.</p>
         }
       >
         <For each={entries()}>
           {([name, value]) => (
-            <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-2">
+            <div class="grid gap-2 border-b pb-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
               <div>
                 <Input
                   aria-invalid={Boolean(keyErrors()[name])}
-                  aria-label="Option name"
+                  aria-label="Сонголтын нэр"
+                  class="min-h-12! text-base! md:h-8! md:text-sm!"
                   disabled={props.disabled}
                   value={name}
                   onChange={event => {
@@ -486,23 +522,25 @@ export function OptionRows(props: OptionRowsProps) {
                 />
                 <Show when={keyErrors()[name]}>
                   {message => (
-                    <p class="mt-1 text-xs text-destructive" role="alert">
+                    <p class="mt-1 text-sm text-destructive" role="alert">
                       {message()}
                     </p>
                   )}
                 </Show>
               </div>
               <Input
-                aria-label={`${name} value`}
+                aria-label={`${name} утга`}
+                class="min-h-12! text-base! md:h-8! md:text-sm!"
                 disabled={props.disabled}
-                placeholder="Value"
+                placeholder="Утга"
                 value={value}
                 onInput={event =>
                   props.onChange({ ...props.value, [name]: event.currentTarget.value })
                 }
               />
               <Button
-                aria-label={`Remove ${name} option`}
+                aria-label={`${name} сонголтыг хасах`}
+                class="min-h-11! md:h-8!"
                 disabled={props.disabled}
                 onClick={() => {
                   setKeyErrors(errors =>
@@ -510,24 +548,23 @@ export function OptionRows(props: OptionRowsProps) {
                   )
                   props.onChange(Object.fromEntries(entries().filter(([key]) => key !== name)))
                 }}
-                size="sm"
                 type="button"
                 variant="ghost"
               >
-                Remove
+                Хасах
               </Button>
             </div>
           )}
         </For>
       </Show>
       <Button
+        class="min-h-11! md:h-8!"
         disabled={props.disabled || entries().length >= 20}
         onClick={addOption}
-        size="sm"
         type="button"
         variant="outline"
       >
-        Add option
+        Сонголт нэмэх
       </Button>
     </div>
   )

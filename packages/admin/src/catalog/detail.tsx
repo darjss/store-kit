@@ -82,16 +82,16 @@ const productStatusLabel = (status: AdminCatalogProductDetail['status']) =>
     taggedStatus(status),
     'status',
   )<string>({
-    draft: () => 'Draft',
-    active: () => 'Active',
-    archived: () => 'Archived',
+    draft: () => 'Ноорог',
+    active: () => 'Идэвхтэй',
+    archived: () => 'Архивласан',
   })
 
 const columnHelper = createColumnHelper<AdminCatalogVariant>()
 
 const variantColumns = (onOpen: (variantId: string) => void) => [
   columnHelper.accessor('name', {
-    header: 'Variant',
+    header: 'Хувилбар',
     cell: info => (
       <button
         class="text-left font-medium underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
@@ -108,17 +108,17 @@ const variantColumns = (onOpen: (variantId: string) => void) => [
   }),
   columnHelper.display({
     id: 'options',
-    header: 'Options',
+    header: 'Сонголт',
     cell: info => (
       <span class="text-xs text-muted-foreground">{optionsLabel(info.row.original)}</span>
     ),
   }),
   columnHelper.accessor('priceMnt', {
-    header: 'Price',
+    header: 'Үнэ',
     cell: info => <span class="whitespace-nowrap tabular-nums">{mnt.format(info.getValue())}</span>,
   }),
   columnHelper.accessor('stockQuantity', {
-    header: 'Stock',
+    header: 'Үлдэгдэл',
     cell: info => (
       <span class={info.getValue() === 0 ? 'text-destructive tabular-nums' : 'tabular-nums'}>
         {info.getValue()}
@@ -126,11 +126,11 @@ const variantColumns = (onOpen: (variantId: string) => void) => [
     ),
   }),
   columnHelper.accessor('active', {
-    header: 'State',
-    cell: info => <StatusBadge>{info.getValue() ? 'Active' : 'Inactive'}</StatusBadge>,
+    header: 'Төлөв',
+    cell: info => <StatusBadge>{info.getValue() ? 'Идэвхтэй' : 'Идэвхгүй'}</StatusBadge>,
   }),
   columnHelper.accessor('sortOrder', {
-    header: 'Order',
+    header: 'Дараалал',
     cell: info => <span class="tabular-nums">{info.getValue()}</span>,
   }),
   columnHelper.display({
@@ -138,7 +138,7 @@ const variantColumns = (onOpen: (variantId: string) => void) => [
     header: '',
     cell: info => (
       <Button onClick={() => onOpen(info.row.original.id)} size="sm" type="button" variant="ghost">
-        Inspect
+        Нээх
       </Button>
     ),
   }),
@@ -184,9 +184,14 @@ export function CatalogDetailPage(props: CatalogDetailPageProps) {
   return (
     <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
       <div class="mb-3">
-        <Button onClick={() => props.onBack()} size="sm" type="button" variant="ghost">
+        <Button
+          class="min-h-11! md:h-8!"
+          onClick={() => props.onBack()}
+          type="button"
+          variant="ghost"
+        >
           <ArrowLeft aria-hidden="true" />
-          Back to catalog
+          Барааны жагсаалт руу буцах
         </Button>
       </div>
 
@@ -208,7 +213,7 @@ export function CatalogDetailPage(props: CatalogDetailPageProps) {
             when={!query.isError && !selectorsQuery.isError}
             fallback={
               <RetryState
-                message="The product editor could not be loaded."
+                message="Барааны мэдээллийг ачаалж чадсангүй."
                 onRetry={retry}
                 pending={query.isFetching || selectorsQuery.isFetching}
               />
@@ -223,18 +228,18 @@ export function CatalogDetailPage(props: CatalogDetailPageProps) {
                     <AdminEmptyState
                       action={
                         <Button onClick={() => props.onBack()} type="button" variant="outline">
-                          Back to catalog
+                          Жагсаалт руу буцах
                         </Button>
                       }
-                      description="This product may have been removed since the catalog was loaded."
-                      title="Product not found"
+                      description="Энэ барааг жагсаалтыг нээснээс хойш устгасан байж болно."
+                      title="Бараа олдсонгүй"
                     />
                   }
                 >
-                  <InlineAlert title="Could not load product editor" tone="destructive">
+                  <InlineAlert title="Барааны мэдээлэл нээгдсэнгүй" tone="destructive">
                     {expectedError()?.message ??
                       selectorError()?.message ??
-                      'The catalog request failed.'}
+                      'Хүсэлтийг гүйцэтгэж чадсангүй.'}
                   </InlineAlert>
                 </Show>
               }
@@ -270,7 +275,7 @@ export function CatalogDetailPage(props: CatalogDetailPageProps) {
 function ProductDetailSkeleton() {
   return (
     <div aria-busy="true" role="status">
-      <span class="sr-only">Loading product editor…</span>
+      <span class="sr-only">Барааны мэдээллийг ачаалж байна…</span>
       <Skeleton class="h-7 w-64" />
       <Skeleton class="mt-2 h-4 w-80 max-w-full" />
       <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
@@ -279,11 +284,11 @@ function ProductDetailSkeleton() {
           <Skeleton class="h-56 w-full" />
           <TableSkeleton
             columns={[
-              { label: 'Variant' },
+              { label: 'Хувилбар' },
               { label: 'SKU' },
-              { label: 'Options' },
-              { label: 'Price' },
-              { label: 'Stock' },
+              { label: 'Сонголт' },
+              { label: 'Үнэ' },
+              { label: 'Үлдэгдэл' },
             ]}
             rows={4}
           />
@@ -318,11 +323,7 @@ function CatalogDetailContent(props: CatalogDetailContentProps) {
       <UnsavedChangesGuard isDirty={() => productDirty() || galleryDirty()} />
       <PageHeader
         actions={<StatusBadge>{productStatusLabel(props.product.status)}</StatusBadge>}
-        description={[
-          props.product.brand?.name,
-          props.product.category?.name,
-          `/${props.product.slug}`,
-        ]
+        description={[props.product.brand?.name, props.product.category?.name]
           .filter(Boolean)
           .join(' · ')}
         title={props.product.name}
@@ -332,7 +333,7 @@ function CatalogDetailContent(props: CatalogDetailContentProps) {
       <Show when={props.mediaWarning}>
         {message => (
           <div class="mt-4">
-            <InlineAlert title="Media cleanup warning" tone="warning">
+            <InlineAlert title="Зураг цэвэрлэх анхааруулга" tone="warning">
               {message()}
             </InlineAlert>
           </div>
@@ -390,7 +391,7 @@ function CatalogDetailContent(props: CatalogDetailContentProps) {
                   queryClient.invalidateQueries({ queryKey: catalogKeys.publicProducts }),
                   queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
                 ])
-                toast.success('Product saved.')
+                toast.success('Барааны өөрчлөлтийг хадгаллаа.')
               }
               return result
             }}
@@ -430,30 +431,74 @@ function VariantTable(props: VariantTableProps) {
 
   return (
     <section aria-labelledby="variants-title" class="pt-6">
-      <div class="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-end sm:justify-between">
+      <div class="flex items-end justify-between gap-3 border-b pb-3">
         <div>
-          <h2 class="text-sm font-semibold" id="variants-title">
-            Variants
+          <h2 class="text-base font-semibold" id="variants-title">
+            Хувилбарууд
           </h2>
-          <p class="mt-0.5 text-xs text-muted-foreground">
-            Prices, stock, options, and sellable state.
+          <p class="mt-1 text-sm text-muted-foreground">
+            Үнэ, үлдэгдэл, сонголт болон борлуулах төлөв.
           </p>
         </div>
-        <Button onClick={() => props.onOpen('new')} size="sm" type="button">
+        <Button
+          class="min-h-11! shrink-0 md:h-8!"
+          onClick={() => props.onOpen('new')}
+          type="button"
+        >
           <AddCircle aria-hidden="true" />
-          Add variant
+          Хувилбар нэмэх
         </Button>
       </div>
+
+      <ul aria-label="Барааны хувилбарууд" class="divide-y border-y md:hidden">
+        <For each={props.product.variants}>
+          {variant => (
+            <li>
+              <button
+                class="grid min-h-20 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-1 py-3 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset active:bg-muted"
+                onClick={() => props.onOpen(variant.id)}
+                type="button"
+              >
+                <div class="min-w-0">
+                  <div class="line-clamp-2 text-base font-semibold">{variant.name}</div>
+                  <div class="mt-1 truncate font-mono text-sm text-muted-foreground">
+                    {variant.sku}
+                  </div>
+                  <Show when={Object.keys(variant.options).length > 0}>
+                    <div class="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                      {optionsLabel(variant)}
+                    </div>
+                  </Show>
+                </div>
+                <div class="text-right">
+                  <div class="text-base font-semibold tabular-nums">
+                    {mnt.format(variant.priceMnt)}
+                  </div>
+                  <div
+                    class={`mt-1 text-sm tabular-nums ${variant.stockQuantity === 0 ? 'text-destructive' : 'text-muted-foreground'}`}
+                  >
+                    Үлдэгдэл {variant.stockQuantity}
+                  </div>
+                  <div class="mt-1 text-xs text-muted-foreground">
+                    {variant.active ? 'Идэвхтэй' : 'Идэвхгүй'}
+                  </div>
+                </div>
+              </button>
+            </li>
+          )}
+        </For>
+      </ul>
+
       <div
         aria-activedescendant={activeTableRowId('product-variants', rowIds(), activeRow())}
-        aria-label="Product variants. Use Up and Down arrow keys to select a row and Enter to inspect it."
-        class="mt-3 rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+        aria-label="Барааны хувилбарын хүснэгт. Сумтай товчоор мөр сонгож, Enter товчоор нээнэ."
+        class="mt-3 hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 md:block"
         onKeyDown={onTableKeyDown}
         role="group"
         tabIndex={0}
       >
-        <Table aria-label="Product variants" class="max-md:block">
-          <TableHeader class="max-md:hidden">
+        <Table aria-label="Барааны хувилбарууд">
+          <TableHeader>
             <For each={table.getHeaderGroups()}>
               {headerGroup => (
                 <TableRow>
@@ -476,12 +521,11 @@ function VariantTable(props: VariantTableProps) {
               )}
             </For>
           </TableHeader>
-          <TableBody class="max-md:block">
+          <TableBody>
             <For each={table.getRowModel().rows}>
               {(row, index) => (
                 <TableRow
                   aria-selected={activeRow() === index()}
-                  class="max-md:grid max-md:grid-cols-2 max-md:py-1"
                   data-state={activeRow() === index() ? 'selected' : undefined}
                   id={tableRowId('product-variants', row.original.id)}
                   onMouseEnter={() => setActiveRow(index())}
@@ -489,19 +533,12 @@ function VariantTable(props: VariantTableProps) {
                   <For each={row.getVisibleCells()}>
                     {cell => (
                       <TableCell
-                        class={`max-md:flex max-md:min-h-9 max-md:items-center max-md:justify-between max-md:gap-2 max-md:px-3 max-md:py-2 ${
+                        class={
                           ['priceMnt', 'stockQuantity', 'sortOrder'].includes(cell.column.id)
-                            ? 'md:text-right'
-                            : ''
-                        } ${cell.column.id === 'name' || cell.column.id === 'options' ? 'max-md:col-span-2' : ''}`}
+                            ? 'text-right'
+                            : undefined
+                        }
                       >
-                        <span class="text-xs text-muted-foreground md:hidden">
-                          {typeof cell.column.columnDef.header === 'string'
-                            ? cell.column.columnDef.header
-                            : cell.column.id === 'actions'
-                              ? 'Actions'
-                              : cell.column.id}
-                        </span>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     )}
@@ -567,13 +604,13 @@ function LifecycleActions(props: LifecycleActionsProps) {
   const archive = () =>
     runVersionMutation(
       input => archiveMutation.mutateAsync({ productId: props.product.id, input }),
-      'Product archived.',
+      'Барааг архивлалаа.',
     )
 
   const restore = () =>
     runVersionMutation(
       input => restoreMutation.mutateAsync({ productId: props.product.id, input }),
-      'Product restored to draft.',
+      'Барааг ноорог төлөвт сэргээв.',
     )
 
   const remove = async () => {
@@ -605,15 +642,13 @@ function LifecycleActions(props: LifecycleActionsProps) {
 
   return (
     <section aria-labelledby="lifecycle-title">
-      <h2 class="text-sm font-semibold" id="lifecycle-title">
-        Lifecycle
+      <h2 class="text-base font-semibold" id="lifecycle-title">
+        Барааны үйлдэл
       </h2>
-      <p class="mt-1 text-xs text-muted-foreground">
-        Archive is the normal reversible removal path.
-      </p>
+      <p class="mt-1 text-sm text-muted-foreground">Архивласан барааг дараа нь сэргээж болно.</p>
       <Show when={props.disabled}>
-        <p class="mt-2 text-xs text-(--admin-warning-foreground)">
-          Save or discard local product and gallery edits before changing lifecycle state.
+        <p class="mt-2 text-sm text-(--admin-warning-foreground)">
+          Төлөв өөрчлөхөөс өмнө бараа болон зургийн засвараа хадгална уу.
         </p>
       </Show>
       <div class="mt-3 space-y-2">
@@ -621,7 +656,7 @@ function LifecycleActions(props: LifecycleActionsProps) {
           when={props.product.status === 'archived'}
           fallback={
             <Button
-              class="w-full justify-start"
+              class="min-h-12! w-full justify-start md:h-9!"
               disabled={props.disabled || archiveMutation.isPending}
               onClick={() => void archive()}
               type="button"
@@ -632,12 +667,12 @@ function LifecycleActions(props: LifecycleActionsProps) {
               ) : (
                 <Archive aria-hidden="true" />
               )}
-              {archiveMutation.isPending ? 'Archiving…' : 'Archive product'}
+              {archiveMutation.isPending ? 'Архивлаж байна…' : 'Барааг архивлах'}
             </Button>
           }
         >
           <Button
-            class="w-full justify-start"
+            class="min-h-12! w-full justify-start md:h-9!"
             disabled={props.disabled || restoreMutation.isPending}
             onClick={() => void restore()}
             type="button"
@@ -648,17 +683,17 @@ function LifecycleActions(props: LifecycleActionsProps) {
             ) : (
               <Restart aria-hidden="true" />
             )}
-            {restoreMutation.isPending ? 'Restoring…' : 'Restore to draft'}
+            {restoreMutation.isPending ? 'Сэргээж байна…' : 'Ноорог төлөвт сэргээх'}
           </Button>
           <Button
-            class="w-full justify-start"
+            class="min-h-12! w-full justify-start md:h-9!"
             disabled={props.disabled}
             onClick={() => setDeleteOpen(true)}
             type="button"
             variant="destructive"
           >
             <TrashBinTrash aria-hidden="true" />
-            Delete permanently
+            Бүрмөсөн устгах
           </Button>
         </Show>
       </div>
@@ -668,7 +703,7 @@ function LifecycleActions(props: LifecycleActionsProps) {
           <CatalogFailure
             failure={failure()}
             onReload={() => void props.onReload()}
-            title="Lifecycle action failed"
+            title="Үйлдлийг гүйцэтгэж чадсангүй"
             transportError={requestError()}
           />
         </div>
@@ -683,14 +718,14 @@ function LifecycleActions(props: LifecycleActionsProps) {
       >
         <DialogContent class="max-w-md rounded-lg border bg-popover p-4">
           <DialogHeader>
-            <DialogTitle>Delete product permanently?</DialogTitle>
+            <DialogTitle>Барааг бүрмөсөн устгах уу?</DialogTitle>
             <DialogDescription>
-              Current catalog data is removed. Historical order snapshots remain unchanged.
+              Бараа каталогоос устна. Өмнөх захиалгын мэдээлэл хэвээр үлдэнэ.
             </DialogDescription>
           </DialogHeader>
           <Field class="mt-4">
             <FieldLabel for="delete-product-confirmation">
-              Enter the product ID to confirm
+              Баталгаажуулахын тулд барааны ID-г оруулна уу
             </FieldLabel>
             <Input
               class="font-mono"
@@ -702,7 +737,7 @@ function LifecycleActions(props: LifecycleActionsProps) {
           </Field>
           <DialogFooter class="mt-5">
             <DialogClose as={Button} type="button" variant="outline">
-              Cancel
+              Болих
             </DialogClose>
             <Button
               disabled={confirmation() !== props.product.id || deleteMutation.isPending}
@@ -710,7 +745,7 @@ function LifecycleActions(props: LifecycleActionsProps) {
               type="button"
               variant="destructive"
             >
-              {deleteMutation.isPending ? 'Deleting…' : 'Delete permanently'}
+              {deleteMutation.isPending ? 'Устгаж байна…' : 'Бүрмөсөн устгах'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -723,51 +758,51 @@ function ArchivedProduct(props: LifecycleActionsProps) {
   return (
     <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-7">
       <main class="min-w-0">
-        <InlineAlert title="Archived product" tone="warning">
-          This record is read-only. Restore it to draft before editing catalog data.
+        <InlineAlert title="Архивласан бараа" tone="warning">
+          Энэ барааг одоогоор засах боломжгүй. Засахын тулд ноорог төлөвт сэргээнэ үү.
         </InlineAlert>
         <section aria-labelledby="archived-summary-title" class="mt-5 border-y bg-card">
           <div class="grid gap-4 border-b px-4 py-4 sm:grid-cols-2">
             <div>
               <h2 class="text-sm font-semibold" id="archived-summary-title">
-                Product summary
+                Барааны хураангуй
               </h2>
               <p class="mt-2 max-w-[70ch] text-sm text-muted-foreground">
-                {props.product.shortDescription ?? 'No short description.'}
+                {props.product.shortDescription ?? 'Товч тайлбаргүй.'}
               </p>
             </div>
             <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
               <div>
-                <dt class="text-muted-foreground">Brand</dt>
-                <dd class="mt-0.5">{props.product.brand?.name ?? 'None'}</dd>
+                <dt class="text-muted-foreground">Брэнд</dt>
+                <dd class="mt-0.5">{props.product.brand?.name ?? 'Байхгүй'}</dd>
               </div>
               <div>
-                <dt class="text-muted-foreground">Category</dt>
-                <dd class="mt-0.5">{props.product.category?.name ?? 'None'}</dd>
+                <dt class="text-muted-foreground">Ангилал</dt>
+                <dd class="mt-0.5">{props.product.category?.name ?? 'Байхгүй'}</dd>
               </div>
               <div>
-                <dt class="text-muted-foreground">Variants</dt>
+                <dt class="text-muted-foreground">Хувилбар</dt>
                 <dd class="mt-0.5 tabular-nums">{props.product.variants.length}</dd>
               </div>
               <div>
-                <dt class="text-muted-foreground">Images</dt>
+                <dt class="text-muted-foreground">Зураг</dt>
                 <dd class="mt-0.5 tabular-nums">{props.product.images.length}</dd>
               </div>
             </dl>
           </div>
           <dl class="grid gap-3 px-4 py-4 text-xs sm:grid-cols-2">
             <div>
-              <dt class="text-muted-foreground">Created</dt>
+              <dt class="text-muted-foreground">Үүсгэсэн</dt>
               <dd class="mt-0.5 tabular-nums">{dateTime.format(props.product.createdAt)}</dd>
             </div>
             <div>
-              <dt class="text-muted-foreground">Last updated</dt>
+              <dt class="text-muted-foreground">Сүүлд шинэчилсэн</dt>
               <dd class="mt-0.5 tabular-nums">{dateTime.format(props.product.updatedAt)}</dd>
             </div>
             <div class="sm:col-span-2">
-              <dt class="text-muted-foreground">Description</dt>
+              <dt class="text-muted-foreground">Тайлбар</dt>
               <dd class="mt-1 max-w-[70ch] whitespace-pre-wrap">
-                {props.product.description ?? 'No description.'}
+                {props.product.description ?? 'Тайлбаргүй.'}
               </dd>
             </div>
           </dl>
@@ -787,25 +822,27 @@ function DeletedProductState(props: {
 }) {
   const warning = () =>
     props.cleanup === 'pending'
-      ? 'Catalog data was deleted, but media cleanup is pending operator attention.'
+      ? 'Бараа устсан боловч зургийн файлыг цэвэрлэх шаардлагатай байна.'
       : props.cleanup === 'retained-for-orders'
-        ? 'Media used by historical orders was retained.'
+        ? 'Өмнөх захиалгад ашигласан зургийг хадгалж үлдээлээ.'
         : undefined
 
   return (
     <div>
-      <PageHeader description={props.productId} title="Product deleted" />
+      <PageHeader description={props.productId} title="Бараа устлаа" />
       <Show when={warning()}>
         {message => (
           <div class="mt-4">
-            <InlineAlert title="Media cleanup" tone="warning">
+            <InlineAlert title="Зургийн файл" tone="warning">
               {message()}
             </InlineAlert>
           </div>
         )}
       </Show>
       <div class="mt-4">
-        <Button onClick={() => props.onBack()}>Return to catalog</Button>
+        <Button class="min-h-12! md:h-9!" onClick={() => props.onBack()}>
+          Жагсаалт руу буцах
+        </Button>
       </div>
     </div>
   )
