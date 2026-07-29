@@ -530,11 +530,108 @@ describe('catalog media and order references', () => {
     const stale = await commerce.catalog.uploadAdminImage(created.id, {
       file: fileFixture(),
       alt: 'Stale image',
+      variantIds: [created.variants[0]!.id],
       expectedUpdatedAt: created.updatedAt,
     })
     expectErrorTag(stale, 'AdminCatalogConflict')
     expect((await env.MEDIA.list({ prefix })).objects).toEqual([])
     expect(changed.images).toEqual([])
+
+    const missingImage = await commerce.catalog.updateAdminImage(
+      created.id,
+      createId('productImage'),
+      {
+        alt: 'Missing image',
+        variantIds: [created.variants[0]!.id],
+        expectedUpdatedAt: changed.updatedAt,
+      },
+    )
+    expectErrorTag(missingImage, 'AdminCatalogImageNotFound')
+  })
+
+  it('retains R2 media when removing a single image referenced by an order snapshot', async () => {
+    await installCheckoutSettings()
+    const created = expectOk(
+      await commerce.catalog.createAdminProduct(
+        productInput(unique('single-image-reference'), unique('SINGLE-IMAGE-REFERENCE'), {
+          status: 'active',
+        }),
+      ),
+    )
+    const withImage = expectOk(
+      await commerce.catalog.uploadAdminImage(created.id, {
+        file: fileFixture(),
+        alt: 'Referenced product image',
+        variantIds: [created.variants[0]!.id],
+        expectedUpdatedAt: created.updatedAt,
+      }),
+    )
+    const image = await env.DB.prepare('select id, r2_key from product_image where id = ?')
+      .bind(withImage.images[0]!.id)
+      .first<{ id: string; r2_key: string }>()
+    const checkout = expectOk(
+      await commerce.checkout.createOrder(checkoutInput(created.variants[0]!.id)),
+    )
+
+    const removed = expectOk(
+      await commerce.catalog.removeAdminImage(created.id, image!.id, {
+        expectedUpdatedAt: withImage.updatedAt,
+      }),
+    )
+    const line = await env.DB.prepare('select image_r2_key from order_line where order_id = ?')
+      .bind(checkout.orderId)
+      .first<{ image_r2_key: string | null }>()
+
+    expect(removed.mediaCleanup).toBe('retained-for-orders')
+    expect(line?.image_r2_key).toBe(image!.r2_key)
+    expect(await env.MEDIA.get(image!.r2_key)).not.toBeNull()
+    expect(
+      await env.DB.prepare('select id from product_image where id = ?').bind(image!.id).first(),
+    ).toBeNull()
+  })
+
+  it('keeps concurrent checkout snapshots and image cleanup consistent in real D1 and R2', async () => {
+    await installCheckoutSettings()
+    const created = expectOk(
+      await commerce.catalog.createAdminProduct(
+        productInput(unique('concurrent-image-reference'), unique('CONCURRENT-IMAGE-REFERENCE'), {
+          status: 'active',
+        }),
+      ),
+    )
+    const withImage = expectOk(
+      await commerce.catalog.uploadAdminImage(created.id, {
+        file: fileFixture(),
+        alt: 'Concurrent checkout image',
+        variantIds: [created.variants[0]!.id],
+        expectedUpdatedAt: created.updatedAt,
+      }),
+    )
+    const image = await env.DB.prepare('select id, r2_key from product_image where id = ?')
+      .bind(withImage.images[0]!.id)
+      .first<{ id: string; r2_key: string }>()
+
+    const [checkoutResult, removalResult] = await Promise.all([
+      commerce.checkout.createOrder(checkoutInput(created.variants[0]!.id)),
+      commerce.catalog.removeAdminImage(created.id, image!.id, {
+        expectedUpdatedAt: withImage.updatedAt,
+      }),
+    ])
+    const checkout = expectOk(checkoutResult)
+    const removal = expectOk(removalResult)
+    const line = await env.DB.prepare('select image_r2_key from order_line where order_id = ?')
+      .bind(checkout.orderId)
+      .first<{ image_r2_key: string | null }>()
+    const object = await env.MEDIA.get(image!.r2_key)
+
+    if (line?.image_r2_key === image!.r2_key) {
+      expect(removal.mediaCleanup).toBe('retained-for-orders')
+      expect(object).not.toBeNull()
+    } else {
+      expect(line?.image_r2_key).toBeNull()
+      expect(removal.mediaCleanup).toBe('complete')
+      expect(object).toBeNull()
+    }
   })
 
   it('retains order-referenced media and immutable snapshots after hard product deletion', async () => {

@@ -16,7 +16,7 @@ const orderParams = t.Object(
   { additionalProperties: false },
 )
 
-export const adminOrderRoutes = createApprovedAdminRoutes()
+export const adminOrderRoutes = createApprovedAdminRoutes('/orders')
   .get(
     '/orders',
     async ({ query }) => Result.serialize(await commerce.orders.listAdminOrders(query)),

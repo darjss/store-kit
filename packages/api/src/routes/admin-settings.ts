@@ -6,7 +6,7 @@ import { contractBody } from '~/typebox-contract'
 
 import { createApprovedAdminRoutes } from './approved-admin'
 
-export const adminSettingsRoutes = createApprovedAdminRoutes()
+export const adminSettingsRoutes = createApprovedAdminRoutes('/settings')
   .get('/settings/store', async () => Result.serialize(await commerce.settings.getStore()))
   .put(
     '/settings/store',

@@ -182,9 +182,15 @@
     font-size: 0.8125rem !important;
   }
 
+  @media (min-width: 48rem) {
+    & .z-table-container {
+      overflow: visible !important;
+    }
+  }
+
   & .z-table-head {
     position: sticky !important;
-    top: 0 !important;
+    top: 3rem !important;
     z-index: 10 !important;
     height: 2rem !important;
     background: var(--admin-table-header) !important;

@@ -346,11 +346,44 @@ function ApprovedWorkspace(props: { session: AdminSession; storeName: string }) 
   }
 
   onMount(() => {
+    let goTimer: ReturnType<typeof setTimeout> | undefined
+    let goPending = false
+    const resetGoShortcut = () => {
+      goPending = false
+      if (goTimer) clearTimeout(goTimer)
+      goTimer = undefined
+    }
+    const goCommands = {
+      d: adminNavigation.dashboard,
+      c: adminNavigation.catalog,
+      n: adminNavigation.newProduct,
+      o: adminNavigation.orders,
+      s: adminNavigation.settings,
+    }
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         setCommandOpen(open => !open)
         return
+      }
+
+      if (!event.metaKey && !event.ctrlKey && !event.altKey && !isEditableTarget(event.target)) {
+        const key = event.key.toLowerCase()
+        if (key === 'g') {
+          event.preventDefault()
+          resetGoShortcut()
+          goPending = true
+          goTimer = setTimeout(resetGoShortcut, 750)
+          return
+        }
+        if (goPending && key in goCommands) {
+          event.preventDefault()
+          const command = goCommands[key as keyof typeof goCommands]
+          resetGoShortcut()
+          void command()
+          return
+        }
+        resetGoShortcut()
       }
 
       if (
@@ -368,7 +401,10 @@ function ApprovedWorkspace(props: { session: AdminSession; storeName: string }) 
     }
 
     document.addEventListener('keydown', onKeyDown)
-    onCleanup(() => document.removeEventListener('keydown', onKeyDown))
+    onCleanup(() => {
+      resetGoShortcut()
+      document.removeEventListener('keydown', onKeyDown)
+    })
   })
 
   return (

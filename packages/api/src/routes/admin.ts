@@ -1,10 +1,13 @@
+import { auth } from '~/auth'
+
 import { createApprovedAdminRoutes } from './approved-admin'
 
 const unauthenticated = { _tag: 'Unauthenticated' as const }
 
-export const adminRoutes = createApprovedAdminRoutes().get(
+export const adminRoutes = createApprovedAdminRoutes('/session').get(
   '/session',
-  ({ adminSession, status }) => {
+  async ({ request, status }) => {
+    const adminSession = await auth.api.getSession({ headers: request.headers })
     if (!adminSession) return status(401, unauthenticated)
 
     return {

@@ -3,6 +3,7 @@ import { Result } from 'better-result'
 
 import { createApprovedAdminRoutes } from './approved-admin'
 
-export const adminDashboardRoutes = createApprovedAdminRoutes().get('/dashboard', async () =>
-  Result.serialize(await commerce.dashboard.getOverview()),
+export const adminDashboardRoutes = createApprovedAdminRoutes('/dashboard').get(
+  '/dashboard',
+  async () => Result.serialize(await commerce.dashboard.getOverview()),
 )

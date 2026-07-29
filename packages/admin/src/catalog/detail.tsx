@@ -39,7 +39,6 @@ import {
 import { Result } from 'better-result'
 import { match } from 'dismatch'
 import { For, Show, createSignal } from 'solid-js'
-import type { JSX } from 'solid-js'
 import { toast } from 'solid-sonner'
 
 import {
@@ -50,6 +49,8 @@ import {
   StatusBadge,
   TableSkeleton,
 } from '../components/foundation'
+import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
+import { UnsavedChangesGuard } from '../components/unsaved-changes'
 import { useQueryResult } from '../query-options/result'
 import { CatalogFailure, ProductEditor, transportMessage } from './forms'
 import { ProductGallery } from './gallery'
@@ -309,13 +310,19 @@ type CatalogDetailContentProps = {
 function CatalogDetailContent(props: CatalogDetailContentProps) {
   const queryClient = useQueryClient()
   const updateProduct = useMutation(() => catalogMutation.updateProduct(props.requests))
+  const [productDirty, setProductDirty] = createSignal(false)
   const [galleryDirty, setGalleryDirty] = createSignal(false)
 
   return (
     <>
+      <UnsavedChangesGuard isDirty={() => productDirty() || galleryDirty()} />
       <PageHeader
         actions={<StatusBadge>{productStatusLabel(props.product.status)}</StatusBadge>}
-        description={[props.product.brandName, props.product.categoryName, `/${props.product.slug}`]
+        description={[
+          props.product.brand?.name,
+          props.product.category?.name,
+          `/${props.product.slug}`,
+        ]
           .filter(Boolean)
           .join(' · ')}
         title={props.product.name}
@@ -372,6 +379,7 @@ function CatalogDetailContent(props: CatalogDetailContentProps) {
               />
             )}
             selectors={props.selectors}
+            onDirtyChange={setProductDirty}
             onProduct={props.onProduct}
             onReload={props.onReload}
             onSave={async input => {
@@ -415,22 +423,10 @@ function VariantTable(props: VariantTableProps) {
     columns: variantColumns(props.onOpen),
     getCoreRowModel: getCoreRowModel(),
   })
-  const onTableKeyDown: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent> = event => {
-    if (event.target !== event.currentTarget) return
-    const rows = table.getRowModel().rows
-    if (rows.length === 0) return
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      setActiveRow(current =>
-        Math.min(rows.length - 1, Math.max(0, current + (event.key === 'ArrowDown' ? 1 : -1))),
-      )
-    }
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      const row = rows[Math.min(activeRow(), rows.length - 1)]
-      if (row) props.onOpen(row.original.id)
-    }
-  }
+  const rowIds = () => table.getRowModel().rows.map(row => row.original.id)
+  const onTableKeyDown = (
+    event: KeyboardEvent & { currentTarget: HTMLDivElement; target: Element },
+  ) => handleTableNavigation(event, rowIds(), activeRow(), setActiveRow, props.onOpen)
 
   return (
     <section aria-labelledby="variants-title" class="pt-6">
@@ -449,8 +445,9 @@ function VariantTable(props: VariantTableProps) {
         </Button>
       </div>
       <div
+        aria-activedescendant={activeTableRowId('product-variants', rowIds(), activeRow())}
         aria-label="Product variants. Use Up and Down arrow keys to select a row and Enter to inspect it."
-        class="mt-3 overflow-hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+        class="mt-3 rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
         onKeyDown={onTableKeyDown}
         role="group"
         tabIndex={0}
@@ -483,8 +480,10 @@ function VariantTable(props: VariantTableProps) {
             <For each={table.getRowModel().rows}>
               {(row, index) => (
                 <TableRow
+                  aria-selected={activeRow() === index()}
                   class="max-md:grid max-md:grid-cols-2 max-md:py-1"
                   data-state={activeRow() === index() ? 'selected' : undefined}
+                  id={tableRowId('product-variants', row.original.id)}
                   onMouseEnter={() => setActiveRow(index())}
                 >
                   <For each={row.getVisibleCells()}>
@@ -740,11 +739,11 @@ function ArchivedProduct(props: LifecycleActionsProps) {
             <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
               <div>
                 <dt class="text-muted-foreground">Brand</dt>
-                <dd class="mt-0.5">{props.product.brandName ?? 'None'}</dd>
+                <dd class="mt-0.5">{props.product.brand?.name ?? 'None'}</dd>
               </div>
               <div>
                 <dt class="text-muted-foreground">Category</dt>
-                <dd class="mt-0.5">{props.product.categoryName ?? 'None'}</dd>
+                <dd class="mt-0.5">{props.product.category?.name ?? 'None'}</dd>
               </div>
               <div>
                 <dt class="text-muted-foreground">Variants</dt>

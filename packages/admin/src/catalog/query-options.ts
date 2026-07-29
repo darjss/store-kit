@@ -8,7 +8,7 @@ import type {
   AdminProductCreate,
   AdminProductDeleteOutcome,
   AdminProductImageDelete,
-  AdminProductImageMutationOutcome,
+  AdminProductImageDeleteOutcome,
   AdminProductImageOrder,
   AdminProductImageUpdate,
   AdminProductImageUpload,
@@ -93,7 +93,7 @@ export type CatalogRequests = {
     productId: string,
     imageId: string,
     input: AdminProductImageDelete,
-  ) => Promise<CatalogResultResponse<AdminProductImageMutationOutcome>>
+  ) => Promise<CatalogResultResponse<AdminProductImageDeleteOutcome>>
 }
 
 const deserialize = <Value>(request: Promise<CatalogResultResponse<Value>>) =>

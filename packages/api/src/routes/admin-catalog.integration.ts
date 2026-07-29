@@ -1,3 +1,4 @@
+import { adminCatalogImageMaxBytes } from '@store-kit/contracts/admin-catalog'
 import type {
   AdminCatalogError,
   AdminCatalogProductDetail,
@@ -201,25 +202,38 @@ const variantUpdate = (
 
 type CatalogMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
-const requestCatalog = (
+const requestCatalog = async (
   path: string,
   {
     body,
     cookie,
+    headers,
     method = 'GET',
-  }: { body?: unknown | FormData; cookie?: string; method?: CatalogMethod } = {},
+  }: {
+    body?: unknown | FormData
+    cookie?: string
+    headers?: HeadersInit
+    method?: CatalogMethod
+  } = {},
 ) => {
   const multipart = body instanceof FormData
+  const request = new Request(`https://plugged.mn${path}`, {
+    method,
+    headers: {
+      ...(body === undefined || multipart ? {} : { 'content-type': 'application/json' }),
+      ...(cookie ? { cookie } : {}),
+      origin: 'https://plugged.mn',
+      ...Object.fromEntries(new Headers(headers)),
+    },
+    ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
+  })
+  if (!multipart || request.headers.has('content-length')) return adminCatalogRoutes.handle(request)
+
+  const encodedBody = await request.arrayBuffer()
+  const encodedHeaders = new Headers(request.headers)
+  encodedHeaders.set('content-length', String(encodedBody.byteLength))
   return adminCatalogRoutes.handle(
-    new Request(`https://plugged.mn${path}`, {
-      method,
-      headers: {
-        ...(body === undefined || multipart ? {} : { 'content-type': 'application/json' }),
-        ...(cookie ? { cookie } : {}),
-        origin: 'https://plugged.mn',
-      },
-      ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
-    }),
+    new Request(request.url, { method, headers: encodedHeaders, body: encodedBody }),
   )
 }
 
@@ -479,6 +493,67 @@ describe('admin catalog API', () => {
       ])
         expect(response.headers.get('cache-control')).toBe('private, no-store')
     }
+  })
+
+  it('authenticates before parsing and rejects unbounded or oversized uploads', async () => {
+    const product = await seedProduct()
+    const malformed = new FormData()
+    malformed.set('expectedUpdatedAt', 'not-a-number')
+    const oversized = imageUploadBody(product.updatedAt, {
+      file: new File([new Uint8Array(adminCatalogImageMaxBytes + 1)], 'oversized.jpg', {
+        type: 'image/jpeg',
+      }),
+    })
+    const oversizedLength = String(adminCatalogImageMaxBytes + 64 * 1024 + 1)
+
+    const [malformedResponse, oversizedResponse] = await Promise.all([
+      requestCatalog(`/api/admin/catalog/products/${product.id}/images`, {
+        method: 'POST',
+        body: malformed,
+      }),
+      requestCatalog(`/api/admin/catalog/products/${product.id}/images`, {
+        method: 'POST',
+        body: oversized,
+        headers: { 'content-length': oversizedLength },
+      }),
+    ])
+    const approved = await createAdminSession(true)
+    const guardedResponse = await requestCatalog(
+      `/api/admin/catalog/products/${product.id}/images`,
+      {
+        method: 'POST',
+        cookie: approved.cookie,
+        body: oversized,
+        headers: { 'content-length': oversizedLength },
+      },
+    )
+    const unknownLengthResponse = await adminCatalogRoutes.handle(
+      new Request(`https://plugged.mn/api/admin/catalog/products/${product.id}/images`, {
+        method: 'POST',
+        headers: {
+          'cookie': approved.cookie,
+          'content-type': 'multipart/form-data; boundary=unknown-length',
+          'origin': 'https://plugged.mn',
+        },
+        body: '--unknown-length--',
+      }),
+    )
+
+    const unauthenticatedBodies = await Promise.all([
+      malformedResponse.json(),
+      oversizedResponse.json(),
+    ])
+    for (const [index, response] of [malformedResponse, oversizedResponse].entries()) {
+      expect(response.status).toBe(401)
+      expect(unauthenticatedBodies[index]).toEqual({ _tag: 'Unauthenticated' })
+      expect(response.headers.get('cache-control')).toBe('private, no-store')
+    }
+    expect(guardedResponse.status).toBe(413)
+    expect(await guardedResponse.json()).toEqual({ _tag: 'PayloadTooLarge' })
+    expect(guardedResponse.headers.get('cache-control')).toBe('private, no-store')
+    expect(unknownLengthResponse.status).toBe(411)
+    expect(await unknownLengthResponse.json()).toEqual({ _tag: 'LengthRequired' })
+    expect(unknownLengthResponse.headers.get('cache-control')).toBe('private, no-store')
   })
 
   it('runs product and variant CRUD through serialized Better Result routes', async () => {

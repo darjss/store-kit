@@ -1,3 +1,7 @@
+import {
+  adminCatalogImageMaxBytes,
+  adminCatalogImageMediaTypes,
+} from '@store-kit/contracts/admin-catalog'
 import type {
   AdminCatalogError,
   AdminCatalogProductDetail,
@@ -47,8 +51,7 @@ const imageFormats = {
   'image/avif': { extension: 'avif', contentType: 'image/avif' },
   'avif': { extension: 'avif', contentType: 'image/avif' },
 } as const
-const acceptedUploadTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
-const maximumImageBytes = 10 * 1024 * 1024
+const acceptedUploadTypes = new Set<string>(adminCatalogImageMediaTypes)
 
 export const listCatalogProducts = async (filters: ProductListFilters = {}) => {
   const normalizedFilters = {
@@ -99,8 +102,6 @@ const toAdminProductDetail = (record: AdminProductRecord): AdminCatalogProductDe
         active: record.category.active,
       }
     : null,
-  brandName: record.brand?.name ?? null,
-  categoryName: record.category?.name ?? null,
   createdAt: record.createdAt,
   updatedAt: record.updatedAt,
   images: record.images.map(image => ({
@@ -688,7 +689,7 @@ export const uploadAdminCatalogImage = async (
   if (
     !(input.file instanceof File) ||
     input.file.size === 0 ||
-    input.file.size > maximumImageBytes ||
+    input.file.size > adminCatalogImageMaxBytes ||
     !acceptedUploadTypes.has(input.file.type)
   )
     return Result.err<AdminCatalogProductDetail, AdminCatalogError>(
@@ -806,21 +807,13 @@ export const reorderAdminCatalogImages = async (
   productId: string,
   input: AdminProductImageOrder,
 ) => {
-  const current = await database.query.catalog.findAdminProduct(productId)
-  if (!current)
-    return Result.err<AdminCatalogProductDetail, AdminCatalogError>(productNotFound(productId))
-  const currentIds = current.images.map(({ id }) => id).toSorted()
-  if (
-    currentIds.length !== input.imageIds.length ||
-    currentIds.some((imageId, index) => imageId !== input.imageIds.toSorted()[index])
-  )
-    return Result.err<AdminCatalogProductDetail, AdminCatalogError>(catalogConflict(productId))
-
   const write = await database.query.catalog.reorderAdminImages(productId, {
     ...input,
     updatedAt: nextVersion(input.expectedUpdatedAt),
   })
-  if (!write.updated || !write.persisted)
+  if (!write.persisted)
+    return Result.err<AdminCatalogProductDetail, AdminCatalogError>(productNotFound(productId))
+  if (!write.updated)
     return Result.err<AdminCatalogProductDetail, AdminCatalogError>(catalogConflict(productId))
   return Result.ok<AdminCatalogProductDetail, AdminCatalogError>(
     toAdminProductDetail(write.persisted),

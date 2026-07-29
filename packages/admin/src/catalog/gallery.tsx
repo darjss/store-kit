@@ -25,7 +25,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/solid-query'
 import { Image } from '@unpic/solid/base'
 import { Result } from 'better-result'
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js'
+import { For, Show, createEffect, createSignal, on, onCleanup, untrack } from 'solid-js'
 import { toast } from 'solid-sonner'
 import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
@@ -225,9 +225,7 @@ export function ProductGallery(props: ProductGalleryProps) {
         setFailure(result.error)
         return false
       }
-      const message = result.value.mediaCleanup
-        ? cleanupMessage(result.value.mediaCleanup)
-        : undefined
+      const message = cleanupMessage(result.value.mediaCleanup)
       if (message) props.onCleanupWarning(message)
       installProduct(result.value.product)
       if (message) toast.warning(message)
@@ -420,16 +418,20 @@ function ImageEditor(props: ImageEditorProps) {
     setExpectedUpdatedAt(updatedAt)
   }
 
-  createEffect(() => {
-    const image = props.image
-    const updatedAt = props.productUpdatedAt
-    if (props.resetVersion !== installedResetVersion) {
-      installedResetVersion = props.resetVersion
-      installBaseline(image, updatedAt)
-      return
-    }
-    if (!dirty()) installBaseline(image, updatedAt)
-  })
+  createEffect(
+    on(
+      () => [props.image, props.productUpdatedAt, props.resetVersion] as const,
+      ([image, updatedAt, resetVersion]) => {
+        if (resetVersion !== installedResetVersion) {
+          installedResetVersion = resetVersion
+          installBaseline(image, updatedAt)
+          return
+        }
+        if (!untrack(dirty)) installBaseline(image, updatedAt)
+      },
+      { defer: true },
+    ),
+  )
   createEffect(() => props.onDirtyChange(dirty()))
   onCleanup(() => props.onDirtyChange(false))
 

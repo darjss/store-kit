@@ -21,6 +21,14 @@ import {
   variantOptionsSchema,
 } from './common'
 
+export const adminCatalogImageMediaTypes = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif',
+] as const
+export const adminCatalogImageMaxBytes = 10 * 1024 * 1024
+
 const nullableBrandIdSchema = Type.Union([brandIdSchema, Type.Null()])
 const nullableCategoryIdSchema = Type.Union([categoryIdSchema, Type.Null()])
 const nullableMntAmountSchema = Type.Union([mntAmountSchema, Type.Null()])
@@ -143,8 +151,6 @@ export const adminCatalogProductDetailSchema = Type.Object(
     featured: Type.Boolean(),
     brand: Type.Union([adminCatalogBrandSchema, Type.Null()]),
     category: Type.Union([adminCatalogCategorySchema, Type.Null()]),
-    brandName: Type.Union([trimmedNonBlankTextSchema, Type.Null()]),
-    categoryName: Type.Union([trimmedNonBlankTextSchema, Type.Null()]),
     createdAt: nonNegativeIntegerSchema,
     updatedAt: nonNegativeIntegerSchema,
     images: Type.Array(adminCatalogImageSchema),
@@ -166,33 +172,24 @@ const initialVariantSchema = Type.Object(
   { additionalProperties: false },
 )
 
+const editableProductFields = {
+  name: trimmedNonBlankTextSchema,
+  slug: slugSchema,
+  shortDescription: nullableTrimmedTextSchema,
+  description: nullableTrimmedTextSchema,
+  status: editableProductStatusSchema,
+  featured: Type.Boolean(),
+  brandId: nullableBrandIdSchema,
+  categoryId: nullableCategoryIdSchema,
+}
+
 export const adminProductCreateSchema = Type.Object(
-  {
-    name: trimmedNonBlankTextSchema,
-    slug: slugSchema,
-    shortDescription: nullableTrimmedTextSchema,
-    description: nullableTrimmedTextSchema,
-    status: editableProductStatusSchema,
-    featured: Type.Boolean(),
-    brandId: nullableBrandIdSchema,
-    categoryId: nullableCategoryIdSchema,
-    initialVariant: initialVariantSchema,
-  },
+  { ...editableProductFields, initialVariant: initialVariantSchema },
   { additionalProperties: false },
 )
 
 export const adminProductUpdateSchema = Type.Object(
-  {
-    expectedUpdatedAt: nonNegativeIntegerSchema,
-    name: trimmedNonBlankTextSchema,
-    slug: slugSchema,
-    shortDescription: nullableTrimmedTextSchema,
-    description: nullableTrimmedTextSchema,
-    status: editableProductStatusSchema,
-    featured: Type.Boolean(),
-    brandId: nullableBrandIdSchema,
-    categoryId: nullableCategoryIdSchema,
-  },
+  { expectedUpdatedAt: nonNegativeIntegerSchema, ...editableProductFields },
   { additionalProperties: false },
 )
 
@@ -252,17 +249,23 @@ export const adminVariantDeleteSchema = Type.Object(
   { additionalProperties: false },
 )
 
+const imageAltSchema = Type.String({
+  minLength: 1,
+  maxLength: 300,
+  pattern: '^\\S(?:[\\s\\S]*\\S)?$',
+})
+
 const adminUploadFileSchema = Type.Unsafe<File>({
   type: 'object',
   required: ['name', 'size', 'type', 'lastModified'],
   properties: {
     name: Type.String({ minLength: 1 }),
-    size: Type.Integer({ minimum: 1, maximum: 10 * 1024 * 1024 }),
+    size: Type.Integer({ minimum: 1, maximum: adminCatalogImageMaxBytes }),
     type: Type.Union([
-      Type.Literal('image/jpeg'),
-      Type.Literal('image/png'),
-      Type.Literal('image/webp'),
-      Type.Literal('image/avif'),
+      Type.Literal(adminCatalogImageMediaTypes[0]),
+      Type.Literal(adminCatalogImageMediaTypes[1]),
+      Type.Literal(adminCatalogImageMediaTypes[2]),
+      Type.Literal(adminCatalogImageMediaTypes[3]),
     ]),
     lastModified: nonNegativeIntegerSchema,
   },
@@ -271,7 +274,7 @@ const adminUploadFileSchema = Type.Unsafe<File>({
 export const adminProductImageUploadSchema = Type.Object(
   {
     file: adminUploadFileSchema,
-    alt: Type.String({ minLength: 1, maxLength: 300, pattern: '^\\S(?:[\\s\\S]*\\S)?$' }),
+    alt: imageAltSchema,
     variantIds: Type.Optional(variantIdsSchema),
     expectedUpdatedAt: nonNegativeIntegerSchema,
   },
@@ -280,7 +283,7 @@ export const adminProductImageUploadSchema = Type.Object(
 
 export const adminProductImageUpdateSchema = Type.Object(
   {
-    alt: Type.String({ minLength: 1, maxLength: 300, pattern: '^\\S(?:[\\s\\S]*\\S)?$' }),
+    alt: imageAltSchema,
     variantIds: variantIdsSchema,
     expectedUpdatedAt: nonNegativeIntegerSchema,
   },
@@ -336,10 +339,10 @@ export const adminVariantDeleteOutcomeSchema = Type.Object(
   { additionalProperties: false },
 )
 
-export const adminProductImageMutationOutcomeSchema = Type.Object(
+export const adminProductImageDeleteOutcomeSchema = Type.Object(
   {
     product: adminCatalogProductDetailSchema,
-    mediaCleanup: Type.Optional(mediaCleanupSchema),
+    mediaCleanup: mediaCleanupSchema,
   },
   { additionalProperties: false },
 )
@@ -521,7 +524,7 @@ export type AdminProductImageDelete = Static<typeof adminProductImageDeleteSchem
 export type MediaCleanup = Static<typeof mediaCleanupSchema>
 export type AdminProductDeleteOutcome = Static<typeof adminProductDeleteOutcomeSchema>
 export type AdminVariantDeleteOutcome = Static<typeof adminVariantDeleteOutcomeSchema>
-export type AdminProductImageMutationOutcome = Static<typeof adminProductImageMutationOutcomeSchema>
+export type AdminProductImageDeleteOutcome = Static<typeof adminProductImageDeleteOutcomeSchema>
 export type AdminCatalogProductNotFound = Static<typeof adminCatalogProductNotFoundSchema>
 export type AdminCatalogVariantNotFound = Static<typeof adminCatalogVariantNotFoundSchema>
 export type AdminCatalogImageNotFound = Static<typeof adminCatalogImageNotFoundSchema>

@@ -7,6 +7,13 @@ import type {
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import {
   Button,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Field,
   FieldDescription,
   FieldError,
@@ -129,6 +136,8 @@ type OrderStatusFormProps = {
 function OrderStatusForm(props: OrderStatusFormProps) {
   const [failure, setFailure] = createSignal<AdminOrderError>()
   const [transportError, setTransportError] = createSignal<string>()
+  const [cancelOpen, setCancelOpen] = createSignal(false)
+  const [cancelConfirmed, setCancelConfirmed] = createSignal(false)
   const validator = toStandardSchema(adminOrderStatusUpdateSchema)
   const defaultValues: AdminOrderStatusUpdate = {
     expectedUpdatedAt: props.order.updatedAt,
@@ -138,6 +147,11 @@ function OrderStatusForm(props: OrderStatusFormProps) {
     defaultValues,
     validators: { onBlur: validator, onSubmit: validator },
     onSubmit: async ({ value }) => {
+      if (value.status === 'cancelled' && !cancelConfirmed()) {
+        setCancelOpen(true)
+        return
+      }
+      setCancelConfirmed(false)
       setFailure()
       setTransportError()
 
@@ -250,6 +264,40 @@ function OrderStatusForm(props: OrderStatusFormProps) {
           </div>
         )}
       </Show>
+
+      <Dialog
+        open={cancelOpen()}
+        onOpenChange={open => {
+          setCancelOpen(open)
+          if (open) setCancelConfirmed(false)
+        }}
+      >
+        <DialogContent class="max-w-md rounded-lg border bg-popover p-4">
+          <DialogHeader>
+            <DialogTitle>Cancel this order?</DialogTitle>
+            <DialogDescription>
+              Cancellation is permanent in this screen. Payment and stock are not changed by this
+              action.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter class="mt-5">
+            <DialogClose as={Button} type="button" variant="outline">
+              Keep order
+            </DialogClose>
+            <Button
+              onClick={() => {
+                setCancelConfirmed(true)
+                setCancelOpen(false)
+                void form.handleSubmit()
+              }}
+              type="button"
+              variant="destructive"
+            >
+              Cancel order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

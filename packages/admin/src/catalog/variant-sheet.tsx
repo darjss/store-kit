@@ -39,6 +39,7 @@ import { Show, createSignal } from 'solid-js'
 import { toast } from 'solid-sonner'
 
 import { InlineAlert, StatusBadge } from '../components/foundation'
+import { UnsavedChangesGuard } from '../components/unsaved-changes'
 import { CatalogFailure, OptionRows, transportMessage, validationMessages } from './forms'
 import type { CatalogRequests } from './query-options'
 import { catalogKeys, catalogMutation } from './query-options'
@@ -160,6 +161,7 @@ function VariantForm(props: VariantFormProps) {
   const [failure, setFailure] = createSignal<AdminCatalogError>()
   const [requestError, setRequestError] = createSignal<string>()
   const [deleteOpen, setDeleteOpen] = createSignal(false)
+  const [saved, setSaved] = createSignal(false)
   const installProduct = (product: AdminCatalogProductDetail) => {
     queryClient.setQueryData(catalogKeys.detail(product.id), Result.ok(product))
     props.onProduct(product)
@@ -192,6 +194,7 @@ function VariantForm(props: VariantFormProps) {
           return
         }
         toast.success(props.variant ? 'Variant saved.' : 'Variant created.')
+        setSaved(true)
         props.onClose()
         installProduct(result.value)
       } catch (error) {
@@ -265,6 +268,7 @@ function VariantForm(props: VariantFormProps) {
         queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
       ])
       toast.success('Variant permanently deleted.')
+      setSaved(true)
       props.onClose()
     } catch (error) {
       setDeleteOpen(false)
@@ -283,6 +287,7 @@ function VariantForm(props: VariantFormProps) {
         void form.handleSubmit()
       }}
     >
+      <UnsavedChangesGuard includeSearchChanges isDirty={() => form.state.isDirty && !saved()} />
       <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
         <Show
           when={props.variant}

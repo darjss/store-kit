@@ -822,8 +822,12 @@ export const attachAdminImage = async (input: {
     ...input.variantIds.map(variantId =>
       env.DB.prepare(
         `insert into product_variant_image (product_id, variant_id, image_id)
-         values (?, ?, ?)`,
-      ).bind(input.productId, variantId, input.imageId),
+         select image.product_id, variant.id, image.id
+         from product_image image
+         join product_variant variant
+           on variant.id = ? and variant.product_id = image.product_id
+         where image.id = ? and image.product_id = ?`,
+      ).bind(variantId, input.imageId, input.productId),
     ),
     env.DB.prepare(
       `update product set updated_at = ?
@@ -862,12 +866,16 @@ export const updateAdminImage = async (
     ...input.variantIds.map(variantId =>
       env.DB.prepare(
         `insert into product_variant_image (product_id, variant_id, image_id)
-         select ?, ?, ?
-         where exists (
-           select 1 from product
-           where id = ? and updated_at = ? and status != 'archived'
-         )`,
-      ).bind(productId, variantId, imageId, productId, input.expectedUpdatedAt),
+         select image.product_id, variant.id, image.id
+         from product_image image
+         join product_variant variant
+           on variant.id = ? and variant.product_id = image.product_id
+         where image.id = ? and image.product_id = ?
+           and exists (
+             select 1 from product
+             where id = ? and updated_at = ? and status != 'archived'
+           )`,
+      ).bind(variantId, imageId, productId, productId, input.expectedUpdatedAt),
     ),
     env.DB.prepare(
       `update product set updated_at = ?
@@ -945,7 +953,7 @@ export const removeAdminImage = async (input: {
       persisted: await findAdminProduct(input.productId),
       referenced: false,
     }
-  const [removed, version] = await env.DB.batch([
+  const [removed, version, reference] = await env.DB.batch([
     env.DB.prepare(
       `delete from product_image
        where id = ? and product_id = ?
@@ -967,13 +975,19 @@ export const removeAdminImage = async (input: {
       input.imageId,
       input.productId,
     ),
+    env.DB.prepare(
+      `select exists(
+         select 1 from order_line where image_r2_key = ?
+       ) as referenced`,
+    ).bind(image.r2Key),
   ])
   const didRemove = removed.meta.changes > 0 && version.meta.changes === 1
+  const referenceRow = reference.results[0] as { referenced?: number } | undefined
   return {
     removed: didRemove,
     image,
     persisted: await findAdminProduct(input.productId),
-    referenced: didRemove ? await isR2KeyReferenced(image.r2Key) : false,
+    referenced: didRemove && referenceRow?.referenced === 1,
   }
 }
 

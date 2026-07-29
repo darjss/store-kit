@@ -25,7 +25,6 @@ import {
 } from '@tanstack/solid-table'
 import { Image } from '@unpic/solid/base'
 import { For, Show, createSignal } from 'solid-js'
-import type { JSX } from 'solid-js'
 import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
 import {
@@ -36,6 +35,7 @@ import {
   StatusBadge,
   TableSkeleton,
 } from '../components/foundation'
+import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
 import { useQueryResult } from '../query-options/result'
 import type { CatalogRequests } from './query-options'
 import { catalogQuery } from './query-options'
@@ -201,25 +201,13 @@ export function CatalogListPage(props: CatalogListPageProps) {
     props.onSearchChange({ ...props.search, ...patch, offset: patch.offset ?? 0 })
   const clearFilters = () =>
     props.onSearchChange({ inventory: 'all', limit: props.search.limit, offset: 0 })
-  const onTableKeyDown: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent> = event => {
-    if (event.target !== event.currentTarget) return
-
-    const rows = table.getRowModel().rows
-    if (rows.length === 0) return
-
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      const direction = event.key === 'ArrowDown' ? 1 : -1
-      setActiveRow(current => Math.min(rows.length - 1, Math.max(0, current + direction)))
-      return
-    }
-
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      const row = rows[Math.min(activeRow(), rows.length - 1)]
-      if (row) window.location.assign(props.productHref(row.original.id))
-    }
-  }
+  const rowIds = () => table.getRowModel().rows.map(row => row.original.id)
+  const onTableKeyDown = (
+    event: KeyboardEvent & { currentTarget: HTMLDivElement; target: Element },
+  ) =>
+    handleTableNavigation(event, rowIds(), activeRow(), setActiveRow, productId =>
+      window.location.assign(props.productHref(productId)),
+    )
 
   return (
     <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
@@ -369,6 +357,11 @@ export function CatalogListPage(props: CatalogListPageProps) {
                 }
               >
                 <div
+                  aria-activedescendant={activeTableRowId(
+                    'catalog-products',
+                    rowIds(),
+                    activeRow(),
+                  )}
                   aria-label="Catalog products. Use Up and Down arrow keys to select a row and Enter to open it."
                   class="rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
                   onKeyDown={onTableKeyDown}
@@ -408,8 +401,10 @@ export function CatalogListPage(props: CatalogListPageProps) {
                       <For each={table.getRowModel().rows}>
                         {(row, index) => (
                           <TableRow
+                            aria-selected={activeRow() === index()}
                             class="max-md:grid max-md:grid-cols-2 max-md:py-1"
                             data-state={activeRow() === index() ? 'selected' : undefined}
+                            id={tableRowId('catalog-products', row.original.id)}
                             onMouseEnter={() => setActiveRow(index())}
                           >
                             <For each={row.getVisibleCells()}>

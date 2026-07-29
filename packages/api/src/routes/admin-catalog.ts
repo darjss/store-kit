@@ -44,7 +44,7 @@ const imageParams = t.Object(
   { additionalProperties: false },
 )
 
-export const adminCatalogRoutes = createApprovedAdminRoutes()
+export const adminCatalogRoutes = createApprovedAdminRoutes('/catalog')
   .get('/catalog/selectors', async () =>
     Result.serialize(await commerce.catalog.listAdminSelectors()),
   )

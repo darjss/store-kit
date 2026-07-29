@@ -5,7 +5,7 @@ import { createAdminSession } from '~/test/admin-session'
 
 import { createApprovedAdminRoutes } from './approved-admin'
 
-const guardedProbe = createApprovedAdminRoutes().get('/foundation/probe', () => ({
+const guardedProbe = createApprovedAdminRoutes('/foundation').get('/foundation/probe', () => ({
   ok: true as const,
 }))
 

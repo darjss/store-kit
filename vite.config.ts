@@ -188,6 +188,10 @@ export default defineConfig({
         command: 'vp test --config vitest.integration.config.ts',
         cache: false,
       },
+      'test:admin:browser': {
+        command: 'vp exec playwright test --config playwright.admin.config.ts',
+        cache: false,
+      },
       'db:test:integration': {
         command: 'vp test run --config vite.integration.config.ts',
         cwd: 'packages/db',

@@ -21,7 +21,7 @@ import {
 } from '@store-kit/ui'
 import { createForm } from '@tanstack/solid-form'
 import type { Result } from 'better-result'
-import { For, Show, createEffect, createSignal, on } from 'solid-js'
+import { For, Show, createEffect, createSignal, on, onCleanup } from 'solid-js'
 import type { JSX } from 'solid-js'
 
 import { InlineAlert } from '../components/foundation'
@@ -104,6 +104,7 @@ type ProductEditorProps = {
   onSave: (
     input: AdminProductUpdate,
   ) => Promise<Result<AdminCatalogProductDetail, AdminCatalogError>>
+  onDirtyChange: (dirty: boolean) => void
   onProduct: (product: AdminCatalogProductDetail) => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
 }
@@ -136,6 +137,9 @@ export function ProductEditor(props: ProductEditorProps) {
       }
     },
   }))
+
+  createEffect(() => props.onDirtyChange(form.state.isDirty))
+  onCleanup(() => props.onDirtyChange(false))
 
   createEffect(
     on(
@@ -429,6 +433,7 @@ type OptionRowsProps = {
 
 export function OptionRows(props: OptionRowsProps) {
   const entries = () => Object.entries(props.value)
+  const [keyErrors, setKeyErrors] = createSignal<Record<string, string>>({})
   const addOption = () => {
     let index = 1
     let key = 'Option'
@@ -439,10 +444,22 @@ export function OptionRows(props: OptionRowsProps) {
     props.onChange({ ...props.value, [key]: '' })
   }
   const updateKey = (oldKey: string, key: string) => {
-    if (!key || key === oldKey || key in props.value) return
+    if (!key) {
+      setKeyErrors(errors => ({ ...errors, [oldKey]: 'Option names cannot be empty.' }))
+      return false
+    }
+    if (key !== oldKey && key in props.value) {
+      setKeyErrors(errors => ({ ...errors, [oldKey]: 'Option names must be unique.' }))
+      return false
+    }
+    setKeyErrors(errors =>
+      Object.fromEntries(Object.entries(errors).filter(([name]) => name !== oldKey)),
+    )
+    if (key === oldKey) return true
     props.onChange(
       Object.fromEntries(entries().map(([name, value]) => [name === oldKey ? key : name, value])),
     )
+    return true
   }
 
   return (
@@ -455,13 +472,26 @@ export function OptionRows(props: OptionRowsProps) {
       >
         <For each={entries()}>
           {([name, value]) => (
-            <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2">
-              <Input
-                aria-label="Option name"
-                disabled={props.disabled}
-                value={name}
-                onChange={event => updateKey(name, event.currentTarget.value.trim())}
-              />
+            <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-2">
+              <div>
+                <Input
+                  aria-invalid={Boolean(keyErrors()[name])}
+                  aria-label="Option name"
+                  disabled={props.disabled}
+                  value={name}
+                  onChange={event => {
+                    if (!updateKey(name, event.currentTarget.value.trim()))
+                      event.currentTarget.value = name
+                  }}
+                />
+                <Show when={keyErrors()[name]}>
+                  {message => (
+                    <p class="mt-1 text-xs text-destructive" role="alert">
+                      {message()}
+                    </p>
+                  )}
+                </Show>
+              </div>
               <Input
                 aria-label={`${name} value`}
                 disabled={props.disabled}
@@ -474,9 +504,12 @@ export function OptionRows(props: OptionRowsProps) {
               <Button
                 aria-label={`Remove ${name} option`}
                 disabled={props.disabled}
-                onClick={() =>
+                onClick={() => {
+                  setKeyErrors(errors =>
+                    Object.fromEntries(Object.entries(errors).filter(([key]) => key !== name)),
+                  )
                   props.onChange(Object.fromEntries(entries().filter(([key]) => key !== name)))
-                }
+                }}
                 size="sm"
                 type="button"
                 variant="ghost"

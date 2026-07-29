@@ -26,6 +26,7 @@ import { For, Show, createSignal } from 'solid-js'
 import { toast } from 'solid-sonner'
 
 import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
+import { UnsavedChangesGuard } from '../components/unsaved-changes'
 import { useQueryResult } from '../query-options/result'
 import { CatalogFailure, OptionRows, transportMessage, validationMessages } from './forms'
 import type { CatalogRequests } from './query-options'
@@ -148,6 +149,7 @@ function CreateProductForm(props: CreateProductFormProps) {
   const [failure, setFailure] = createSignal<AdminCatalogError>()
   const [requestError, setRequestError] = createSignal<string>()
   const [slugEdited, setSlugEdited] = createSignal(false)
+  const [created, setCreated] = createSignal(false)
   const form = createForm(() => ({
     defaultValues,
     validators: {
@@ -170,6 +172,7 @@ function CreateProductForm(props: CreateProductFormProps) {
           queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
         ])
         toast.success('Product created.')
+        setCreated(true)
         props.onCreated(result.value.id)
       } catch (error) {
         setRequestError(transportMessage(error))
@@ -188,6 +191,7 @@ function CreateProductForm(props: CreateProductFormProps) {
         void form.handleSubmit()
       }}
     >
+      <UnsavedChangesGuard isDirty={() => form.state.isDirty && !created()} />
       <section aria-labelledby="new-product-section" class="border-b pb-5">
         <div class="mb-4 grid gap-1 sm:grid-cols-[11rem_1fr] sm:gap-5">
           <h2 class="text-sm font-semibold" id="new-product-section">
