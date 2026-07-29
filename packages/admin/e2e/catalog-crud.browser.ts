@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { BrowserContext, Locator } from '@playwright/test'
+import type { BrowserContext, Locator, Page } from '@playwright/test'
 
 const appUrl = 'http://127.0.0.1:4321'
 const authSecret = 'admin-browser-auth-secret-at-least-thirty-two-characters'
@@ -15,6 +15,44 @@ const expectSwitchTarget = async (input: Locator) => {
   })
   expect(size?.height).toBeGreaterThanOrEqual(44)
   expect(size?.width).toBeGreaterThanOrEqual(44)
+}
+
+const focusAppearance = (target: Locator) =>
+  target.evaluate(element => {
+    const style = getComputedStyle(element)
+    return {
+      borderColor: style.borderColor,
+      boxShadow: style.boxShadow,
+      focusVisible: element.matches(':focus-visible'),
+      outlineStyle: style.outlineStyle,
+      outlineWidth: Number.parseFloat(style.outlineWidth),
+    }
+  })
+
+const pressTabUntilFocused = async (page: Page, target: Locator, attemptsRemaining: number) => {
+  if (attemptsRemaining === 0) throw new Error('The target was not reachable with the Tab key.')
+
+  await page.keyboard.press('Tab')
+  if (await target.evaluate(element => element === document.activeElement)) return
+  await pressTabUntilFocused(page, target, attemptsRemaining - 1)
+}
+
+const focusWithKeyboard = async (page: Page, target: Locator) => {
+  await target.scrollIntoViewIfNeeded()
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await pressTabUntilFocused(page, target, 80)
+}
+
+const expectAdminFocusVisible = async (page: Page, target: Locator) => {
+  const normalBorderColor = await target.evaluate(element => getComputedStyle(element).borderColor)
+  await focusWithKeyboard(page, target)
+  const appearance = await focusAppearance(target)
+
+  expect(appearance.focusVisible).toBe(true)
+  expect(appearance.outlineStyle).toBe('solid')
+  expect(appearance.outlineWidth).toBeGreaterThanOrEqual(2)
+  expect(appearance.boxShadow).not.toBe('none')
+  expect(appearance.borderColor).not.toBe(normalBorderColor)
 }
 
 const authenticate = async (context: BrowserContext) => {
@@ -314,6 +352,41 @@ test('uses the mobile dashboard, order summaries, and checkout settings against 
   await settingsGuard.getByRole('button', { name: 'Үргэлжлүүлэн засах' }).click()
   await expect(page).toHaveURL(/\/admin\/settings$/u)
   await expect(deliveryFee).toHaveValue('6750')
+})
+
+const expectFocusBehaviorAtViewport = async (page: Page, width: number, height: number) => {
+  await page.setViewportSize({ width, height })
+  await page.goto('/admin/catalog/new')
+
+  const actionSearch = page.getByRole('button', { name: 'Үйлдэл хайх' })
+  await actionSearch.click()
+  await page.keyboard.press('Escape')
+  const pointerAppearance = await focusAppearance(actionSearch)
+  expect(pointerAppearance.focusVisible).toBe(false)
+  expect(pointerAppearance.outlineStyle).toBe('none')
+  expect(pointerAppearance.boxShadow).toBe('none')
+
+  await expectAdminFocusVisible(page, actionSearch)
+  await expectAdminFocusVisible(page, page.getByLabel('Барааны нэр', { exact: true }))
+  await expectAdminFocusVisible(page, page.getByLabel('Ангилал', { exact: true }))
+
+  await page.locator('summary').filter({ hasText: 'Дэлгэрэнгүй мэдээлэл' }).click()
+  await expectAdminFocusVisible(page, page.getByLabel('Товч тайлбар', { exact: true }))
+
+  if (width >= 1024) return
+
+  const bottomNavigationLink = page.getByRole('link', { name: 'Бараа', exact: true })
+  await focusWithKeyboard(page, bottomNavigationLink)
+  const bottomNavigationFocus = await focusAppearance(bottomNavigationLink)
+  expect(bottomNavigationFocus.focusVisible).toBe(true)
+  expect(bottomNavigationFocus.boxShadow).not.toBe('none')
+}
+
+test('shows focus only for keyboard navigation on admin controls at mobile and desktop sizes', async ({
+  page,
+}) => {
+  await expectFocusBehaviorAtViewport(page, 360, 800)
+  await expectFocusBehaviorAtViewport(page, 1280, 800)
 })
 
 test('guards drafts and runs the displayed command shortcuts', async ({ page }) => {

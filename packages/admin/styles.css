@@ -60,11 +60,14 @@
   & .z-button {
     min-height: 2.75rem !important;
     border-radius: var(--radius-md) !important;
-    box-shadow: none !important;
     font-size: 1rem !important;
     font-weight: 600 !important;
     transition-duration: 160ms !important;
     transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+
+  & .z-button:not(:focus-visible) {
+    box-shadow: none !important;
   }
 
   & .z-button:disabled {
@@ -115,10 +118,19 @@
   & .z-select-trigger,
   & .z-input-group {
     height: 3rem !important;
-    border-color: var(--input) !important;
     background: var(--card) !important;
-    box-shadow: none !important;
     font-size: 1rem !important;
+  }
+
+  & .z-input:not(:focus-visible),
+  & .z-native-select:not(:focus-visible),
+  & .z-select-trigger:not(:focus-visible),
+  &
+    .z-input-group:not(:focus-visible):not(
+      :has(> [data-slot='input-group-control']:focus-visible)
+    ) {
+    border-color: var(--input) !important;
+    box-shadow: none !important;
   }
 
   & .z-input::placeholder,
@@ -129,11 +141,27 @@
 
   & .z-textarea {
     min-height: 7rem;
-    border-color: var(--input) !important;
     background: var(--card) !important;
-    box-shadow: none !important;
     font-size: 1rem !important;
     line-height: 1.5 !important;
+  }
+
+  & .z-textarea:not(:focus-visible) {
+    border-color: var(--input) !important;
+    box-shadow: none !important;
+  }
+
+  & .z-button:focus-visible,
+  & .z-input:focus-visible:not([data-slot='input-group-control']),
+  & .z-native-select:focus-visible,
+  & .z-select-trigger:focus-visible,
+  & .z-textarea:focus-visible:not([data-slot='input-group-control']),
+  & .z-input-group:focus-visible,
+  & .z-input-group:has(> [data-slot='input-group-control']:focus-visible) {
+    border-color: var(--ring) !important;
+    outline: 2px solid var(--ring) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 22%, transparent) !important;
   }
 
   & .z-checkbox,
