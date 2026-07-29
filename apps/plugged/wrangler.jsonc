@@ -20,6 +20,8 @@
     },
   ],
   "kv_namespaces": [{ "binding": "CACHE" }, { "binding": "AUTH_KV" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "plugged" }],
+  "images": { "binding": "IMAGES" },
   "secrets": {
     "required": ["BETTER_AUTH_SECRETS", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   },
@@ -55,6 +57,14 @@
           "id": "470331f571da4b08ae62430790e630b8",
         },
       ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA",
+          "bucket_name": "plugged-development-media",
+          "remote": true,
+        },
+      ],
+      "images": { "binding": "IMAGES" },
       "vars": {
         "DEPLOYMENT_ENV": "development",
         "PUBLIC_APP_URL": "https://storekit.plugged.darjs.dev",

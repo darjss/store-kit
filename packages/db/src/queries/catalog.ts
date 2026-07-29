@@ -1,14 +1,21 @@
 import type {
   AdminCatalogProductListFilters,
+  AdminProductCreate,
+  AdminProductImageOrder,
+  AdminProductImageUpdate,
   AdminProductUpdate,
   AdminStockUpdate,
+  AdminVariantActivation,
+  AdminVariantCreate,
   AdminVariantUpdate,
 } from '@store-kit/contracts/admin-catalog'
-import { and, asc, count, desc, eq, exists, gt, gte, isNull, lte, ne, or, sql } from 'drizzle-orm'
+import { env } from 'cloudflare:workers'
+import { and, asc, count, desc, eq, exists, gte, inArray, lte, ne, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 
 import { db } from '../client'
+import { createId } from '../ids'
 import {
   brand,
   category,
@@ -17,6 +24,7 @@ import {
   productVariant,
   productVariantImage,
 } from '../schema/catalog'
+import { orderLine } from '../schema/shopping'
 import type { ProductListFilters } from '../schemas/catalog'
 
 export type PublishedProduct = typeof product.$inferSelect & {
@@ -196,6 +204,30 @@ const maximumActivePrice = sql<number | null>`(
   select max(${productVariant.priceMnt}) from ${productVariant}
   where ${productVariant.productId} = ${product.id} and ${productVariant.active} = 1
 )`
+const primaryImageR2Key = sql<string | null>`(
+  select ${productImage.r2Key} from ${productImage}
+  where ${productImage.productId} = ${product.id}
+  order by ${productImage.sortOrder}, ${productImage.id}
+  limit 1
+)`
+const primaryImageWidth = sql<number | null>`(
+  select ${productImage.width} from ${productImage}
+  where ${productImage.productId} = ${product.id}
+  order by ${productImage.sortOrder}, ${productImage.id}
+  limit 1
+)`
+const primaryImageHeight = sql<number | null>`(
+  select ${productImage.height} from ${productImage}
+  where ${productImage.productId} = ${product.id}
+  order by ${productImage.sortOrder}, ${productImage.id}
+  limit 1
+)`
+const primaryImageAlt = sql<string | null>`(
+  select ${productImage.alt} from ${productImage}
+  where ${productImage.productId} = ${product.id}
+  order by ${productImage.sortOrder}, ${productImage.id}
+  limit 1
+)`
 
 export const listAdminProducts = async (filters: AdminCatalogProductListFilters = {}) => {
   const limit = Math.min(filters.limit ?? 24, 100)
@@ -238,6 +270,10 @@ export const listAdminProducts = async (filters: AdminCatalogProductListFilters 
         .as('admin_product_featured'),
       brandName: sql<string | null>`${brand.name}`.as('admin_brand_name'),
       categoryName: sql<string | null>`${category.name}`.as('admin_category_name'),
+      primaryImageR2Key: primaryImageR2Key.as('admin_primary_image_r2_key'),
+      primaryImageWidth: primaryImageWidth.as('admin_primary_image_width'),
+      primaryImageHeight: primaryImageHeight.as('admin_primary_image_height'),
+      primaryImageAlt: primaryImageAlt.as('admin_primary_image_alt'),
       activeVariantCount: activeVariantCount.as('admin_active_variant_count'),
       totalStockQuantity: totalActiveStock.as('admin_total_stock_quantity'),
       minimumPriceMnt: minimumActivePrice.as('admin_minimum_price_mnt'),
@@ -257,9 +293,46 @@ export const listAdminProducts = async (filters: AdminCatalogProductListFilters 
     .leftJoin(brand, eq(brand.id, product.brandId))
     .leftJoin(category, eq(category.id, product.categoryId))
     .where(where)
-  const [items, totalRows] = await db.batch([list, total])
+  const [rows, totalRows] = await db.batch([list, total])
+  const items = rows.map(row => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    status: row.status,
+    featured: row.featured,
+    brandName: row.brandName,
+    categoryName: row.categoryName,
+    primaryImage:
+      row.primaryImageR2Key &&
+      row.primaryImageWidth &&
+      row.primaryImageHeight &&
+      row.primaryImageAlt
+        ? {
+            r2Key: row.primaryImageR2Key,
+            width: row.primaryImageWidth,
+            height: row.primaryImageHeight,
+            alt: row.primaryImageAlt,
+          }
+        : null,
+    activeVariantCount: row.activeVariantCount,
+    totalStockQuantity: row.totalStockQuantity,
+    minimumPriceMnt: row.minimumPriceMnt,
+    maximumPriceMnt: row.maximumPriceMnt,
+    updatedAt: row.updatedAt,
+  }))
 
   return { items, total: totalRows[0]?.value ?? 0, limit, offset }
+}
+
+export const listAdminSelectors = async () => {
+  const [brands, categories] = await db.batch([
+    db.query.brand.findMany({ orderBy: { name: 'asc', id: 'asc' } }),
+    db.query.category.findMany({ orderBy: { name: 'asc', id: 'asc' } }),
+  ])
+  return {
+    brands: brands.map(({ id, slug, name }) => ({ id, slug, name })),
+    categories: categories.map(({ id, slug, name, active }) => ({ id, slug, name, active })),
+  }
 }
 
 export const findAdminProduct = (productId: string) =>
@@ -268,9 +341,127 @@ export const findAdminProduct = (productId: string) =>
     with: {
       brand: true,
       category: true,
+      images: {
+        orderBy: { sortOrder: 'asc', id: 'asc' },
+        with: { variantLinks: true },
+      },
       variants: { orderBy: { sortOrder: 'asc', id: 'asc' } },
     },
   })
+
+export const findProductBySlug = (slug: string) =>
+  db.query.product.findFirst({ where: { slug }, columns: { id: true } })
+
+export const findVariantBySku = (sku: string) =>
+  db.query.productVariant.findFirst({ where: { sku }, columns: { id: true } })
+
+export const findAdminVariant = (productId: string, variantId: string) =>
+  db.query.productVariant.findFirst({ where: { id: variantId, productId } })
+
+export const findAdminImage = (productId: string, imageId: string) =>
+  db.query.productImage.findFirst({
+    where: { id: imageId, productId },
+    with: { variantLinks: true },
+  })
+
+export const findCatalogReferences = async (input: {
+  brandId: string | null
+  categoryId: string | null
+  productId?: string
+}) => {
+  const [brandRecord, categoryRecord, productRecord] = await Promise.all([
+    input.brandId
+      ? db.query.brand.findFirst({ where: { id: input.brandId }, columns: { id: true } })
+      : undefined,
+    input.categoryId
+      ? db.query.category.findFirst({
+          where: { id: input.categoryId },
+          columns: { id: true, active: true },
+        })
+      : undefined,
+    input.productId
+      ? db.query.product.findFirst({
+          where: { id: input.productId },
+          columns: { categoryId: true },
+        })
+      : undefined,
+  ])
+  return { brand: brandRecord, category: categoryRecord, product: productRecord }
+}
+
+export const findMissingVariantIds = async (productId: string, variantIds: string[]) => {
+  if (variantIds.length === 0) return []
+  const records = await db
+    .select({ id: productVariant.id })
+    .from(productVariant)
+    .where(and(eq(productVariant.productId, productId), inArray(productVariant.id, variantIds)))
+  const found = new Set(records.map(({ id }) => id))
+  return variantIds.filter(id => !found.has(id))
+}
+
+export const isR2KeyReferenced = async (r2Key: string) => {
+  const reference = await db
+    .select({ value: sql<number>`1` })
+    .from(orderLine)
+    .where(eq(orderLine.imageR2Key, r2Key))
+    .limit(1)
+  return reference.length === 1
+}
+
+const findReferencedR2Keys = async (r2Keys: string[]) => {
+  if (r2Keys.length === 0) return new Set<string>()
+  const references = await db
+    .selectDistinct({ r2Key: orderLine.imageR2Key })
+    .from(orderLine)
+    .where(inArray(orderLine.imageR2Key, r2Keys))
+  return new Set(references.flatMap(({ r2Key }) => (r2Key ? [r2Key] : [])))
+}
+
+export type AdminProductCreateWrite = AdminProductCreate & { createdAt: number }
+
+export const createAdminProduct = async (input: AdminProductCreateWrite) => {
+  const productId = createId('product')
+  const variantId = createId('productVariant')
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into product
+        (id, slug, brand_id, category_id, name, short_description, description, status,
+         featured, use_cases, created_at, updated_at)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', ?, ?)`,
+    ).bind(
+      productId,
+      input.slug,
+      input.brandId,
+      input.categoryId,
+      input.name,
+      input.shortDescription,
+      input.description,
+      input.status,
+      input.featured ? 1 : 0,
+      input.createdAt,
+      input.createdAt,
+    ),
+    env.DB.prepare(
+      `insert into product_variant
+        (id, product_id, sku, name, options, price_mnt, compare_at_price_mnt,
+         stock_quantity, active, sort_order, created_at, updated_at)
+       values (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+    ).bind(
+      variantId,
+      productId,
+      input.initialVariant.sku,
+      input.initialVariant.name,
+      JSON.stringify(input.initialVariant.options),
+      input.initialVariant.priceMnt,
+      input.initialVariant.compareAtPriceMnt,
+      input.initialVariant.stockQuantity,
+      input.initialVariant.sortOrder,
+      input.createdAt,
+      input.createdAt,
+    ),
+  ])
+  return { productId, variantId, persisted: await findAdminProduct(productId) }
+}
 
 export type AdminProductWrite = AdminProductUpdate & {
   productId: string
@@ -287,20 +478,138 @@ export const updateAdminProduct = async (input: AdminProductWrite) => {
             .where(and(eq(productVariant.productId, product.id), eq(productVariant.active, true))),
         )
       : undefined
-  const update = db
+  const updated = await db
     .update(product)
-    .set({ status: input.status, featured: input.featured, updatedAt: input.updatedAt })
+    .set({
+      name: input.name,
+      slug: input.slug,
+      shortDescription: input.shortDescription,
+      description: input.description,
+      status: input.status,
+      featured: input.featured,
+      brandId: input.brandId,
+      categoryId: input.categoryId,
+      updatedAt: input.updatedAt,
+    })
     .where(
       and(
         eq(product.id, input.productId),
         eq(product.updatedAt, input.expectedUpdatedAt),
+        ne(product.status, 'archived'),
         activationAllowed,
       ),
     )
     .returning({ id: product.id })
-  const [updated] = await db.batch([update])
-  const persisted = await findAdminProduct(input.productId)
-  return { updated: updated.length === 1, persisted }
+  return { updated: updated.length === 1, persisted: await findAdminProduct(input.productId) }
+}
+
+export const archiveAdminProduct = async (input: {
+  productId: string
+  expectedUpdatedAt: number
+  updatedAt: number
+}) => {
+  const updated = await db
+    .update(product)
+    .set({ status: 'archived', featured: false, updatedAt: input.updatedAt })
+    .where(
+      and(
+        eq(product.id, input.productId),
+        eq(product.updatedAt, input.expectedUpdatedAt),
+        ne(product.status, 'archived'),
+      ),
+    )
+    .returning({ id: product.id })
+  return { updated: updated.length === 1, persisted: await findAdminProduct(input.productId) }
+}
+
+export const restoreAdminProduct = async (input: {
+  productId: string
+  expectedUpdatedAt: number
+  updatedAt: number
+}) => {
+  const updated = await db
+    .update(product)
+    .set({ status: 'draft', featured: false, updatedAt: input.updatedAt })
+    .where(
+      and(
+        eq(product.id, input.productId),
+        eq(product.updatedAt, input.expectedUpdatedAt),
+        eq(product.status, 'archived'),
+      ),
+    )
+    .returning({ id: product.id })
+  return { updated: updated.length === 1, persisted: await findAdminProduct(input.productId) }
+}
+
+export const deleteAdminProduct = async (input: {
+  productId: string
+  expectedUpdatedAt: number
+}) => {
+  const before = await findAdminProduct(input.productId)
+  const deleted = await db
+    .delete(product)
+    .where(
+      and(
+        eq(product.id, input.productId),
+        eq(product.updatedAt, input.expectedUpdatedAt),
+        eq(product.status, 'archived'),
+      ),
+    )
+    .returning({ id: product.id })
+  if (deleted.length === 0)
+    return { deleted: false, persisted: await findAdminProduct(input.productId), media: [] }
+
+  const keys = before?.images.map(({ r2Key }) => r2Key) ?? []
+  const referenced = await findReferencedR2Keys(keys)
+  return {
+    deleted: true,
+    persisted: undefined,
+    media: keys.map(r2Key => ({ r2Key, referenced: referenced.has(r2Key) })),
+  }
+}
+
+export type AdminVariantCreateWrite = AdminVariantCreate & {
+  productId: string
+  variantId: string
+  createdAt: number
+  updatedAt: number
+}
+
+export const createAdminVariant = async (input: Omit<AdminVariantCreateWrite, 'variantId'>) => {
+  const variantId = createId('productVariant')
+  const [inserted, version] = await env.DB.batch([
+    env.DB.prepare(
+      `insert into product_variant
+        (id, product_id, sku, name, options, price_mnt, compare_at_price_mnt,
+         stock_quantity, active, sort_order, created_at, updated_at)
+       select ?, id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       from product
+       where id = ? and updated_at = ? and status != 'archived'`,
+    ).bind(
+      variantId,
+      input.sku,
+      input.name,
+      JSON.stringify(input.options),
+      input.priceMnt,
+      input.compareAtPriceMnt,
+      input.stockQuantity,
+      input.active ? 1 : 0,
+      input.sortOrder,
+      input.createdAt,
+      input.createdAt,
+      input.productId,
+      input.expectedProductUpdatedAt,
+    ),
+    env.DB.prepare(
+      `update product set updated_at = ?
+       where id = ? and updated_at = ? and status != 'archived'`,
+    ).bind(input.updatedAt, input.productId, input.expectedProductUpdatedAt),
+  ])
+  return {
+    created: inserted.meta.changes === 1 && version.meta.changes === 1,
+    variantId,
+    persisted: await findAdminProduct(input.productId),
+  }
 }
 
 export type AdminVariantWrite = AdminVariantUpdate & {
@@ -310,16 +619,6 @@ export type AdminVariantWrite = AdminVariantUpdate & {
 }
 
 export const updateAdminVariant = async (input: AdminVariantWrite) => {
-  const resultingPrice = input.priceMnt ?? productVariant.priceMnt
-  const compareAtAllowed =
-    input.compareAtPriceMnt === null
-      ? undefined
-      : input.compareAtPriceMnt === undefined
-        ? or(
-            isNull(productVariant.compareAtPriceMnt),
-            gt(productVariant.compareAtPriceMnt, resultingPrice),
-          )
-        : sql`${input.compareAtPriceMnt} > ${resultingPrice}`
   const activeSibling = alias(productVariant, 'active_sibling')
   const lastActiveVariantAllowed =
     input.active === false
@@ -345,12 +644,27 @@ export const updateAdminVariant = async (input: AdminVariantWrite) => {
           ),
         )
       : undefined
-  const update = db
+  const compareAtAllowed =
+    input.compareAtPriceMnt === null
+      ? undefined
+      : sql`${input.compareAtPriceMnt} > ${input.priceMnt}`
+  const editableProduct = exists(
+    db
+      .select({ value: sql`1` })
+      .from(product)
+      .where(and(eq(product.id, productVariant.productId), ne(product.status, 'archived'))),
+  )
+  const updated = await db
     .update(productVariant)
     .set({
+      sku: input.sku,
+      name: input.name,
+      options: input.options,
       priceMnt: input.priceMnt,
       compareAtPriceMnt: input.compareAtPriceMnt,
+      stockQuantity: input.stockQuantity,
       active: input.active,
+      sortOrder: input.sortOrder,
       updatedAt: input.updatedAt,
     })
     .where(
@@ -358,14 +672,43 @@ export const updateAdminVariant = async (input: AdminVariantWrite) => {
         eq(productVariant.id, input.variantId),
         eq(productVariant.productId, input.productId),
         eq(productVariant.updatedAt, input.expectedUpdatedAt),
+        editableProduct,
         compareAtAllowed,
         lastActiveVariantAllowed,
       ),
     )
     .returning({ id: productVariant.id })
-  const [updated] = await db.batch([update])
-  const persisted = await findAdminProduct(input.productId)
-  return { updated: updated.length === 1, persisted }
+  return { updated: updated.length === 1, persisted: await findAdminProduct(input.productId) }
+}
+
+export type AdminVariantActivationWrite = AdminVariantActivation & {
+  productId: string
+  variantId: string
+  updatedAt: number
+}
+
+export const updateAdminVariantActivation = async (input: AdminVariantActivationWrite) => {
+  const current = await findAdminVariant(input.productId, input.variantId)
+  if (!current)
+    return {
+      updated: false,
+      persisted: await findAdminProduct(input.productId),
+      variant: undefined,
+    }
+  return updateAdminVariant({
+    productId: input.productId,
+    variantId: input.variantId,
+    expectedUpdatedAt: input.expectedUpdatedAt,
+    sku: current.sku,
+    name: current.name,
+    options: current.options,
+    priceMnt: current.priceMnt,
+    compareAtPriceMnt: current.compareAtPriceMnt,
+    stockQuantity: current.stockQuantity,
+    active: input.active,
+    sortOrder: current.sortOrder,
+    updatedAt: input.updatedAt,
+  })
 }
 
 export type AdminStockWrite = AdminStockUpdate & {
@@ -375,7 +718,13 @@ export type AdminStockWrite = AdminStockUpdate & {
 }
 
 export const updateAdminStock = async (input: AdminStockWrite) => {
-  const update = db
+  const editableProduct = exists(
+    db
+      .select({ value: sql`1` })
+      .from(product)
+      .where(and(eq(product.id, productVariant.productId), ne(product.status, 'archived'))),
+  )
+  const updated = await db
     .update(productVariant)
     .set({ stockQuantity: input.stockQuantity, updatedAt: input.updatedAt })
     .where(
@@ -383,12 +732,249 @@ export const updateAdminStock = async (input: AdminStockWrite) => {
         eq(productVariant.id, input.variantId),
         eq(productVariant.productId, input.productId),
         eq(productVariant.updatedAt, input.expectedUpdatedAt),
+        editableProduct,
       ),
     )
     .returning({ id: productVariant.id })
-  const [updated] = await db.batch([update])
-  const persisted = await findAdminProduct(input.productId)
-  return { updated: updated.length === 1, persisted }
+  return { updated: updated.length === 1, persisted: await findAdminProduct(input.productId) }
+}
+
+export const deleteAdminVariant = async (input: {
+  productId: string
+  variantId: string
+  expectedProductUpdatedAt: number
+  expectedVariantUpdatedAt: number
+  updatedAt: number
+}) => {
+  const current = await findAdminVariant(input.productId, input.variantId)
+  if (!current) return { deleted: false, persisted: await findAdminProduct(input.productId) }
+  const [deleted, version] = await env.DB.batch([
+    env.DB.prepare(
+      `delete from product_variant
+       where id = ? and product_id = ? and updated_at = ? and active = 0
+         and exists (
+           select 1 from product
+           where id = ? and updated_at = ? and status != 'archived'
+         )`,
+    ).bind(
+      input.variantId,
+      input.productId,
+      input.expectedVariantUpdatedAt,
+      input.productId,
+      input.expectedProductUpdatedAt,
+    ),
+    env.DB.prepare(
+      `update product set updated_at = ?
+       where id = ? and updated_at = ? and status != 'archived'
+         and not exists (
+           select 1 from product_variant where id = ? and product_id = ?
+         )`,
+    ).bind(
+      input.updatedAt,
+      input.productId,
+      input.expectedProductUpdatedAt,
+      input.variantId,
+      input.productId,
+    ),
+  ])
+  return {
+    deleted: deleted.meta.changes > 0 && version.meta.changes === 1,
+    persisted: await findAdminProduct(input.productId),
+  }
+}
+
+export const attachAdminImage = async (input: {
+  productId: string
+  expectedUpdatedAt: number
+  updatedAt: number
+  imageId: string
+  r2Key: string
+  width: number
+  height: number
+  alt: string
+  variantIds: string[]
+  createdAt: number
+}) => {
+  const lastImage = await db.query.productImage.findFirst({
+    where: { productId: input.productId },
+    orderBy: { sortOrder: 'desc', id: 'desc' },
+    columns: { sortOrder: true },
+  })
+  const sortOrder = (lastImage?.sortOrder ?? 0) + 10
+  const statements = [
+    env.DB.prepare(
+      `insert into product_image
+        (id, product_id, r2_key, width, height, alt, sort_order, created_at)
+       select ?, id, ?, ?, ?, ?, ?, ?
+       from product
+       where id = ? and updated_at = ? and status != 'archived'`,
+    ).bind(
+      input.imageId,
+      input.r2Key,
+      input.width,
+      input.height,
+      input.alt,
+      sortOrder,
+      input.createdAt,
+      input.productId,
+      input.expectedUpdatedAt,
+    ),
+    ...input.variantIds.map(variantId =>
+      env.DB.prepare(
+        `insert into product_variant_image (product_id, variant_id, image_id)
+         values (?, ?, ?)`,
+      ).bind(input.productId, variantId, input.imageId),
+    ),
+    env.DB.prepare(
+      `update product set updated_at = ?
+       where id = ? and updated_at = ? and status != 'archived'`,
+    ).bind(input.updatedAt, input.productId, input.expectedUpdatedAt),
+  ]
+  const results = await env.DB.batch(statements)
+  return {
+    attached: results[0]?.meta.changes === 1 && results.at(-1)?.meta.changes === 1,
+    persisted: await findAdminProduct(input.productId),
+  }
+}
+
+export const updateAdminImage = async (
+  productId: string,
+  imageId: string,
+  input: AdminProductImageUpdate & { updatedAt: number },
+) => {
+  const statements = [
+    env.DB.prepare(
+      `update product_image set alt = ?
+       where id = ? and product_id = ?
+         and exists (
+           select 1 from product
+           where id = ? and updated_at = ? and status != 'archived'
+         )`,
+    ).bind(input.alt, imageId, productId, productId, input.expectedUpdatedAt),
+    env.DB.prepare(
+      `delete from product_variant_image
+       where image_id = ? and product_id = ?
+         and exists (
+           select 1 from product
+           where id = ? and updated_at = ? and status != 'archived'
+         )`,
+    ).bind(imageId, productId, productId, input.expectedUpdatedAt),
+    ...input.variantIds.map(variantId =>
+      env.DB.prepare(
+        `insert into product_variant_image (product_id, variant_id, image_id)
+         select ?, ?, ?
+         where exists (
+           select 1 from product
+           where id = ? and updated_at = ? and status != 'archived'
+         )`,
+      ).bind(productId, variantId, imageId, productId, input.expectedUpdatedAt),
+    ),
+    env.DB.prepare(
+      `update product set updated_at = ?
+       where id = ? and updated_at = ? and status != 'archived'
+         and exists (
+           select 1 from product_image where id = ? and product_id = ?
+         )`,
+    ).bind(input.updatedAt, productId, input.expectedUpdatedAt, imageId, productId),
+  ]
+  const results = await env.DB.batch(statements)
+  return {
+    updated: results[0]?.meta.changes === 1 && results.at(-1)?.meta.changes === 1,
+    persisted: await findAdminProduct(productId),
+  }
+}
+
+export const reorderAdminImages = async (
+  productId: string,
+  input: AdminProductImageOrder & { updatedAt: number },
+) => {
+  const current = await db
+    .select({ id: productImage.id })
+    .from(productImage)
+    .where(eq(productImage.productId, productId))
+  const currentIds = current.map(({ id }) => id).toSorted()
+  const requestedIds = input.imageIds.toSorted()
+  if (
+    currentIds.length !== requestedIds.length ||
+    currentIds.some((imageId, index) => imageId !== requestedIds[index])
+  )
+    return { updated: false, persisted: await findAdminProduct(productId) }
+
+  const statements = [
+    env.DB.prepare(
+      `update product_image set sort_order = sort_order + 1000000
+       where product_id = ?
+         and exists (
+           select 1 from product
+           where id = ? and updated_at = ? and status != 'archived'
+         )`,
+    ).bind(productId, productId, input.expectedUpdatedAt),
+    ...input.imageIds.map((imageId, index) =>
+      env.DB.prepare(
+        `update product_image set sort_order = ?
+         where id = ? and product_id = ?
+           and exists (
+             select 1 from product
+             where id = ? and updated_at = ? and status != 'archived'
+           )`,
+      ).bind((index + 1) * 10, imageId, productId, productId, input.expectedUpdatedAt),
+    ),
+    env.DB.prepare(
+      `update product set updated_at = ?
+       where id = ? and updated_at = ? and status != 'archived'`,
+    ).bind(input.updatedAt, productId, input.expectedUpdatedAt),
+  ]
+  const results = await env.DB.batch(statements)
+  return {
+    updated: results.at(-1)?.meta.changes === 1,
+    persisted: await findAdminProduct(productId),
+  }
+}
+
+export const removeAdminImage = async (input: {
+  productId: string
+  imageId: string
+  expectedUpdatedAt: number
+  updatedAt: number
+}) => {
+  const image = await findAdminImage(input.productId, input.imageId)
+  if (!image)
+    return {
+      removed: false,
+      image: undefined,
+      persisted: await findAdminProduct(input.productId),
+      referenced: false,
+    }
+  const [removed, version] = await env.DB.batch([
+    env.DB.prepare(
+      `delete from product_image
+       where id = ? and product_id = ?
+         and exists (
+           select 1 from product
+           where id = ? and updated_at = ? and status != 'archived'
+         )`,
+    ).bind(input.imageId, input.productId, input.productId, input.expectedUpdatedAt),
+    env.DB.prepare(
+      `update product set updated_at = ?
+       where id = ? and updated_at = ? and status != 'archived'
+         and not exists (
+           select 1 from product_image where id = ? and product_id = ?
+         )`,
+    ).bind(
+      input.updatedAt,
+      input.productId,
+      input.expectedUpdatedAt,
+      input.imageId,
+      input.productId,
+    ),
+  ])
+  const didRemove = removed.meta.changes > 0 && version.meta.changes === 1
+  return {
+    removed: didRemove,
+    image,
+    persisted: await findAdminProduct(input.productId),
+    referenced: didRemove ? await isR2KeyReferenced(image.r2Key) : false,
+  }
 }
 
 export const catalogQuery = {
@@ -397,8 +983,27 @@ export const catalogQuery = {
   listPublishedCategories,
   listBrands,
   listAdminProducts,
+  listAdminSelectors,
   findAdminProduct,
+  findProductBySlug,
+  findVariantBySku,
+  findAdminVariant,
+  findAdminImage,
+  findCatalogReferences,
+  findMissingVariantIds,
+  createAdminProduct,
   updateAdminProduct,
+  archiveAdminProduct,
+  restoreAdminProduct,
+  deleteAdminProduct,
+  createAdminVariant,
   updateAdminVariant,
+  updateAdminVariantActivation,
   updateAdminStock,
+  deleteAdminVariant,
+  attachAdminImage,
+  updateAdminImage,
+  reorderAdminImages,
+  removeAdminImage,
+  isR2KeyReferenced,
 }

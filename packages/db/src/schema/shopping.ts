@@ -109,6 +109,9 @@ export const orderLine = sqliteTable(
   },
   table => [
     primaryKey({ name: 'order_line_pk', columns: [table.id] }),
+    index('order_line_product_id_index').on(table.productId),
+    index('order_line_variant_id_index').on(table.variantId),
+    index('order_line_image_r2_key_index').on(table.imageR2Key),
     check('order_line_unit_price_mnt_check', sql`${table.unitPriceMnt} >= 0`),
     check('order_line_quantity_check', sql`${table.quantity} > 0`),
     check('order_line_total_mnt_check', sql`${table.lineTotalMnt} >= 0`),

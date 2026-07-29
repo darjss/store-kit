@@ -129,6 +129,7 @@ export const productImage = sqliteTable(
     primaryKey({ name: 'product_image_pk', columns: [table.id] }),
     uniqueIndex('product_image_product_id_sort_order_unique').on(table.productId, table.sortOrder),
     uniqueIndex('product_image_id_product_id_unique').on(table.id, table.productId),
+    uniqueIndex('product_image_r2_key_unique').on(table.r2Key),
     check('product_image_width_check', sql`${table.width} > 0`),
     check('product_image_height_check', sql`${table.height} > 0`),
     check('product_image_alt_check', sql`length(trim(${table.alt})) > 0`),

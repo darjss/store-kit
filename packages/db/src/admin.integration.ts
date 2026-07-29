@@ -111,7 +111,14 @@ describe('admin database foundation', () => {
     const activation = await database.query.catalog.updateAdminProduct({
       productId: draft.productId,
       expectedUpdatedAt: draft.updatedAt,
+      name: 'Admin Product 711',
+      slug: 'admin-product-711',
+      shortDescription: null,
+      description: null,
       status: 'active',
+      featured: false,
+      brandId: null,
+      categoryId: null,
       updatedAt: draft.updatedAt + 1,
     })
     expect(activation.updated).toBe(false)
@@ -122,7 +129,14 @@ describe('admin database foundation', () => {
       productId: active.productId,
       variantId: active.variantId,
       expectedUpdatedAt: active.updatedAt,
+      sku: 'ADMIN-712',
+      name: 'Default',
+      options: {},
+      priceMnt: 10000,
+      compareAtPriceMnt: 12000,
+      stockQuantity: 3,
       active: false,
+      sortOrder: 0,
       updatedAt: active.updatedAt + 1,
     })
     expect(deactivation.updated).toBe(false)

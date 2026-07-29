@@ -95,6 +95,10 @@ const seedProduct = async ({
     const variantId = createId('productVariant')
     const sku = variant.sku ?? `ADMIN-API-${suffix}-${index}`
     const variantName = variant.name ?? `Variant ${index + 1}`
+    const priceMnt = variant.priceMnt ?? 10_000 + index * 1_000
+    const compareAtPriceMnt = variant.compareAtPriceMnt ?? null
+    const stockQuantity = variant.stockQuantity ?? 5
+    const active = variant.active ?? true
     statements.push(
       env.DB.prepare(
         `insert into product_variant
@@ -106,16 +110,27 @@ const seedProduct = async ({
         productId,
         sku,
         variantName,
-        variant.priceMnt ?? 10_000 + index * 1_000,
-        variant.compareAtPriceMnt ?? null,
-        variant.stockQuantity ?? 5,
-        variant.active ?? true,
+        priceMnt,
+        compareAtPriceMnt,
+        stockQuantity,
+        active,
         index,
         updatedAt,
         updatedAt,
       ),
     )
-    return { id: variantId, name: variantName, sku, updatedAt }
+    return {
+      id: variantId,
+      name: variantName,
+      sku,
+      options: {},
+      priceMnt,
+      compareAtPriceMnt,
+      stockQuantity,
+      active,
+      sortOrder: index,
+      updatedAt,
+    }
   })
 
   await env.DB.batch(statements)
@@ -125,10 +140,56 @@ const seedProduct = async ({
     slug,
     updatedAt,
     variants: seededVariants,
+    brandId,
+    categoryId,
     brandName: brandId ? `Admin Brand ${suffix}` : null,
     categoryName: categoryId ? `Admin Category ${suffix}` : null,
+    status,
+    featured,
   }
 }
+
+const productUpdate = (
+  product: Awaited<ReturnType<typeof seedProduct>>,
+  overrides: Record<string, unknown> = {},
+) => ({
+  expectedUpdatedAt: product.updatedAt,
+  name: product.name,
+  slug: product.slug,
+  shortDescription: null,
+  description: null,
+  status: product.status === 'active' ? ('active' as const) : ('draft' as const),
+  featured: product.featured,
+  brandId: product.brandId,
+  categoryId: product.categoryId,
+  ...overrides,
+})
+
+const variantUpdate = (
+  variant: {
+    sku: string
+    name: string
+    options: Record<string, string>
+    priceMnt: number
+    compareAtPriceMnt: number | null
+    stockQuantity: number
+    active: boolean
+    sortOrder: number
+    updatedAt: number
+  },
+  overrides: Record<string, unknown> = {},
+) => ({
+  expectedUpdatedAt: variant.updatedAt,
+  sku: variant.sku,
+  name: variant.name,
+  options: variant.options,
+  priceMnt: variant.priceMnt,
+  compareAtPriceMnt: variant.compareAtPriceMnt,
+  stockQuantity: variant.stockQuantity,
+  active: variant.active,
+  sortOrder: variant.sortOrder,
+  ...overrides,
+})
 
 const requestCatalog = (
   path: string,
@@ -203,12 +264,12 @@ describe('admin catalog API', () => {
       {
         path: `/api/admin/catalog/products/${productWrite.id}`,
         method: 'PATCH' as const,
-        body: { expectedUpdatedAt: productWrite.updatedAt, featured: true },
+        body: productUpdate(productWrite, { featured: true }),
       },
       {
         path: `/api/admin/catalog/products/${variantWrite.id}/variants/${variantWrite.variants[0]!.id}`,
         method: 'PATCH' as const,
-        body: { expectedUpdatedAt: variantWrite.updatedAt, priceMnt: 11_000 },
+        body: variantUpdate(variantWrite.variants[0]!, { priceMnt: 11_000 }),
       },
       {
         path: `/api/admin/catalog/products/${stockWrite.id}/variants/${stockWrite.variants[0]!.id}/stock`,
@@ -410,7 +471,7 @@ describe('admin catalog API', () => {
         await requestCatalog(`/api/admin/catalog/products/${product.id}`, {
           method: 'PATCH',
           cookie: approved.cookie,
-          body: { expectedUpdatedAt: detail.updatedAt, featured: true, status: 'archived' },
+          body: productUpdate(product, { featured: true, status: 'draft' }),
         }),
       ),
     )
@@ -422,12 +483,11 @@ describe('admin catalog API', () => {
           {
             method: 'PATCH',
             cookie: approved.cookie,
-            body: {
-              expectedUpdatedAt: variantBefore.updatedAt,
+            body: variantUpdate(variantBefore, {
               priceMnt: 18_000,
               compareAtPriceMnt: 22_000,
               active: true,
-            },
+            }),
           },
         ),
       ),
@@ -451,7 +511,7 @@ describe('admin catalog API', () => {
       name: 'Stable Product Name',
       slug: product.slug,
       featured: true,
-      status: 'archived',
+      status: 'draft',
       variants: [
         { name: 'Primary', priceMnt: 10_000, stockQuantity: 5, active: true },
         {
@@ -476,7 +536,7 @@ describe('admin catalog API', () => {
     expect(persisted).toEqual({
       name: 'Stable Product Name',
       slug: product.slug,
-      status: 'archived',
+      status: 'draft',
       featured: 1,
       sku: product.variants[1]!.sku,
       variant_name: 'Inactive',
@@ -499,7 +559,7 @@ describe('admin catalog API', () => {
       await requestCatalog(`/api/admin/catalog/products/${inactiveDraft.id}`, {
         method: 'PATCH',
         cookie: approved.cookie,
-        body: { expectedUpdatedAt: inactiveDraft.updatedAt, status: 'active' },
+        body: productUpdate(inactiveDraft, { status: 'active' }),
       }),
     )
     expect(activation).toMatchObject({
@@ -512,7 +572,7 @@ describe('admin catalog API', () => {
       await requestCatalog(`/api/admin/catalog/products/${active.id}/variants/${variantId}`, {
         method: 'PATCH',
         cookie: approved.cookie,
-        body: { expectedUpdatedAt: active.updatedAt, active: false },
+        body: variantUpdate(active.variants[0]!, { active: false }),
       }),
     )
     expect(lastActive).toMatchObject({
@@ -524,11 +584,10 @@ describe('admin catalog API', () => {
       await requestCatalog(`/api/admin/catalog/products/${active.id}/variants/${variantId}`, {
         method: 'PATCH',
         cookie: approved.cookie,
-        body: {
-          expectedUpdatedAt: active.updatedAt,
+        body: variantUpdate(active.variants[0]!, {
           priceMnt: 12_000,
           compareAtPriceMnt: 12_000,
-        },
+        }),
       }),
     )
     expect(invalidCompareAt).toMatchObject({
@@ -541,7 +600,7 @@ describe('admin catalog API', () => {
         await requestCatalog(`/api/admin/catalog/products/${active.id}`, {
           method: 'PATCH',
           cookie: approved.cookie,
-          body: { expectedUpdatedAt: active.updatedAt, featured: true },
+          body: productUpdate(active, { featured: true }),
         }),
       ),
     )
@@ -549,7 +608,7 @@ describe('admin catalog API', () => {
       await requestCatalog(`/api/admin/catalog/products/${active.id}`, {
         method: 'PATCH',
         cookie: approved.cookie,
-        body: { expectedUpdatedAt: active.updatedAt, featured: false },
+        body: productUpdate(active, { featured: false }),
       }),
     )
     expect(firstWrite.updatedAt).toBeGreaterThan(active.updatedAt)

@@ -2,8 +2,8 @@
 
 Catalog media is always read from a remote R2 custom domain. The production origin is fixed at
 `https://plugged.storekitcdn.darjs.dev/`. Development must use a separate remote bucket and custom
-domain; it may never fall back to the production origin. The Astro Worker has no public R2 read
-binding or media route.
+domain; it may never fall back to the production origin. The Astro Worker has no media delivery
+route. Its `MEDIA` binding is only for approved admin writes and reference-aware deletes.
 
 The non-production client demo uses:
 
@@ -27,6 +27,7 @@ Deployment tasks require an explicit `env.development` or `env.production` entry
 - a unique Worker `name`
 - `DB` with both `database_name` and `database_id`
 - `CACHE`, `AUTH_KV`, and Astro's `SESSION` binding with IDs
+- `MEDIA` bound to the environment's R2 bucket and an `IMAGES` binding
 - `DEPLOYMENT_ENV`, `PUBLIC_APP_URL`, `PUBLIC_MEDIA_BASE_URL`, and `QPAY_BASE_URL` variables
 
 Wrangler variables and bindings are non-inheritable between environments, so declare every item in

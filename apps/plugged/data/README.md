@@ -25,6 +25,8 @@ types should be described as stocked until a real purchasable source is added.
 - Stock: the old seed script's development default of 10 units per variant.
 - Checkout settings: retained from the validated Store Kit seed.
 
+`catalog.seed.json` is initial provisioning input. Admin catalog changes write live D1 and R2 data and do not update this file. Rerunning the data seed intentionally upserts records and can overwrite fields on records that the seed owns; it is not ongoing synchronization.
+
 The imported MVP subset is:
 
 - TANGZU Wan'er 2 Red Lion

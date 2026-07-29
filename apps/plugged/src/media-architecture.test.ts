@@ -37,14 +37,14 @@ describe('catalog media delivery architecture', () => {
     expect(offenders).toEqual([])
   })
 
-  test('has no Worker media route or runtime R2 read binding', async () => {
+  test('keeps catalog delivery off the Worker while allowing media writes', async () => {
     const fetchSource = await readFile(resolve(pluggedDirectory, 'src/fetch.ts'), 'utf8')
     const wranglerConfig = await readFile(resolve(pluggedDirectory, 'wrangler.jsonc'), 'utf8')
 
     await expect(access(resolve(pluggedDirectory, 'src/media.ts'))).rejects.toThrow()
     expect(fetchSource).not.toContain('handleMediaRequest')
-    expect(wranglerConfig).not.toContain('"r2_buckets"')
-    expect(wranglerConfig).not.toContain('"binding": "MEDIA"')
+    expect(wranglerConfig).toContain('"r2_buckets"')
+    expect(wranglerConfig).toContain('"binding": "MEDIA"')
   })
 
   test('uses Unpic Cloudflare transformers for Astro and Solid catalog images', async () => {

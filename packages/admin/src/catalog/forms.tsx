@@ -48,7 +48,7 @@ const transportMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'The save request failed. Try again.'
 
 const productStatus = (value: string): AdminProductUpdate['status'] => {
-  if (value === 'active' || value === 'archived') return value
+  if (value === 'active') return value
   return 'draft'
 }
 
@@ -95,8 +95,14 @@ export function ProductVisibilityForm(props: ProductVisibilityFormProps) {
   const validator = toStandardSchema(adminProductUpdateSchema)
   const defaultValues: AdminProductUpdate = {
     expectedUpdatedAt: props.product.updatedAt,
-    status: props.product.status,
+    name: props.product.name,
+    slug: props.product.slug,
+    shortDescription: props.product.shortDescription,
+    description: props.product.description,
+    status: productStatus(props.product.status),
     featured: props.product.featured,
+    brandId: props.product.brand?.id ?? null,
+    categoryId: props.product.category?.id ?? null,
   }
   const form = createForm(() => ({
     defaultValues,
@@ -206,9 +212,14 @@ export function VariantEditor(props: VariantEditorProps) {
   const stockValidator = toStandardSchema(adminStockUpdateSchema)
   const commercialDefaultValues: AdminVariantUpdate = {
     expectedUpdatedAt: props.variant.updatedAt,
+    sku: props.variant.sku,
+    name: props.variant.name,
+    options: props.variant.options,
     priceMnt: props.variant.priceMnt,
     compareAtPriceMnt: props.variant.compareAtPriceMnt,
+    stockQuantity: props.variant.stockQuantity,
     active: props.variant.active,
+    sortOrder: props.variant.sortOrder,
   }
 
   const commercialForm = createForm(() => ({

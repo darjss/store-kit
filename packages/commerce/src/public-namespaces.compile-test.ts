@@ -3,6 +3,8 @@ type CommerceModule = typeof import('./index')
 
 export const provePublicNamespacesCompile = (db: DatabaseModule, storeKit: CommerceModule) => {
   void db.database.query.catalog.listPublishedProducts
+  void db.database.query.catalog.createAdminProduct
+  void db.database.query.catalog.attachAdminImage
   void db.database.query.cart.findVariants
   void db.database.query.checkout.insertOrder
   void db.database.query.dashboard.getOverview
@@ -11,6 +13,9 @@ export const provePublicNamespacesCompile = (db: DatabaseModule, storeKit: Comme
   void db.database.query.settings.getStore
 
   void storeKit.commerce.catalog.listProducts
+  void storeKit.commerce.catalog.createAdminProduct
+  void storeKit.commerce.catalog.createAdminVariant
+  void storeKit.commerce.catalog.uploadAdminImage
   void storeKit.commerce.cart.validate
   void storeKit.commerce.checkout.createOrder
   void storeKit.commerce.dashboard.getOverview

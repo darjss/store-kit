@@ -75,6 +75,8 @@ const start = async () => {
       'exec',
       'wrangler',
       'dev',
+      '--env',
+      'development',
       '--local',
       '--ip',
       '127.0.0.1',

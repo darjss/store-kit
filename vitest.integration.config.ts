@@ -17,14 +17,17 @@ export default defineConfig({
           DEPLOYMENT_ENV: 'production',
           TEST_MIGRATIONS: (
             await Promise.all(
-              ['20260723180551_old_karnak', '20260727160704_parallel_starhawk'].map(
-                async directory =>
-                  (
-                    await readD1Migrations(path.join(root, 'packages/db/migrations', directory))
-                  ).map(migration => ({
+              [
+                '20260723180551_old_karnak',
+                '20260727160704_parallel_starhawk',
+                '20260729022502_massive_captain_marvel',
+              ].map(async directory =>
+                (await readD1Migrations(path.join(root, 'packages/db/migrations', directory))).map(
+                  migration => ({
                     ...migration,
                     name: `${directory}/${migration.name}`,
-                  })),
+                  }),
+                ),
               ),
             )
           ).flat(),
