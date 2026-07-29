@@ -37,24 +37,27 @@ type PageHeaderProps = {
 }
 
 export function PageHeader(props: PageHeaderProps) {
-  const titleId = props.titleId ?? `admin-page-title-${createUniqueId()}`
+  const generatedTitleId = `admin-page-title-${createUniqueId()}`
+  const titleId = () => props.titleId ?? generatedTitleId
 
   return (
-    <header class="flex min-h-14 flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
+    <header class="flex min-h-16 flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
       <div class="min-w-0">
-        <h1 class="text-xl leading-7 font-semibold tracking-[-0.015em] text-balance" id={titleId}>
+        <h1 class="text-xl leading-7 font-semibold tracking-[-0.015em] text-balance" id={titleId()}>
           {props.title}
         </h1>
         <Show when={props.description}>
           {description => (
-            <p class="mt-0.5 max-w-[70ch] text-[13px] leading-[1.4] text-pretty text-muted-foreground">
+            <p class="mt-1 max-w-[70ch] text-sm leading-5 text-pretty text-muted-foreground">
               {description()}
             </p>
           )}
         </Show>
       </div>
       <Show when={props.actions}>
-        <div class="flex shrink-0 flex-wrap items-center gap-1.5">{props.actions}</div>
+        <div class="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto [&_.z-button]:flex-1 sm:[&_.z-button]:flex-none">
+          {props.actions}
+        </div>
       </Show>
     </header>
   )
@@ -154,18 +157,20 @@ type AdminEmptyStateProps = {
 
 export function AdminEmptyState(props: AdminEmptyStateProps) {
   return (
-    <Empty class="border-0 bg-card px-4 py-5! sm:px-5!">
+    <Empty class="border-y bg-card px-4 py-8! sm:px-5!">
       <EmptyHeader>
         <Show when={props.icon}>
           <EmptyMedia class="mb-0!" variant="icon">
             {props.icon}
           </EmptyMedia>
         </Show>
-        <EmptyTitle class="text-sm">{props.title}</EmptyTitle>
+        <EmptyTitle>{props.title}</EmptyTitle>
         <EmptyDescription class="max-w-xl">{props.description}</EmptyDescription>
       </EmptyHeader>
       <Show when={props.action}>
-        <EmptyContent class="mt-1">{props.action}</EmptyContent>
+        <EmptyContent class="mt-1 w-full sm:w-auto [&_.z-button]:w-full sm:[&_.z-button]:w-auto">
+          {props.action}
+        </EmptyContent>
       </Show>
     </Empty>
   )
@@ -215,34 +220,53 @@ export function TableSkeleton(props: TableSkeletonProps) {
   const rows = () => Array.from({ length: props.rows ?? 5 }, (_, index) => index)
 
   return (
-    <div aria-busy="true" class="overflow-hidden rounded-lg border bg-card" role="status">
+    <div aria-busy="true" class="bg-card" role="status">
       <span class="sr-only">Loading table data…</span>
-      <Table>
-        <TableHeader>
-          <TableRow class="hover:bg-transparent">
-            <For each={props.columns}>
-              {column => <TableHead class={column.class}>{column.label}</TableHead>}
+      <div class="border-y md:hidden">
+        <For each={rows()}>
+          {() => (
+            <div class="flex min-h-20 items-center gap-3 border-b px-4 py-3 last:border-b-0">
+              <Skeleton class="size-12 shrink-0 rounded-md" />
+              <div class="min-w-0 flex-1 space-y-2">
+                <Skeleton class="h-4 w-2/3 max-w-48" />
+                <Skeleton class="h-3.5 w-1/3 max-w-28" />
+              </div>
+              <div class="w-16 space-y-2">
+                <Skeleton class="ml-auto h-4 w-14" />
+                <Skeleton class="ml-auto h-3.5 w-10" />
+              </div>
+            </div>
+          )}
+        </For>
+      </div>
+      <div class="hidden overflow-hidden rounded-lg border md:block">
+        <Table>
+          <TableHeader>
+            <TableRow class="hover:bg-transparent">
+              <For each={props.columns}>
+                {column => <TableHead class={column.class}>{column.label}</TableHead>}
+              </For>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <For each={rows()}>
+              {() => (
+                <TableRow class="hover:bg-transparent">
+                  <For each={props.columns}>
+                    {(column, index) => (
+                      <TableCell class={column.class}>
+                        <Skeleton
+                          class={index() === 0 ? 'h-4 w-32 max-w-full' : 'h-4 w-20 max-w-full'}
+                        />
+                      </TableCell>
+                    )}
+                  </For>
+                </TableRow>
+              )}
             </For>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <For each={rows()}>
-            {() => (
-              <TableRow class="hover:bg-transparent">
-                <For each={props.columns}>
-                  {(column, index) => (
-                    <TableCell class={column.class}>
-                      <Skeleton
-                        class={index() === 0 ? 'h-4 w-32 max-w-full' : 'h-4 w-20 max-w-full'}
-                      />
-                    </TableCell>
-                  )}
-                </For>
-              </TableRow>
-            )}
-          </For>
-        </TableBody>
-      </Table>
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }
