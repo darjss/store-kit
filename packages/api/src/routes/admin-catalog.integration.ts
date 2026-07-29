@@ -10,6 +10,7 @@ import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
 import { createAdminSession } from '~/test/admin-session'
+import fixtureDataUrl from '~/test/fixtures/catalog-upload.jpg?inline'
 
 import { adminCatalogRoutes } from './admin-catalog'
 import { catalogRoutes } from './catalog'
@@ -17,6 +18,13 @@ import { catalogRoutes } from './catalog'
 let sequence = 0
 
 const nextSequence = () => ++sequence
+
+const fixtureBytes = Uint8Array.from(
+  atob(fixtureDataUrl.slice(fixtureDataUrl.indexOf(',') + 1)),
+  character => character.charCodeAt(0),
+)
+
+const imageFile = (type = 'image/jpeg') => new File([fixtureBytes], 'catalog-upload.jpg', { type })
 
 type SeedVariant = {
   active?: boolean
@@ -191,25 +199,41 @@ const variantUpdate = (
   ...overrides,
 })
 
+type CatalogMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
 const requestCatalog = (
   path: string,
   {
     body,
     cookie,
     method = 'GET',
-  }: { body?: unknown; cookie?: string; method?: 'GET' | 'PATCH' } = {},
-) =>
-  adminCatalogRoutes.handle(
+  }: { body?: unknown | FormData; cookie?: string; method?: CatalogMethod } = {},
+) => {
+  const multipart = body instanceof FormData
+  return adminCatalogRoutes.handle(
     new Request(`https://plugged.mn${path}`, {
       method,
       headers: {
-        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+        ...(body === undefined || multipart ? {} : { 'content-type': 'application/json' }),
         ...(cookie ? { cookie } : {}),
         origin: 'https://plugged.mn',
       },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
     }),
   )
+}
+
+const imageUploadBody = (
+  expectedUpdatedAt: number,
+  { alt = 'Product image', file = imageFile(), variantIds = [] as string[] } = {},
+) => {
+  const body = new FormData()
+  body.set('file', file)
+  body.set('alt', alt)
+  body.set('expectedUpdatedAt', String(expectedUpdatedAt))
+  if (variantIds.length > 0) body.set('variantIds', JSON.stringify(variantIds))
+  return body
+}
 
 const deserializeCatalog = async <Value>(response: Response) =>
   Result.deserialize<Value, AdminCatalogError>(await response.json())
@@ -252,51 +276,191 @@ const seedClaimedOrder = async (productId: string, variantId: string) => {
 }
 
 describe('admin catalog API', () => {
-  it('requires a real approved Better Auth session on every route and method', async () => {
+  it('requires current D1 approval on every planned route and method', async () => {
+    const detail = await seedProduct()
     const productWrite = await seedProduct()
-    const variantWrite = await seedProduct()
+    const productDelete = await seedProduct()
+    const archive = await seedProduct()
+    const restore = await seedProduct({ status: 'archived' })
+    const variantCreate = await seedProduct({ status: 'draft' })
+    const variantWrite = await seedProduct({ status: 'draft' })
+    const variantDelete = await seedProduct({ status: 'draft' })
+    const activation = await seedProduct({ status: 'draft' })
     const stockWrite = await seedProduct()
-    const unapproved = await createAdminSession(false)
-    const approved = await createAdminSession(true)
-    const requests = [
-      { path: '/api/admin/catalog/products' },
-      { path: `/api/admin/catalog/products/${productWrite.id}` },
+    const upload = await seedProduct()
+    const reorder = await seedProduct()
+    const imageWrite = await seedProduct()
+    const imageDelete = await seedProduct()
+    const missingImageId = createId('productImage')
+    const createdSuffix = nextSequence()
+    const routes: Array<{
+      method: CatalogMethod
+      path: string
+      body?: unknown | (() => FormData)
+    }> = [
+      { method: 'GET', path: '/api/admin/catalog/selectors' },
+      { method: 'GET' as const, path: '/api/admin/catalog/products' },
       {
+        method: 'POST' as const,
+        path: '/api/admin/catalog/products',
+        body: {
+          name: `Approved route product ${createdSuffix}`,
+          slug: `approved-route-product-${createdSuffix}`,
+          shortDescription: null,
+          description: null,
+          status: 'draft' as const,
+          featured: false,
+          brandId: null,
+          categoryId: null,
+          initialVariant: {
+            sku: `APPROVED-ROUTE-${createdSuffix}`,
+            name: 'Default',
+            options: {},
+            priceMnt: 10_000,
+            compareAtPriceMnt: null,
+            stockQuantity: 1,
+            sortOrder: 0,
+          },
+        },
+      },
+      { method: 'GET' as const, path: `/api/admin/catalog/products/${detail.id}` },
+      {
+        method: 'PUT' as const,
         path: `/api/admin/catalog/products/${productWrite.id}`,
-        method: 'PATCH' as const,
         body: productUpdate(productWrite, { featured: true }),
       },
       {
+        method: 'DELETE' as const,
+        path: `/api/admin/catalog/products/${productDelete.id}`,
+        body: { expectedUpdatedAt: productDelete.updatedAt },
+      },
+      {
+        method: 'POST' as const,
+        path: `/api/admin/catalog/products/${archive.id}/archive`,
+        body: { expectedUpdatedAt: archive.updatedAt },
+      },
+      {
+        method: 'POST' as const,
+        path: `/api/admin/catalog/products/${restore.id}/restore`,
+        body: { expectedUpdatedAt: restore.updatedAt },
+      },
+      {
+        method: 'POST' as const,
+        path: `/api/admin/catalog/products/${variantCreate.id}/variants`,
+        body: {
+          expectedProductUpdatedAt: variantCreate.updatedAt,
+          sku: `APPROVED-VARIANT-${createdSuffix}`,
+          name: 'New variant',
+          options: { color: 'Violet' },
+          priceMnt: 12_000,
+          compareAtPriceMnt: null,
+          stockQuantity: 2,
+          active: true,
+          sortOrder: 10,
+        },
+      },
+      {
+        method: 'PUT' as const,
         path: `/api/admin/catalog/products/${variantWrite.id}/variants/${variantWrite.variants[0]!.id}`,
-        method: 'PATCH' as const,
         body: variantUpdate(variantWrite.variants[0]!, { priceMnt: 11_000 }),
       },
       {
-        path: `/api/admin/catalog/products/${stockWrite.id}/variants/${stockWrite.variants[0]!.id}/stock`,
+        method: 'DELETE' as const,
+        path: `/api/admin/catalog/products/${variantDelete.id}/variants/${variantDelete.variants[0]!.id}`,
+        body: {
+          expectedProductUpdatedAt: variantDelete.updatedAt,
+          expectedVariantUpdatedAt: variantDelete.variants[0]!.updatedAt,
+        },
+      },
+      {
         method: 'PATCH' as const,
-        body: { expectedUpdatedAt: stockWrite.updatedAt, stockQuantity: 8 },
+        path: `/api/admin/catalog/products/${activation.id}/variants/${activation.variants[0]!.id}/activation`,
+        body: { expectedUpdatedAt: activation.variants[0]!.updatedAt, active: true },
+      },
+      {
+        method: 'PATCH' as const,
+        path: `/api/admin/catalog/products/${stockWrite.id}/variants/${stockWrite.variants[0]!.id}/stock`,
+        body: { expectedUpdatedAt: stockWrite.variants[0]!.updatedAt, stockQuantity: 8 },
+      },
+      {
+        method: 'POST' as const,
+        path: `/api/admin/catalog/products/${upload.id}/images`,
+        body: () => imageUploadBody(upload.updatedAt),
+      },
+      {
+        method: 'PUT' as const,
+        path: `/api/admin/catalog/products/${reorder.id}/images/order`,
+        body: { expectedUpdatedAt: reorder.updatedAt, imageIds: [] },
+      },
+      {
+        method: 'PUT' as const,
+        path: `/api/admin/catalog/products/${imageWrite.id}/images/${missingImageId}`,
+        body: {
+          expectedUpdatedAt: imageWrite.updatedAt,
+          alt: 'Updated image',
+          variantIds: [],
+        },
+      },
+      {
+        method: 'DELETE' as const,
+        path: `/api/admin/catalog/products/${imageDelete.id}/images/${missingImageId}`,
+        body: { expectedUpdatedAt: imageDelete.updatedAt },
       },
     ]
+    const declaredRoutes = new Set(
+      adminCatalogRoutes.routes.map(route => `${route.method} ${route.path}`),
+    )
+    const plannedRoutes = [
+      'GET /api/admin/catalog/selectors',
+      'GET /api/admin/catalog/products',
+      'POST /api/admin/catalog/products',
+      'GET /api/admin/catalog/products/:productId',
+      'PUT /api/admin/catalog/products/:productId',
+      'DELETE /api/admin/catalog/products/:productId',
+      'POST /api/admin/catalog/products/:productId/archive',
+      'POST /api/admin/catalog/products/:productId/restore',
+      'POST /api/admin/catalog/products/:productId/variants',
+      'PUT /api/admin/catalog/products/:productId/variants/:variantId',
+      'DELETE /api/admin/catalog/products/:productId/variants/:variantId',
+      'PATCH /api/admin/catalog/products/:productId/variants/:variantId/activation',
+      'PATCH /api/admin/catalog/products/:productId/variants/:variantId/stock',
+      'POST /api/admin/catalog/products/:productId/images',
+      'PUT /api/admin/catalog/products/:productId/images/order',
+      'PUT /api/admin/catalog/products/:productId/images/:imageId',
+      'DELETE /api/admin/catalog/products/:productId/images/:imageId',
+    ]
+    for (const route of plannedRoutes) expect(declaredRoutes).toContain(route)
 
     const outcomes = await Promise.all(
-      requests.map(async request => {
-        const [unauthenticatedResponse, unapprovedResponse, approvedResponse] = await Promise.all([
-          requestCatalog(request.path, request),
-          requestCatalog(request.path, { ...request, cookie: unapproved.cookie }),
-          requestCatalog(request.path, { ...request, cookie: approved.cookie }),
+      routes.map(async route => {
+        const session = await createAdminSession(false)
+        const makeBody = () => (typeof route.body === 'function' ? route.body() : route.body)
+        const [unauthenticatedResponse, unapprovedResponse] = await Promise.all([
+          requestCatalog(route.path, { method: route.method, body: makeBody() }),
+          requestCatalog(route.path, {
+            method: route.method,
+            body: makeBody(),
+            cookie: session.cookie,
+          }),
         ])
+        await env.DB.prepare('update user set approved = 1 where id = ?').bind(session.userId).run()
+        const approvedResponse = await requestCatalog(route.path, {
+          method: route.method,
+          body: makeBody(),
+          cookie: session.cookie,
+        })
         const [unauthenticatedBody, unapprovedBody, approvedBody] = await Promise.all([
           unauthenticatedResponse.json(),
           unapprovedResponse.json(),
           approvedResponse.json(),
         ])
         return {
-          approvedResult: Result.deserialize<unknown, AdminCatalogError>(approvedBody),
-          approvedResponse,
-          unauthenticatedBody,
           unauthenticatedResponse,
-          unapprovedBody,
+          unauthenticatedBody,
           unapprovedResponse,
+          unapprovedBody,
+          approvedResponse,
+          approvedResult: Result.deserialize<unknown, AdminCatalogError>(approvedBody),
         }
       }),
     )
@@ -307,7 +471,7 @@ describe('admin catalog API', () => {
       expect(outcome.unapprovedResponse.status).toBe(403)
       expect(outcome.unapprovedBody).toEqual({ _tag: 'ApprovalRequired' })
       expect(outcome.approvedResponse.status).toBe(200)
-      expect(outcome.approvedResult).toMatchObject({ status: 'ok' })
+      expect(outcome.approvedResult.status).toMatch(/^(ok|error)$/u)
       for (const response of [
         outcome.unauthenticatedResponse,
         outcome.unapprovedResponse,
@@ -317,26 +481,579 @@ describe('admin catalog API', () => {
     }
   })
 
-  it('validates every route at the TypeBox boundary', async () => {
+  it('runs product and variant CRUD through serialized Better Result routes', async () => {
+    const references = await seedProduct({ withRelations: true })
+    const cookie = (await createAdminSession(true)).cookie
+    const suffix = nextSequence()
+    const createBody = {
+      name: `Route CRUD product ${suffix}`,
+      slug: `route-crud-product-${suffix}`,
+      shortDescription: 'Compact description',
+      description: 'Full product description',
+      status: 'draft' as const,
+      featured: false,
+      brandId: references.brandId,
+      categoryId: references.categoryId,
+      initialVariant: {
+        sku: `ROUTE-CRUD-${suffix}`,
+        name: 'Default',
+        options: { color: 'Graphite' },
+        priceMnt: 100_000,
+        compareAtPriceMnt: 120_000,
+        stockQuantity: 4,
+        sortOrder: 0,
+      },
+    }
+    const createResponse = await requestCatalog('/api/admin/catalog/products', {
+      method: 'POST',
+      cookie,
+      body: createBody,
+    })
+    const created = expectOk(await deserializeCatalog<AdminCatalogProductDetail>(createResponse))
+    expect(createResponse.headers.get('cache-control')).toBe('private, no-store')
+    expect(created).toMatchObject({
+      name: createBody.name,
+      slug: createBody.slug,
+      shortDescription: createBody.shortDescription,
+      description: createBody.description,
+      status: 'draft',
+      featured: false,
+      brand: { id: references.brandId },
+      category: { id: references.categoryId },
+      images: [],
+      variants: [
+        {
+          sku: createBody.initialVariant.sku,
+          name: 'Default',
+          options: { color: 'Graphite' },
+          priceMnt: 100_000,
+          compareAtPriceMnt: 120_000,
+          stockQuantity: 4,
+          active: true,
+          sortOrder: 0,
+        },
+      ],
+    })
+
+    const duplicateSlug = await deserializeCatalog<AdminCatalogProductDetail>(
+      await requestCatalog('/api/admin/catalog/products', {
+        method: 'POST',
+        cookie,
+        body: {
+          ...createBody,
+          initialVariant: { ...createBody.initialVariant, sku: `UNIQUE-SKU-${suffix}` },
+        },
+      }),
+    )
+    const duplicateSkuSlug = `duplicate-route-sku-${suffix}`
+    const duplicateSku = await deserializeCatalog<AdminCatalogProductDetail>(
+      await requestCatalog('/api/admin/catalog/products', {
+        method: 'POST',
+        cookie,
+        body: { ...createBody, slug: duplicateSkuSlug },
+      }),
+    )
+    expect(duplicateSlug).toMatchObject({ status: 'error', error: { _tag: 'ProductSlugTaken' } })
+    expect(duplicateSku).toMatchObject({ status: 'error', error: { _tag: 'VariantSkuTaken' } })
+    expect(
+      await env.DB.prepare('select id from product where slug = ?').bind(duplicateSkuSlug).first(),
+    ).toBeNull()
+
+    const selectors = expectOk(
+      await deserializeCatalog<{
+        brands: Array<{ id: string }>
+        categories: Array<{ id: string }>
+      }>(await requestCatalog('/api/admin/catalog/selectors', { cookie })),
+    )
+    expect(selectors.brands).toContainEqual(expect.objectContaining({ id: references.brandId }))
+    expect(selectors.categories).toContainEqual(
+      expect.objectContaining({ id: references.categoryId }),
+    )
+
+    const updated = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${created.id}`, {
+          method: 'PUT',
+          cookie,
+          body: {
+            expectedUpdatedAt: created.updatedAt,
+            name: 'Edited route product',
+            slug: createBody.slug,
+            shortDescription: null,
+            description: null,
+            status: 'active',
+            featured: true,
+            brandId: references.brandId,
+            categoryId: references.categoryId,
+          },
+        }),
+      ),
+    )
+    const withVariant = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${created.id}/variants`, {
+          method: 'POST',
+          cookie,
+          body: {
+            expectedProductUpdatedAt: updated.updatedAt,
+            sku: `ROUTE-SECOND-${suffix}`,
+            name: 'Second',
+            options: { color: 'Violet' },
+            priceMnt: 110_000,
+            compareAtPriceMnt: null,
+            stockQuantity: 2,
+            active: true,
+            sortOrder: 10,
+          },
+        }),
+      ),
+    )
+    const second = withVariant.variants.find(variant => variant.name === 'Second')!
+    const edited = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${created.id}/variants/${second.id}`, {
+          method: 'PUT',
+          cookie,
+          body: variantUpdate(second, {
+            name: 'Second edited',
+            options: { color: 'Electric violet' },
+            priceMnt: 115_000,
+            compareAtPriceMnt: 130_000,
+            sortOrder: 20,
+          }),
+        }),
+      ),
+    )
+    const editedSecond = edited.variants.find(variant => variant.id === second.id)!
+    const stocked = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(
+          `/api/admin/catalog/products/${created.id}/variants/${second.id}/stock`,
+          {
+            method: 'PATCH',
+            cookie,
+            body: { expectedUpdatedAt: editedSecond.updatedAt, stockQuantity: 9 },
+          },
+        ),
+      ),
+    )
+    const stockedSecond = stocked.variants.find(variant => variant.id === second.id)!
+    const deactivated = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(
+          `/api/admin/catalog/products/${created.id}/variants/${second.id}/activation`,
+          {
+            method: 'PATCH',
+            cookie,
+            body: { expectedUpdatedAt: stockedSecond.updatedAt, active: false },
+          },
+        ),
+      ),
+    )
+    const inactiveSecond = deactivated.variants.find(variant => variant.id === second.id)!
+    expect(inactiveSecond).toMatchObject({
+      name: 'Second edited',
+      stockQuantity: 9,
+      active: false,
+      sortOrder: 20,
+    })
+
+    const deletedVariant = expectOk(
+      await deserializeCatalog<{ productId: string; variantId: string; updatedAt: number }>(
+        await requestCatalog(`/api/admin/catalog/products/${created.id}/variants/${second.id}`, {
+          method: 'DELETE',
+          cookie,
+          body: {
+            expectedProductUpdatedAt: deactivated.updatedAt,
+            expectedVariantUpdatedAt: inactiveSecond.updatedAt,
+          },
+        }),
+      ),
+    )
+    expect(deletedVariant.variantId).toBe(second.id)
+
+    const archived = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${created.id}/archive`, {
+          method: 'POST',
+          cookie,
+          body: { expectedUpdatedAt: deletedVariant.updatedAt },
+        }),
+      ),
+    )
+    expect(archived).toMatchObject({ status: 'archived', featured: false })
+    const restored = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${created.id}/restore`, {
+          method: 'POST',
+          cookie,
+          body: { expectedUpdatedAt: archived.updatedAt },
+        }),
+      ),
+    )
+    expect(restored).toMatchObject({ status: 'draft', featured: false })
+    const archivedAgain = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${created.id}/archive`, {
+          method: 'POST',
+          cookie,
+          body: { expectedUpdatedAt: restored.updatedAt },
+        }),
+      ),
+    )
+    const deletedProduct = expectOk(
+      await deserializeCatalog<{ productId: string; mediaCleanup: string }>(
+        await requestCatalog(`/api/admin/catalog/products/${created.id}`, {
+          method: 'DELETE',
+          cookie,
+          body: { expectedUpdatedAt: archivedAgain.updatedAt },
+        }),
+      ),
+    )
+    expect(deletedProduct).toEqual({ productId: created.id, mediaCleanup: 'complete' })
+    expect(
+      await env.DB.prepare('select id from product where id = ?').bind(created.id).first(),
+    ).toBeNull()
+  })
+
+  it('uses real Images, R2, and D1 for multipart image CRUD without exposing storage fields', async () => {
+    const product = await seedProduct({ status: 'active' })
+    const variantId = product.variants[0]!.id
+    const cookie = (await createAdminSession(true)).cookie
+    const firstResponse = await requestCatalog(`/api/admin/catalog/products/${product.id}/images`, {
+      method: 'POST',
+      cookie,
+      body: imageUploadBody(product.updatedAt, {
+        alt: 'Front product image',
+        file: imageFile('image/png'),
+        variantIds: [variantId],
+      }),
+    })
+    const firstWire = await firstResponse.json()
+    const first = expectOk(
+      Result.deserialize<AdminCatalogProductDetail, AdminCatalogError>(firstWire),
+    )
+    const firstImage = first.images[0]!
+    expect(firstResponse.status).toBe(200)
+    expect(firstResponse.headers.get('cache-control')).toBe('private, no-store')
+    expect(firstImage).toEqual({
+      id: firstImage.id,
+      productId: product.id,
+      url: `https://plugged.storekitcdn.darjs.dev/products/${product.id}/${firstImage.id}.jpg`,
+      width: 322,
+      height: 448,
+      alt: 'Front product image',
+      sortOrder: 10,
+      variantIds: [variantId],
+    })
+    expect(JSON.stringify(firstWire)).not.toContain('r2Key')
+    expect(JSON.stringify(firstWire)).not.toContain('r2_key')
+    const listWire = await requestCatalog(
+      `/api/admin/catalog/products?query=${encodeURIComponent(product.slug)}`,
+      { cookie },
+    ).then(response => response.json())
+    const list = expectOk(Result.deserialize<AdminCatalogProductList, AdminCatalogError>(listWire))
+    expect(list.items).toContainEqual(
+      expect.objectContaining({
+        id: product.id,
+        primaryImage: {
+          url: firstImage.url,
+          width: 322,
+          height: 448,
+          alt: 'Front product image',
+        },
+      }),
+    )
+    expect(JSON.stringify(listWire)).not.toContain('r2Key')
+
+    const firstRecord = await env.DB.prepare(
+      'select r2_key, width, height, alt, sort_order from product_image where id = ?',
+    )
+      .bind(firstImage.id)
+      .first<{
+        r2_key: string
+        width: number
+        height: number
+        alt: string
+        sort_order: number
+      }>()
+    const firstObject = await env.MEDIA.get(firstRecord!.r2_key)
+    expect(firstRecord).toMatchObject({
+      width: 322,
+      height: 448,
+      alt: 'Front product image',
+      sort_order: 10,
+    })
+    expect(firstObject?.httpMetadata).toMatchObject({
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=31536000, immutable',
+    })
+    expect(new Uint8Array(await firstObject!.arrayBuffer())).toEqual(fixtureBytes)
+
+    const second = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${product.id}/images`, {
+          method: 'POST',
+          cookie,
+          body: imageUploadBody(first.updatedAt, { alt: 'Detail product image' }),
+        }),
+      ),
+    )
+    const secondImage = second.images.find(image => image.id !== firstImage.id)!
+    const edited = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${product.id}/images/${secondImage.id}`, {
+          method: 'PUT',
+          cookie,
+          body: {
+            expectedUpdatedAt: second.updatedAt,
+            alt: 'Variant detail image',
+            variantIds: [variantId],
+          },
+        }),
+      ),
+    )
+    expect(edited.images.find(image => image.id === secondImage.id)).toMatchObject({
+      alt: 'Variant detail image',
+      variantIds: [variantId],
+    })
+
+    const reordered = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${product.id}/images/order`, {
+          method: 'PUT',
+          cookie,
+          body: {
+            expectedUpdatedAt: edited.updatedAt,
+            imageIds: [secondImage.id, firstImage.id],
+          },
+        }),
+      ),
+    )
+    expect(reordered.images.map(image => image.id)).toEqual([secondImage.id, firstImage.id])
+    expect(reordered.images.map(image => image.sortOrder)).toEqual([10, 20])
+
+    const removed = expectOk(
+      await deserializeCatalog<{
+        product: AdminCatalogProductDetail
+        mediaCleanup: string
+      }>(
+        await requestCatalog(`/api/admin/catalog/products/${product.id}/images/${firstImage.id}`, {
+          method: 'DELETE',
+          cookie,
+          body: { expectedUpdatedAt: reordered.updatedAt },
+        }),
+      ),
+    )
+    expect(removed.mediaCleanup).toBe('complete')
+    expect(removed.product.images.map(image => image.id)).toEqual([secondImage.id])
+    expect(await env.MEDIA.get(firstRecord!.r2_key)).toBeNull()
+
+    const prefix = `products/${product.id}/`
+    const beforeFailures = (await env.MEDIA.list({ prefix })).objects.map(object => object.key)
+    const invalidBytes = new File([new TextEncoder().encode('not an image')], 'invalid.jpg', {
+      type: 'image/jpeg',
+    })
+    const invalid = await deserializeCatalog<AdminCatalogProductDetail>(
+      await requestCatalog(`/api/admin/catalog/products/${product.id}/images`, {
+        method: 'POST',
+        cookie,
+        body: imageUploadBody(removed.product.updatedAt, {
+          alt: 'Invalid image',
+          file: invalidBytes,
+        }),
+      }),
+    )
+    expect(invalid).toMatchObject({ status: 'error', error: { _tag: 'ImageUploadRejected' } })
+    const foreignVariant = await deserializeCatalog<AdminCatalogProductDetail>(
+      await requestCatalog(`/api/admin/catalog/products/${product.id}/images`, {
+        method: 'POST',
+        cookie,
+        body: imageUploadBody(removed.product.updatedAt, {
+          alt: 'Foreign variant image',
+          variantIds: [createId('productVariant')],
+        }),
+      }),
+    )
+    expect(foreignVariant).toMatchObject({
+      status: 'error',
+      error: { _tag: 'CatalogReferenceNotFound', referenceType: 'variant' },
+    })
+
+    const changed = expectOk(
+      await deserializeCatalog<AdminCatalogProductDetail>(
+        await requestCatalog(`/api/admin/catalog/products/${product.id}`, {
+          method: 'PUT',
+          cookie,
+          body: productUpdate(
+            {
+              ...product,
+              name: product.name,
+              slug: product.slug,
+              updatedAt: removed.product.updatedAt,
+            },
+            { name: 'Changed before stale upload', status: 'active' },
+          ),
+        }),
+      ),
+    )
+    const stale = await deserializeCatalog<AdminCatalogProductDetail>(
+      await requestCatalog(`/api/admin/catalog/products/${product.id}/images`, {
+        method: 'POST',
+        cookie,
+        body: imageUploadBody(removed.product.updatedAt, { alt: 'Stale image' }),
+      }),
+    )
+    expect(changed.updatedAt).toBeGreaterThan(removed.product.updatedAt)
+    expect(stale).toMatchObject({ status: 'error', error: { _tag: 'AdminCatalogConflict' } })
+    expect((await env.MEDIA.list({ prefix })).objects.map(object => object.key)).toEqual(
+      beforeFailures,
+    )
+  })
+
+  it('validates JSON, params, queries, and converted multipart bodies at the TypeBox boundary', async () => {
     const product = await seedProduct()
+    const variantId = product.variants[0]!.id
+    const imageId = createId('productImage')
     const approved = await createAdminSession(true)
-    const invalidRequests = [
+    const suffix = nextSequence()
+    const validCreate = {
+      name: 'Boundary product',
+      slug: `boundary-product-${suffix}`,
+      shortDescription: null,
+      description: null,
+      status: 'draft' as const,
+      featured: false,
+      brandId: null,
+      categoryId: null,
+      initialVariant: {
+        sku: `BOUNDARY-${suffix}`,
+        name: 'Default',
+        options: {},
+        priceMnt: 10_000,
+        compareAtPriceMnt: null,
+        stockQuantity: 1,
+        sortOrder: 0,
+      },
+    }
+    const invalidVersion = imageUploadBody(product.updatedAt)
+    invalidVersion.set('expectedUpdatedAt', 'not-a-number')
+    const duplicateVariants = imageUploadBody(product.updatedAt, {
+      variantIds: [variantId, variantId],
+    })
+    const invalidRequests: Array<{
+      path: string
+      method?: CatalogMethod
+      body?: unknown | FormData
+    }> = [
       { path: '/api/admin/catalog/products?limit=0' },
+      { path: '/api/admin/catalog/products?unknown=value' },
       { path: '/api/admin/catalog/products/not-a-product-id' },
+      { path: '/api/admin/catalog/products', method: 'POST', body: {} },
+      {
+        path: '/api/admin/catalog/products',
+        method: 'POST',
+        body: { ...validCreate, slug: 'Invalid Slug' },
+      },
+      {
+        path: '/api/admin/catalog/products',
+        method: 'POST',
+        body: { ...validCreate, unsupported: true },
+      },
+      {
+        path: '/api/admin/catalog/products',
+        method: 'POST',
+        body: {
+          ...validCreate,
+          initialVariant: { ...validCreate.initialVariant, priceMnt: -1 },
+        },
+      },
       {
         path: `/api/admin/catalog/products/${product.id}`,
-        method: 'PATCH' as const,
+        method: 'PUT',
         body: { expectedUpdatedAt: product.updatedAt },
       },
       {
-        path: `/api/admin/catalog/products/${product.id}/variants/${product.variants[0]!.id}`,
-        method: 'PATCH' as const,
+        path: `/api/admin/catalog/products/${product.id}`,
+        method: 'DELETE',
+        body: { expectedUpdatedAt: -1 },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/archive`,
+        method: 'POST',
+        body: { expectedUpdatedAt: product.updatedAt, unsupported: true },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/variants`,
+        method: 'POST',
+        body: { expectedProductUpdatedAt: product.updatedAt },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/variants/${variantId}`,
+        method: 'PUT',
         body: { expectedUpdatedAt: product.updatedAt, priceMnt: 9000, unsupported: true },
       },
       {
-        path: `/api/admin/catalog/products/${product.id}/variants/${product.variants[0]!.id}/stock`,
-        method: 'PATCH' as const,
+        path: `/api/admin/catalog/products/${product.id}/variants/${variantId}`,
+        method: 'DELETE',
+        body: {
+          expectedProductUpdatedAt: product.updatedAt,
+          expectedVariantUpdatedAt: -1,
+        },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/variants/${variantId}/activation`,
+        method: 'PATCH',
+        body: { expectedUpdatedAt: product.updatedAt },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/variants/${variantId}/stock`,
+        method: 'PATCH',
         body: { expectedUpdatedAt: product.updatedAt, stockQuantity: -1 },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/images/order`,
+        method: 'PUT',
+        body: { expectedUpdatedAt: product.updatedAt, imageIds: [imageId, imageId] },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/images/${imageId}`,
+        method: 'PUT',
+        body: { expectedUpdatedAt: product.updatedAt, alt: ' ', variantIds: [] },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/images/not-an-image-id`,
+        method: 'DELETE',
+        body: { expectedUpdatedAt: product.updatedAt },
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/images`,
+        method: 'POST',
+        body: imageUploadBody(product.updatedAt, { alt: ' ' }),
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/images`,
+        method: 'POST',
+        body: imageUploadBody(product.updatedAt, { file: imageFile('image/gif') }),
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/images`,
+        method: 'POST',
+        body: imageUploadBody(product.updatedAt, {
+          file: new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'large.jpg', {
+            type: 'image/jpeg',
+          }),
+        }),
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/images`,
+        method: 'POST',
+        body: invalidVersion,
+      },
+      {
+        path: `/api/admin/catalog/products/${product.id}/images`,
+        method: 'POST',
+        body: duplicateVariants,
       },
     ]
 
@@ -345,6 +1062,7 @@ describe('admin catalog API', () => {
         requestCatalog(request.path, { ...request, cookie: approved.cookie }),
       ),
     )
+    expect(responses).toHaveLength(invalidRequests.length)
     for (const response of responses) {
       expect(response.status).toBe(422)
       expect(response.headers.get('cache-control')).toBe('private, no-store')
@@ -469,7 +1187,7 @@ describe('admin catalog API', () => {
     const productResult = expectOk(
       await deserializeCatalog<AdminCatalogProductDetail>(
         await requestCatalog(`/api/admin/catalog/products/${product.id}`, {
-          method: 'PATCH',
+          method: 'PUT',
           cookie: approved.cookie,
           body: productUpdate(product, { featured: true, status: 'draft' }),
         }),
@@ -481,7 +1199,7 @@ describe('admin catalog API', () => {
         await requestCatalog(
           `/api/admin/catalog/products/${product.id}/variants/${variantBefore.id}`,
           {
-            method: 'PATCH',
+            method: 'PUT',
             cookie: approved.cookie,
             body: variantUpdate(variantBefore, {
               priceMnt: 18_000,
@@ -557,7 +1275,7 @@ describe('admin catalog API', () => {
 
     const activation = await deserializeCatalog<AdminCatalogProductDetail>(
       await requestCatalog(`/api/admin/catalog/products/${inactiveDraft.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         cookie: approved.cookie,
         body: productUpdate(inactiveDraft, { status: 'active' }),
       }),
@@ -570,7 +1288,7 @@ describe('admin catalog API', () => {
     const variantId = active.variants[0]!.id
     const lastActive = await deserializeCatalog<AdminCatalogProductDetail>(
       await requestCatalog(`/api/admin/catalog/products/${active.id}/variants/${variantId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         cookie: approved.cookie,
         body: variantUpdate(active.variants[0]!, { active: false }),
       }),
@@ -582,7 +1300,7 @@ describe('admin catalog API', () => {
 
     const invalidCompareAt = await deserializeCatalog<AdminCatalogProductDetail>(
       await requestCatalog(`/api/admin/catalog/products/${active.id}/variants/${variantId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         cookie: approved.cookie,
         body: variantUpdate(active.variants[0]!, {
           priceMnt: 12_000,
@@ -598,7 +1316,7 @@ describe('admin catalog API', () => {
     const firstWrite = expectOk(
       await deserializeCatalog<AdminCatalogProductDetail>(
         await requestCatalog(`/api/admin/catalog/products/${active.id}`, {
-          method: 'PATCH',
+          method: 'PUT',
           cookie: approved.cookie,
           body: productUpdate(active, { featured: true }),
         }),
@@ -606,7 +1324,7 @@ describe('admin catalog API', () => {
     )
     const staleWrite = await deserializeCatalog<AdminCatalogProductDetail>(
       await requestCatalog(`/api/admin/catalog/products/${active.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         cookie: approved.cookie,
         body: productUpdate(active, { featured: false }),
       }),
