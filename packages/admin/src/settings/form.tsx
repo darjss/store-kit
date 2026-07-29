@@ -109,7 +109,7 @@ export function StoreSettingsForm(props: StoreSettingsFormProps) {
   return (
     <form
       aria-label="Store checkout settings"
-      class="rounded-lg border bg-background p-4 sm:p-5"
+      class="border-y bg-card"
       noValidate
       onSubmit={event => {
         event.preventDefault()
@@ -117,119 +117,134 @@ export function StoreSettingsForm(props: StoreSettingsFormProps) {
         void form.handleSubmit()
       }}
     >
-      <div class="mb-5 border-b pb-4">
-        <h2 class="text-lg leading-6 font-semibold">Checkout and bank transfer</h2>
-        <p class="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">
-          These values apply to new checkouts. Existing orders keep their recorded delivery fee and
-          payment instructions.
-        </p>
-      </div>
-
-      <FieldGroup class="gap-5">
-        <form.Field name="deliveryFeeMnt">
-          {field => (
-            <Field class="max-w-xs">
-              <FieldLabel for="store-delivery-fee">Delivery fee</FieldLabel>
-              <Input
-                id="store-delivery-fee"
-                inputMode="numeric"
-                min="0"
-                step="1"
-                type="number"
-                value={Number.isNaN(field().state.value) ? '' : field().state.value}
-                aria-invalid={!field().state.meta.isValid}
-                onBlur={() => field().handleBlur()}
-                onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
-              />
-              <FieldDescription>
-                Enter a nonnegative whole MNT amount, for example {deliveryFeeExample}.
-              </FieldDescription>
-              <FieldError errors={validationMessages(field().state.meta.errors)} />
-            </Field>
-          )}
-        </form.Field>
-
-        <div class="grid gap-5 md:grid-cols-2">
-          <form.Field name="bankName">
-            {field => (
-              <Field>
-                <FieldLabel for="store-bank-name">Bank name</FieldLabel>
-                <Input
-                  autocomplete="organization"
-                  id="store-bank-name"
-                  maxlength="120"
-                  value={field().state.value}
-                  aria-invalid={!field().state.meta.isValid}
-                  onBlur={() => field().handleBlur()}
-                  onInput={event => field().handleChange(event.currentTarget.value)}
-                />
-                <FieldDescription>The bank shown in bank-transfer instructions.</FieldDescription>
-                <FieldError errors={validationMessages(field().state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
-
-          <form.Field name="bankAccountName">
-            {field => (
-              <Field>
-                <FieldLabel for="store-bank-account-name">Account name</FieldLabel>
-                <Input
-                  autocomplete="name"
-                  id="store-bank-account-name"
-                  maxlength="120"
-                  value={field().state.value}
-                  aria-invalid={!field().state.meta.isValid}
-                  onBlur={() => field().handleBlur()}
-                  onInput={event => field().handleChange(event.currentTarget.value)}
-                />
-                <FieldDescription>The account holder name customers must use.</FieldDescription>
-                <FieldError errors={validationMessages(field().state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
+      <div class="grid gap-5 px-4 py-5 sm:px-5 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-8">
+        <div>
+          <h2 class="text-sm font-semibold">Checkout and bank transfer</h2>
+          <p class="mt-1 text-xs leading-5 text-muted-foreground">
+            These values apply to new checkouts. Existing orders keep their recorded delivery fee
+            and payment instructions.
+          </p>
         </div>
 
-        <form.Field name="bankAccountNumber">
-          {field => (
-            <Field class="max-w-md">
-              <FieldLabel for="store-bank-account-number">Account number</FieldLabel>
-              <Input
-                autocomplete="off"
-                id="store-bank-account-number"
-                inputMode="numeric"
-                maxlength="120"
-                spellcheck={false}
-                type="text"
-                value={field().state.value}
-                aria-invalid={!field().state.meta.isValid}
-                onBlur={() => field().handleBlur()}
-                onInput={event => field().handleChange(event.currentTarget.value)}
-              />
-              <FieldDescription>
-                Stored as text so leading zeroes remain in the payment instructions.
-              </FieldDescription>
-              <FieldError errors={validationMessages(field().state.meta.errors)} />
-            </Field>
-          )}
-        </form.Field>
-      </FieldGroup>
+        <FieldGroup class="gap-0">
+          <form.Field name="deliveryFeeMnt">
+            {field => (
+              <Field class="max-w-xs border-b pb-4">
+                <FieldLabel for="store-delivery-fee">Delivery fee</FieldLabel>
+                <Input
+                  id="store-delivery-fee"
+                  inputMode="numeric"
+                  min="0"
+                  step="1"
+                  type="number"
+                  value={Number.isNaN(field().state.value) ? '' : field().state.value}
+                  aria-invalid={!field().state.meta.isValid}
+                  onBlur={() => field().handleBlur()}
+                  onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
+                />
+                <FieldDescription>
+                  Enter a nonnegative whole MNT amount, for example {deliveryFeeExample}.
+                </FieldDescription>
+                <FieldError errors={validationMessages(field().state.meta.errors)} />
+              </Field>
+            )}
+          </form.Field>
+
+          <div class="grid gap-4 border-b py-4 md:grid-cols-2">
+            <form.Field name="bankName">
+              {field => (
+                <Field>
+                  <FieldLabel for="store-bank-name">Bank name</FieldLabel>
+                  <Input
+                    autocomplete="organization"
+                    id="store-bank-name"
+                    maxlength="120"
+                    value={field().state.value}
+                    aria-invalid={!field().state.meta.isValid}
+                    onBlur={() => field().handleBlur()}
+                    onInput={event => field().handleChange(event.currentTarget.value)}
+                  />
+                  <FieldDescription>The bank shown in bank-transfer instructions.</FieldDescription>
+                  <FieldError errors={validationMessages(field().state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="bankAccountName">
+              {field => (
+                <Field>
+                  <FieldLabel for="store-bank-account-name">Account name</FieldLabel>
+                  <Input
+                    autocomplete="name"
+                    id="store-bank-account-name"
+                    maxlength="120"
+                    value={field().state.value}
+                    aria-invalid={!field().state.meta.isValid}
+                    onBlur={() => field().handleBlur()}
+                    onInput={event => field().handleChange(event.currentTarget.value)}
+                  />
+                  <FieldDescription>The account holder name customers must use.</FieldDescription>
+                  <FieldError errors={validationMessages(field().state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
+          </div>
+
+          <form.Field name="bankAccountNumber">
+            {field => (
+              <Field class="max-w-md pt-4">
+                <FieldLabel for="store-bank-account-number">Account number</FieldLabel>
+                <Input
+                  autocomplete="off"
+                  id="store-bank-account-number"
+                  inputMode="numeric"
+                  maxlength="120"
+                  spellcheck={false}
+                  type="text"
+                  value={field().state.value}
+                  aria-invalid={!field().state.meta.isValid}
+                  onBlur={() => field().handleBlur()}
+                  onInput={event => field().handleChange(event.currentTarget.value)}
+                />
+                <FieldDescription>
+                  Stored as text so leading zeroes remain in the payment instructions.
+                </FieldDescription>
+                <FieldError errors={validationMessages(field().state.meta.errors)} />
+              </Field>
+            )}
+          </form.Field>
+        </FieldGroup>
+      </div>
 
       <form.Subscribe
-        selector={state => ({ canSubmit: state.canSubmit, pending: state.isSubmitting })}
+        selector={state => ({
+          canSubmit: state.canSubmit,
+          dirty: state.isDirty,
+          pending: state.isSubmitting,
+        })}
       >
         {state => (
-          <Button class="mt-6 w-36" disabled={!state().canSubmit || state().pending} type="submit">
-            <Show when={state().pending}>
-              <Spinner aria-hidden="true" />
-            </Show>
-            {state().pending ? 'Saving…' : 'Save settings'}
-          </Button>
+          <div class="sticky bottom-0 flex min-h-12 items-center justify-between gap-3 border-t bg-popover px-4 py-2 sm:px-5">
+            <p class="text-xs text-muted-foreground" role="status">
+              {state().dirty ? 'Unsaved changes' : 'All changes saved'}
+            </p>
+            <Button
+              class="w-32"
+              disabled={!state().canSubmit || !state().dirty || state().pending}
+              type="submit"
+            >
+              <Show when={state().pending}>
+                <Spinner aria-hidden="true" />
+              </Show>
+              {state().pending ? 'Saving…' : 'Save settings'}
+            </Button>
+          </div>
         )}
       </form.Subscribe>
 
       <Show when={message()}>
         {text => (
-          <div class="mt-5">
+          <div class="border-t px-4 py-3 sm:px-5">
             <InlineAlert
               action={
                 <Show when={conflict()}>

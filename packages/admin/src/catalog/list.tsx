@@ -23,7 +23,8 @@ import {
   flexRender,
   getCoreRowModel,
 } from '@tanstack/solid-table'
-import { For, Show } from 'solid-js'
+import { For, Show, createSignal } from 'solid-js'
+import type { JSX } from 'solid-js'
 
 import {
   AdminEmptyState,
@@ -59,6 +60,19 @@ function InventoryBadge(props: { quantity: number }) {
 }
 
 const columnHelper = createColumnHelper<AdminCatalogProductListItem>()
+
+const productColumnLabel: Record<string, string> = {
+  status: 'Status',
+  activeVariantCount: 'Variants',
+  totalStockQuantity: 'Inventory',
+  price: 'Active price',
+  featured: 'Featured',
+}
+
+const mobileCellClass = (columnId: string) =>
+  columnId === 'name' || columnId === 'classification'
+    ? 'max-md:col-span-2 max-md:block max-md:px-3 max-md:py-2'
+    : `${columnId === 'totalStockQuantity' || columnId === 'price' ? 'max-md:col-span-2' : ''} max-md:flex max-md:min-h-9 max-md:items-center max-md:justify-between max-md:gap-3 max-md:px-3 max-md:py-2`
 
 const productColumns = (productHref: (productId: string) => string) => [
   columnHelper.accessor('name', {
@@ -130,6 +144,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminCatalogError | undefined>({ ok: () => undefined, err: error => error })
+  const [activeRow, setActiveRow] = createSignal(0)
   const table = createSolidTable({
     get data() {
       return data()?.items ?? []
@@ -141,17 +156,36 @@ export function CatalogListPage(props: CatalogListPageProps) {
     props.onSearchChange({ ...props.search, ...patch, offset: patch.offset ?? 0 })
   const clearFilters = () =>
     props.onSearchChange({ inventory: 'all', limit: props.search.limit, offset: 0 })
+  const onTableKeyDown: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent> = event => {
+    if (event.target !== event.currentTarget) return
+
+    const rows = table.getRowModel().rows
+    if (rows.length === 0) return
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const direction = event.key === 'ArrowDown' ? 1 : -1
+      setActiveRow(current => Math.min(rows.length - 1, Math.max(0, current + direction)))
+      return
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      const row = rows[Math.min(activeRow(), rows.length - 1)]
+      if (row) window.location.assign(props.productHref(row.original.id))
+    }
+  }
 
   return (
-    <section class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
       <PageHeader
         description="Review product visibility, commercial details, and current inventory."
         title="Catalog"
         titleId="catalog-title"
       />
 
-      <div class="mt-5 flex flex-col gap-3 border-b pb-5 lg:flex-row lg:items-end">
-        <label class="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium" for="catalog-search">
+      <div class="mt-4 flex flex-col gap-2 border-y bg-card px-3 py-3 sm:px-4 lg:flex-row lg:items-end">
+        <label class="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium" for="catalog-search">
           Search catalog
           <div class="relative">
             <span
@@ -161,7 +195,8 @@ export function CatalogListPage(props: CatalogListPageProps) {
               <Magnifer size={16} />
             </span>
             <Input
-              class="pl-9"
+              class="pl-9!"
+              data-admin-list-search
               id="catalog-search"
               placeholder="Product, slug, brand, or SKU"
               type="search"
@@ -170,7 +205,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
             />
           </div>
         </label>
-        <label class="flex flex-col gap-1 text-sm font-medium" for="catalog-status-filter">
+        <label class="flex flex-col gap-1 text-xs font-medium" for="catalog-status-filter">
           Status
           <NativeSelect
             class="w-full lg:w-40"
@@ -192,7 +227,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
             <NativeSelectOption value="archived">Archived</NativeSelectOption>
           </NativeSelect>
         </label>
-        <label class="flex flex-col gap-1 text-sm font-medium" for="catalog-inventory-filter">
+        <label class="flex flex-col gap-1 text-xs font-medium" for="catalog-inventory-filter">
           Inventory
           <NativeSelect
             class="w-full lg:w-40"
@@ -213,7 +248,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
         </Button>
       </div>
 
-      <div class="mt-5">
+      <div class="mt-4">
         <Show
           when={!query.isPending}
           fallback={
@@ -263,15 +298,28 @@ export function CatalogListPage(props: CatalogListPageProps) {
                   />
                 }
               >
-                <div class="rounded-lg border">
-                  <Table aria-label="Catalog products">
-                    <TableHeader>
+                <div
+                  aria-label="Catalog products. Use Up and Down arrow keys to select a row and Enter to open it."
+                  class="rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                  onKeyDown={onTableKeyDown}
+                  role="group"
+                  tabIndex={0}
+                >
+                  <Table aria-label="Catalog products" class="max-md:block">
+                    <TableHeader class="max-md:hidden">
                       <For each={table.getHeaderGroups()}>
                         {headerGroup => (
                           <TableRow>
                             <For each={headerGroup.headers}>
                               {header => (
-                                <TableHead>
+                                <TableHead
+                                  class={
+                                    header.column.id === 'activeVariantCount' ||
+                                    header.column.id === 'price'
+                                      ? 'text-right'
+                                      : undefined
+                                  }
+                                >
                                   {header.isPlaceholder
                                     ? null
                                     : flexRender(
@@ -285,13 +333,31 @@ export function CatalogListPage(props: CatalogListPageProps) {
                         )}
                       </For>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody class="max-md:block">
                       <For each={table.getRowModel().rows}>
-                        {row => (
-                          <TableRow>
+                        {(row, index) => (
+                          <TableRow
+                            class="max-md:grid max-md:grid-cols-2 max-md:py-1"
+                            data-state={activeRow() === index() ? 'selected' : undefined}
+                            onMouseEnter={() => setActiveRow(index())}
+                          >
                             <For each={row.getVisibleCells()}>
                               {cell => (
-                                <TableCell>
+                                <TableCell
+                                  class={`${mobileCellClass(cell.column.id)} ${
+                                    cell.column.id === 'activeVariantCount' ||
+                                    cell.column.id === 'price'
+                                      ? 'md:text-right'
+                                      : ''
+                                  }`}
+                                >
+                                  <Show when={productColumnLabel[cell.column.id]}>
+                                    {label => (
+                                      <span class="text-xs text-muted-foreground md:hidden">
+                                        {label()}
+                                      </span>
+                                    )}
+                                  </Show>
                                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </TableCell>
                               )}
@@ -302,7 +368,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                     </TableBody>
                   </Table>
                 </div>
-                <div class="mt-3 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                <div class="mt-3 flex flex-col gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                   <p>
                     Showing {data()!.offset + 1}–
                     {Math.min(data()!.offset + data()!.items.length, data()!.total)} of{' '}

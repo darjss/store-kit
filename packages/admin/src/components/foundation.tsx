@@ -40,21 +40,21 @@ export function PageHeader(props: PageHeaderProps) {
   const titleId = props.titleId ?? `admin-page-title-${createUniqueId()}`
 
   return (
-    <header class="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
+    <header class="flex min-h-14 flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="min-w-0">
-        <h1 class="text-2xl leading-8 font-semibold tracking-[-0.02em] text-balance" id={titleId}>
+        <h1 class="text-xl leading-7 font-semibold tracking-[-0.015em] text-balance" id={titleId}>
           {props.title}
         </h1>
         <Show when={props.description}>
           {description => (
-            <p class="mt-1 max-w-[70ch] text-sm leading-5 text-pretty text-muted-foreground">
+            <p class="mt-0.5 max-w-[70ch] text-[13px] leading-[1.4] text-pretty text-muted-foreground">
               {description()}
             </p>
           )}
         </Show>
       </div>
       <Show when={props.actions}>
-        <div class="flex shrink-0 flex-wrap items-center gap-2">{props.actions}</div>
+        <div class="flex shrink-0 flex-wrap items-center gap-1.5">{props.actions}</div>
       </Show>
     </header>
   )
@@ -109,7 +109,7 @@ export function InlineAlert(props: InlineAlertProps) {
       <AlertDescription class="text-current!">
         <div>{merged.children}</div>
         <Show when={merged.action}>
-          <div class="mt-2 flex flex-wrap items-center gap-2">{merged.action}</div>
+          <div class="mt-2 flex flex-wrap items-center gap-1.5">{merged.action}</div>
         </Show>
       </AlertDescription>
     </Alert>
@@ -154,16 +154,18 @@ type AdminEmptyStateProps = {
 
 export function AdminEmptyState(props: AdminEmptyStateProps) {
   return (
-    <Empty class="rounded-lg border border-dashed p-6! sm:p-8!">
+    <Empty class="border-0 bg-card px-4 py-5! sm:px-5!">
       <EmptyHeader>
         <Show when={props.icon}>
-          <EmptyMedia variant="icon">{props.icon}</EmptyMedia>
+          <EmptyMedia class="mb-0!" variant="icon">
+            {props.icon}
+          </EmptyMedia>
         </Show>
-        <EmptyTitle class="text-base">{props.title}</EmptyTitle>
-        <EmptyDescription>{props.description}</EmptyDescription>
+        <EmptyTitle class="text-sm">{props.title}</EmptyTitle>
+        <EmptyDescription class="max-w-xl">{props.description}</EmptyDescription>
       </EmptyHeader>
       <Show when={props.action}>
-        <EmptyContent>{props.action}</EmptyContent>
+        <EmptyContent class="mt-1">{props.action}</EmptyContent>
       </Show>
     </Empty>
   )
@@ -213,7 +215,7 @@ export function TableSkeleton(props: TableSkeletonProps) {
   const rows = () => Array.from({ length: props.rows ?? 5 }, (_, index) => index)
 
   return (
-    <div aria-busy="true" class="rounded-lg border" role="status">
+    <div aria-busy="true" class="overflow-hidden rounded-lg border bg-card" role="status">
       <span class="sr-only">Loading table data…</span>
       <Table>
         <TableHeader>

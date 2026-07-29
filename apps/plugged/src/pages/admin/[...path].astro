@@ -6,15 +6,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store')
 ---
 
 <!doctype html>
-<html lang="en" class="bg-background font-sans">
+<html lang="en" class="dark bg-[oklch(0.18_0.012_270)] font-sans">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#18181d" />
     <title>Store Kit Admin</title>
   </head>
   <body class="store-kit-admin m-0 min-w-0 bg-background text-foreground antialiased">
-    <AdminShell client:only="solid-js" />
+    <AdminShell client:only="solid-js" storeName="Plugged" />
   </body>
 </html>

@@ -22,7 +22,8 @@ import {
   flexRender,
   getCoreRowModel,
 } from '@tanstack/solid-table'
-import { For, Show } from 'solid-js'
+import { For, Show, createSignal } from 'solid-js'
+import type { JSX } from 'solid-js'
 
 import {
   AdminEmptyState,
@@ -52,6 +53,18 @@ const formatDate = (value: number) => dateFormatter.format(new Date(value))
 const dateTime = (value: number) => new Date(value).toISOString()
 
 const columnHelper = createColumnHelper<AdminOrderListItem>()
+
+const orderColumnLabel: Record<string, string> = {
+  status: 'Order status',
+  payment: 'Payment',
+  lineCount: 'Items',
+  totalMnt: 'Total',
+}
+
+const mobileCellClass = (columnId: string) =>
+  columnId === 'number' || columnId === 'customerName'
+    ? 'max-md:col-span-2 max-md:block max-md:px-3 max-md:py-2'
+    : `${columnId === 'payment' ? 'max-md:col-span-2' : ''} max-md:flex max-md:min-h-9 max-md:items-center max-md:justify-between max-md:gap-3 max-md:px-3 max-md:py-2`
 
 const orderColumns = (orderHref: (orderId: string) => string) => [
   columnHelper.accessor('number', {
@@ -91,7 +104,7 @@ const orderColumns = (orderHref: (orderId: string) => string) => [
     id: 'payment',
     header: 'Payment',
     cell: info => (
-      <div class="min-w-32">
+      <div class="min-w-0 md:min-w-32">
         <PaymentStatusBadge status={info.row.original.paymentStatus} />
         <div class="mt-1 text-xs text-muted-foreground">
           {paymentMethodLabel(info.row.original.paymentMethod)}
@@ -128,6 +141,7 @@ export function OrderListPage(props: OrderListPageProps) {
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminOrderError | undefined>({ ok: () => undefined, err: error => error })
+  const [activeRow, setActiveRow] = createSignal(0)
   const table = createSolidTable({
     get data() {
       return data()?.items ?? []
@@ -138,17 +152,36 @@ export function OrderListPage(props: OrderListPageProps) {
   const setSearch = (patch: Partial<OrderListSearch>) =>
     props.onSearchChange({ ...props.search, ...patch, offset: patch.offset ?? 0 })
   const clearFilters = () => props.onSearchChange({ limit: props.search.limit, offset: 0 })
+  const onTableKeyDown: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent> = event => {
+    if (event.target !== event.currentTarget) return
+
+    const rows = table.getRowModel().rows
+    if (rows.length === 0) return
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const direction = event.key === 'ArrowDown' ? 1 : -1
+      setActiveRow(current => Math.min(rows.length - 1, Math.max(0, current + direction)))
+      return
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      const row = rows[Math.min(activeRow(), rows.length - 1)]
+      if (row) window.location.assign(props.orderHref(row.original.id))
+    }
+  }
 
   return (
-    <section class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
       <PageHeader
         description="Find customer orders, review payment state, and move eligible orders through fulfillment."
         title="Orders"
         titleId="orders-title"
       />
 
-      <div class="mt-5 flex flex-col gap-3 border-b pb-5 lg:flex-row lg:items-end">
-        <label class="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium" for="order-search">
+      <div class="mt-4 flex flex-col gap-2 border-y bg-card px-3 py-3 sm:px-4 lg:flex-row lg:items-end">
+        <label class="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium" for="order-search">
           Search orders
           <div class="relative">
             <span
@@ -158,7 +191,8 @@ export function OrderListPage(props: OrderListPageProps) {
               <Magnifer size={16} />
             </span>
             <Input
-              class="pl-9"
+              class="pl-9!"
+              data-admin-list-search
               id="order-search"
               placeholder="Order number, customer, or phone"
               type="search"
@@ -167,7 +201,7 @@ export function OrderListPage(props: OrderListPageProps) {
             />
           </div>
         </label>
-        <label class="flex flex-col gap-1 text-sm font-medium" for="order-status-filter">
+        <label class="flex flex-col gap-1 text-xs font-medium" for="order-status-filter">
           Order status
           <NativeSelect
             class="w-full lg:w-44"
@@ -197,7 +231,7 @@ export function OrderListPage(props: OrderListPageProps) {
             <NativeSelectOption value="cancelled">Cancelled</NativeSelectOption>
           </NativeSelect>
         </label>
-        <label class="flex flex-col gap-1 text-sm font-medium" for="payment-status-filter">
+        <label class="flex flex-col gap-1 text-xs font-medium" for="payment-status-filter">
           Payment status
           <NativeSelect
             class="w-full lg:w-44"
@@ -230,7 +264,7 @@ export function OrderListPage(props: OrderListPageProps) {
         </Button>
       </div>
 
-      <div class="mt-5">
+      <div class="mt-4">
         <Show
           when={!query.isPending}
           fallback={
@@ -279,15 +313,28 @@ export function OrderListPage(props: OrderListPageProps) {
                   />
                 }
               >
-                <div class="rounded-lg border">
-                  <Table aria-label="Store orders">
-                    <TableHeader>
+                <div
+                  aria-label="Store orders. Use Up and Down arrow keys to select a row and Enter to open it."
+                  class="rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                  onKeyDown={onTableKeyDown}
+                  role="group"
+                  tabIndex={0}
+                >
+                  <Table aria-label="Store orders" class="max-md:block">
+                    <TableHeader class="max-md:hidden">
                       <For each={table.getHeaderGroups()}>
                         {headerGroup => (
                           <TableRow>
                             <For each={headerGroup.headers}>
                               {header => (
-                                <TableHead>
+                                <TableHead
+                                  class={
+                                    header.column.id === 'lineCount' ||
+                                    header.column.id === 'totalMnt'
+                                      ? 'text-right'
+                                      : undefined
+                                  }
+                                >
                                   {header.isPlaceholder
                                     ? null
                                     : flexRender(
@@ -301,13 +348,30 @@ export function OrderListPage(props: OrderListPageProps) {
                         )}
                       </For>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody class="max-md:block">
                       <For each={table.getRowModel().rows}>
-                        {row => (
-                          <TableRow>
+                        {(row, index) => (
+                          <TableRow
+                            class="max-md:grid max-md:grid-cols-2 max-md:py-1"
+                            data-state={activeRow() === index() ? 'selected' : undefined}
+                            onMouseEnter={() => setActiveRow(index())}
+                          >
                             <For each={row.getVisibleCells()}>
                               {cell => (
-                                <TableCell>
+                                <TableCell
+                                  class={`${mobileCellClass(cell.column.id)} ${
+                                    cell.column.id === 'lineCount' || cell.column.id === 'totalMnt'
+                                      ? 'md:text-right'
+                                      : ''
+                                  }`}
+                                >
+                                  <Show when={orderColumnLabel[cell.column.id]}>
+                                    {label => (
+                                      <span class="text-xs text-muted-foreground md:hidden">
+                                        {label()}
+                                      </span>
+                                    )}
+                                  </Show>
                                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </TableCell>
                               )}
@@ -320,7 +384,7 @@ export function OrderListPage(props: OrderListPageProps) {
                 </div>
                 <Show when={data()} keyed>
                   {orders => (
-                    <div class="mt-3 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                    <div class="mt-3 flex flex-col gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                       <p>
                         Showing {orders.offset + 1}–
                         {Math.min(orders.offset + orders.items.length, orders.total)} of{' '}

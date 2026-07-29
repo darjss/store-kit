@@ -62,6 +62,9 @@ const router = createRouter({ routeTree, basepath: '/admin' })
 
 export const adminNavigation = {
   dashboard: () => router.navigate({ to: '/' }),
+  catalog: () => router.navigate({ to: '/catalog' }),
+  orders: () => router.navigate({ to: '/orders' }),
+  settings: () => router.navigate({ to: '/settings' }),
 }
 
 export function AdminRouterProvider(props: ParentProps) {

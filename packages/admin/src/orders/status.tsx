@@ -155,7 +155,7 @@ function OrderStatusForm(props: OrderStatusFormProps) {
   return (
     <form
       aria-label="Change order status"
-      class="rounded-lg border p-4"
+      class="border-y bg-card px-3 py-3 sm:px-4"
       noValidate
       onSubmit={event => {
         event.preventDefault()
@@ -163,64 +163,68 @@ function OrderStatusForm(props: OrderStatusFormProps) {
         void form.handleSubmit()
       }}
     >
-      <div class="mb-4">
-        <h2 class="text-lg leading-6 font-semibold">Order status</h2>
-        <p class="mt-1 text-sm text-muted-foreground">
-          Use only the next status supplied by the server. Payment and stock do not change here.
-        </p>
-      </div>
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
-        <form.Field name="status">
-          {field => (
-            <Field class="sm:max-w-56">
-              <FieldLabel for={`${props.order.id}-next-status`}>Next status</FieldLabel>
-              <NativeSelect
-                class="w-full"
-                id={`${props.order.id}-next-status`}
-                value={field().state.value}
-                aria-invalid={!field().state.meta.isValid}
-                onBlur={() => field().handleBlur()}
-                onChange={event => {
-                  const transition = props.order.allowedTransitions.find(
-                    status => status === event.currentTarget.value,
-                  )
-                  if (transition) field().handleChange(transition)
-                }}
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div class="max-w-xl">
+          <h2 class="text-sm font-semibold">Order status</h2>
+          <p class="mt-0.5 text-xs text-muted-foreground">
+            Use only the next status supplied by the server. Payment and stock do not change here.
+          </p>
+        </div>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-start">
+          <form.Field name="status">
+            {field => (
+              <Field class="sm:max-w-56">
+                <FieldLabel for={`${props.order.id}-next-status`}>Next status</FieldLabel>
+                <NativeSelect
+                  class="w-full"
+                  id={`${props.order.id}-next-status`}
+                  value={field().state.value}
+                  aria-invalid={!field().state.meta.isValid}
+                  onBlur={() => field().handleBlur()}
+                  onChange={event => {
+                    const transition = props.order.allowedTransitions.find(
+                      status => status === event.currentTarget.value,
+                    )
+                    if (transition) field().handleChange(transition)
+                  }}
+                >
+                  <For each={props.order.allowedTransitions}>
+                    {status => (
+                      <NativeSelectOption value={status}>
+                        {orderStatusDisplay(status).label}
+                      </NativeSelectOption>
+                    )}
+                  </For>
+                </NativeSelect>
+                <FieldDescription>
+                  Status changes cannot be reversed in this screen.
+                </FieldDescription>
+                <FieldError errors={validationMessages(field().state.meta.errors)} />
+              </Field>
+            )}
+          </form.Field>
+          <form.Subscribe
+            selector={state => ({
+              canSubmit: state.canSubmit,
+              pending: state.isSubmitting,
+              status: state.values.status,
+            })}
+          >
+            {state => (
+              <Button
+                class="mt-0 w-40 sm:mt-5"
+                disabled={!state().canSubmit || state().pending}
+                type="submit"
+                variant={state().status === 'cancelled' ? 'destructive' : 'default'}
               >
-                <For each={props.order.allowedTransitions}>
-                  {status => (
-                    <NativeSelectOption value={status}>
-                      {orderStatusDisplay(status).label}
-                    </NativeSelectOption>
-                  )}
-                </For>
-              </NativeSelect>
-              <FieldDescription>Status changes cannot be reversed in this screen.</FieldDescription>
-              <FieldError errors={validationMessages(field().state.meta.errors)} />
-            </Field>
-          )}
-        </form.Field>
-        <form.Subscribe
-          selector={state => ({
-            canSubmit: state.canSubmit,
-            pending: state.isSubmitting,
-            status: state.values.status,
-          })}
-        >
-          {state => (
-            <Button
-              class="mt-0 w-40 sm:mt-5"
-              disabled={!state().canSubmit || state().pending}
-              type="submit"
-              variant={state().status === 'cancelled' ? 'destructive' : 'default'}
-            >
-              <Show when={state().pending}>
-                <Spinner aria-hidden="true" />
-              </Show>
-              {state().pending ? 'Updating…' : transitionActionLabel(state().status)}
-            </Button>
-          )}
-        </form.Subscribe>
+                <Show when={state().pending}>
+                  <Spinner aria-hidden="true" />
+                </Show>
+                {state().pending ? 'Updating…' : transitionActionLabel(state().status)}
+              </Button>
+            )}
+          </form.Subscribe>
+        </div>
       </div>
       <Show when={message()}>
         {text => (

@@ -64,9 +64,9 @@ function DetailSkeleton() {
       <span class="sr-only">Loading order details…</span>
       <Skeleton class="h-8 w-48" />
       <Skeleton class="mt-2 h-4 w-72 max-w-full" />
-      <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
-        <div class="space-y-6">
-          <Skeleton class="h-40 w-full rounded-lg" />
+      <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.72fr)]">
+        <div class="space-y-5">
+          <Skeleton class="h-10 w-full" />
           <TableSkeleton
             columns={[
               { label: 'Product' },
@@ -78,9 +78,9 @@ function DetailSkeleton() {
             rows={4}
           />
         </div>
-        <div class="space-y-6">
-          <Skeleton class="h-48 w-full rounded-lg" />
-          <Skeleton class="h-44 w-full rounded-lg" />
+        <div class="border-y bg-card px-4 py-3">
+          <Skeleton class="h-48 w-full" />
+          <Skeleton class="mt-4 h-44 w-full" />
         </div>
       </div>
     </div>
@@ -89,17 +89,17 @@ function DetailSkeleton() {
 
 function DefinitionRow(props: { label: string; children: JSX.Element }) {
   return (
-    <div class="grid gap-1 border-b py-2.5 last:border-b-0 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-4">
+    <div class="grid gap-1 border-b py-2.5 last:border-b-0 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
       <dt class="text-xs font-medium text-muted-foreground">{props.label}</dt>
-      <dd class="min-w-0 text-sm wrap-break-word">{props.children}</dd>
+      <dd class="min-w-0 text-[13px] wrap-break-word">{props.children}</dd>
     </div>
   )
 }
 
 function CustomerDelivery(props: { order: AdminOrderDetail }) {
   return (
-    <section aria-labelledby="customer-delivery-title" class="rounded-lg border px-4">
-      <h2 class="border-b py-3 text-lg leading-6 font-semibold" id="customer-delivery-title">
+    <section aria-labelledby="customer-delivery-title" class="border-b pb-2">
+      <h2 class="border-b py-3 text-sm font-semibold" id="customer-delivery-title">
         Customer and delivery
       </h2>
       <dl>
@@ -118,9 +118,9 @@ function CustomerDelivery(props: { order: AdminOrderDetail }) {
 
 function PaymentDetails(props: { order: AdminOrderDetail }) {
   return (
-    <section aria-labelledby="payment-details-title" class="rounded-lg border px-4">
+    <section aria-labelledby="payment-details-title" class="border-b pb-2">
       <div class="flex items-center justify-between gap-3 border-b py-3">
-        <h2 class="text-lg leading-6 font-semibold" id="payment-details-title">
+        <h2 class="text-sm font-semibold" id="payment-details-title">
           Payment
         </h2>
         <PaymentStatusBadge status={props.order.payment.status} />
@@ -166,8 +166,8 @@ function PaymentDetails(props: { order: AdminOrderDetail }) {
 
 function OrderTiming(props: { order: AdminOrderDetail }) {
   return (
-    <section aria-labelledby="order-timing-title" class="rounded-lg border px-4">
-      <h2 class="border-b py-3 text-lg leading-6 font-semibold" id="order-timing-title">
+    <section aria-labelledby="order-timing-title">
+      <h2 class="border-b py-3 text-sm font-semibold" id="order-timing-title">
         Order record
       </h2>
       <dl>
@@ -190,22 +190,22 @@ function OrderTiming(props: { order: AdminOrderDetail }) {
 function OrderLines(props: { order: AdminOrderDetail }) {
   return (
     <section aria-labelledby="order-lines-title">
-      <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div class="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
-          <h2 class="text-lg leading-6 font-semibold" id="order-lines-title">
+          <h2 class="text-sm font-semibold" id="order-lines-title">
             Order items
           </h2>
-          <p class="mt-1 text-sm text-muted-foreground">
+          <p class="mt-0.5 text-xs text-muted-foreground">
             Product and price details are immutable checkout snapshots.
           </p>
         </div>
-        <span class="text-sm text-muted-foreground">
+        <span class="text-xs text-muted-foreground">
           {props.order.lines.length} {props.order.lines.length === 1 ? 'line' : 'lines'}
         </span>
       </div>
-      <div class="rounded-lg border">
-        <Table aria-label="Order line items">
-          <TableHeader>
+      <div class="rounded-lg border bg-card">
+        <Table aria-label="Order line items" class="max-md:block">
+          <TableHeader class="max-md:hidden">
             <TableRow>
               <TableHead>Product</TableHead>
               <TableHead>SKU</TableHead>
@@ -214,24 +214,30 @@ function OrderLines(props: { order: AdminOrderDetail }) {
               <TableHead class="text-right">Line total</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody class="max-md:block">
             <For each={props.order.lines}>
               {line => (
-                <TableRow>
-                  <TableCell>
+                <TableRow class="max-md:grid max-md:grid-cols-2 max-md:py-1">
+                  <TableCell class="max-md:col-span-2 max-md:block max-md:px-3 max-md:py-2">
                     <div class="min-w-48 font-medium">{line.productName}</div>
                     <div class="mt-0.5 text-xs text-muted-foreground">
                       {line.variantName} · {optionsLabel(line)}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell class="max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
+                    <span class="text-xs text-muted-foreground md:hidden">SKU</span>
                     <code class="text-xs whitespace-nowrap">{line.sku}</code>
                   </TableCell>
-                  <TableCell class="text-right whitespace-nowrap tabular-nums">
+                  <TableCell class="text-right whitespace-nowrap tabular-nums max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
+                    <span class="text-xs text-muted-foreground md:hidden">Unit price</span>
                     {formatMoney(line.unitPriceMnt)}
                   </TableCell>
-                  <TableCell class="text-right tabular-nums">{line.quantity}</TableCell>
-                  <TableCell class="text-right font-medium whitespace-nowrap tabular-nums">
+                  <TableCell class="text-right tabular-nums max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
+                    <span class="text-xs text-muted-foreground md:hidden">Quantity</span>
+                    {line.quantity}
+                  </TableCell>
+                  <TableCell class="col-span-2 text-right font-medium whitespace-nowrap tabular-nums max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
+                    <span class="text-xs text-muted-foreground md:hidden">Line total</span>
                     {formatMoney(line.lineTotalMnt)}
                   </TableCell>
                 </TableRow>
@@ -240,12 +246,12 @@ function OrderLines(props: { order: AdminOrderDetail }) {
           </TableBody>
         </Table>
       </div>
-      <dl class="mt-3 ml-auto w-full max-w-sm rounded-lg border px-4">
+      <dl class="mt-3 ml-auto w-full max-w-sm border-y bg-card px-4">
         <DefinitionRow label="Subtotal">{formatMoney(props.order.subtotalMnt)}</DefinitionRow>
         <DefinitionRow label="Delivery fee">
           {formatMoney(props.order.deliveryFeeMnt)}
         </DefinitionRow>
-        <div class="grid gap-1 py-3 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-4">
+        <div class="grid gap-1 py-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
           <dt class="text-sm font-semibold">Total</dt>
           <dd class="text-base font-semibold tabular-nums sm:text-right">
             {formatMoney(props.order.totalMnt)}
@@ -273,19 +279,19 @@ function DetailContent(props: DetailContentProps) {
         title={props.order.number}
         titleId="order-detail-title"
       />
-      <div class="mt-6">
+      <div class="mt-4">
         <OrderStatusControl
           order={props.order}
           onReload={props.onReload}
           onSave={props.onSaveStatus}
         />
       </div>
-      <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
-        <div class="min-w-0 space-y-6">
-          <CustomerDelivery order={props.order} />
+      <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.72fr)]">
+        <div class="min-w-0">
           <OrderLines order={props.order} />
         </div>
-        <aside class="space-y-6">
+        <aside class="border-y bg-card px-4">
+          <CustomerDelivery order={props.order} />
           <PaymentDetails order={props.order} />
           <OrderTiming order={props.order} />
         </aside>
@@ -323,8 +329,8 @@ export function OrderDetailPage(props: OrderDetailPageProps) {
   }
 
   return (
-    <section class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div class="mb-4">
+    <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
+      <div class="mb-3">
         <Button onClick={() => props.onBack()} size="sm" type="button" variant="ghost">
           <ArrowLeft aria-hidden="true" />
           Back to orders
