@@ -163,18 +163,3 @@ export const adminCatalogRoutes = createApprovedAdminRoutes()
       ),
     { body: contractBody(adminProductImageDeleteSchema), params: imageParams },
   )
-  // Keep the old update methods until the existing admin Eden callers move to the approved PUT routes.
-  .patch(
-    '/catalog/products/:productId',
-    async ({ body, params }) =>
-      Result.serialize(await commerce.catalog.updateAdminProduct(params.productId, body)),
-    { body: contractBody(adminProductUpdateSchema), params: productParams },
-  )
-  .patch(
-    '/catalog/products/:productId/variants/:variantId',
-    async ({ body, params }) =>
-      Result.serialize(
-        await commerce.catalog.updateAdminVariant(params.productId, params.variantId, body),
-      ),
-    { body: contractBody(adminVariantUpdateSchema), params: variantParams },
-  )

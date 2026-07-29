@@ -14,6 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from '@store-kit/ui'
+import {
+  createColumnHelper,
+  createSolidTable,
+  flexRender,
+  getCoreRowModel,
+} from '@tanstack/solid-table'
 import { For, Match, Switch } from 'solid-js'
 
 import {
@@ -71,6 +77,107 @@ const dateFormatter = new Intl.DateTimeFormat('mn-MN', {
 const formatMoney = (value: number) => moneyFormatter.format(value)
 const formatDate = (value: number) => dateFormatter.format(new Date(value))
 const dateTime = (value: number) => new Date(value).toISOString()
+
+const recentOrderColumnHelper = createColumnHelper<AdminOrderListItem>()
+const recentOrderTableColumns = (orderHref: (orderId: AdminOrderListItem['id']) => string) => [
+  recentOrderColumnHelper.accessor('number', {
+    header: 'Order',
+    cell: info => (
+      <div>
+        <a
+          class="font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          href={orderHref(info.row.original.id)}
+        >
+          {info.getValue()}
+        </a>
+        <p class="mt-0.5 text-xs text-muted-foreground">{info.row.original.customerName}</p>
+      </div>
+    ),
+  }),
+  recentOrderColumnHelper.accessor('status', {
+    header: 'Order status',
+    cell: info => {
+      const status = orderStatusDisplay(info.getValue())
+      return <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+    },
+  }),
+  recentOrderColumnHelper.display({
+    id: 'payment',
+    header: 'Payment',
+    cell: info => {
+      const status = paymentStatusDisplay(info.row.original.paymentStatus)
+      return (
+        <div class="flex items-center gap-2">
+          <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+          <span class="text-xs text-muted-foreground">
+            {paymentMethodLabel(info.row.original.paymentMethod)}
+          </span>
+        </div>
+      )
+    },
+  }),
+  recentOrderColumnHelper.accessor('lineCount', {
+    header: 'Items',
+    cell: info => <span class="tabular-nums">{info.getValue()}</span>,
+  }),
+  recentOrderColumnHelper.accessor('totalMnt', {
+    header: 'Total',
+    cell: info => <span class="font-medium tabular-nums">{formatMoney(info.getValue())}</span>,
+  }),
+  recentOrderColumnHelper.accessor('createdAt', {
+    header: 'Placed',
+    cell: info => <time dateTime={dateTime(info.getValue())}>{formatDate(info.getValue())}</time>,
+  }),
+]
+
+const recentOrderMobileClass: Record<string, string> = {
+  number: 'max-md:col-span-2 max-md:block',
+  status: 'max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between',
+  payment: 'max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between',
+  lineCount: 'max-md:flex max-md:items-center max-md:justify-between',
+  totalMnt: 'max-md:flex max-md:items-center max-md:justify-between',
+  createdAt: 'max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between',
+}
+
+const lowStockColumnHelper = createColumnHelper<AdminLowStockVariant>()
+const lowStockTableColumns = (
+  catalogHref: (
+    productId: AdminLowStockVariant['productId'],
+    variantId: AdminLowStockVariant['variantId'],
+  ) => string,
+) => [
+  lowStockColumnHelper.accessor('productName', {
+    header: 'Product',
+    cell: info => (
+      <div>
+        <a
+          class="font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          href={catalogHref(info.row.original.productId, info.row.original.variantId)}
+        >
+          {info.getValue()}
+        </a>
+        <p class="mt-0.5 text-xs text-muted-foreground">{info.row.original.variantName}</p>
+      </div>
+    ),
+  }),
+  lowStockColumnHelper.accessor('sku', {
+    header: 'SKU',
+    cell: info => <code class="text-xs">{info.getValue()}</code>,
+  }),
+  lowStockColumnHelper.accessor('stockQuantity', {
+    header: 'Inventory',
+    cell: info => (
+      <div class="flex items-center gap-2">
+        <span class="font-medium tabular-nums">{info.getValue()}</span>
+        <InventoryStatus stockQuantity={info.getValue()} />
+      </div>
+    ),
+  }),
+  lowStockColumnHelper.accessor('updatedAt', {
+    header: 'Updated',
+    cell: info => <time dateTime={dateTime(info.getValue())}>{formatDate(info.getValue())}</time>,
+  }),
+]
 
 function DashboardSkeleton() {
   return (
@@ -139,6 +246,14 @@ function RecentOrders(props: {
   orders: AdminOrderListItem[]
   orderHref: (orderId: AdminOrderListItem['id']) => string
 }) {
+  const table = createSolidTable({
+    get data() {
+      return props.orders
+    },
+    columns: recentOrderTableColumns(props.orderHref),
+    getCoreRowModel: getCoreRowModel(),
+  })
+
   return (
     <section aria-labelledby="recent-orders-title">
       <div class="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -161,64 +276,52 @@ function RecentOrders(props: {
             <Table class="max-md:block">
               <TableCaption class="sr-only">The eight newest store orders</TableCaption>
               <TableHeader class="max-md:hidden">
-                <TableRow class="hover:bg-transparent">
-                  <TableHead>Order</TableHead>
-                  <TableHead>Order status</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead class="text-right">Items</TableHead>
-                  <TableHead class="text-right">Total</TableHead>
-                  <TableHead>Placed</TableHead>
-                </TableRow>
+                <For each={table.getHeaderGroups()}>
+                  {headerGroup => (
+                    <TableRow class="hover:bg-transparent">
+                      <For each={headerGroup.headers}>
+                        {header => (
+                          <TableHead
+                            class={
+                              header.column.id === 'lineCount' || header.column.id === 'totalMnt'
+                                ? 'text-right'
+                                : undefined
+                            }
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
+                        )}
+                      </For>
+                    </TableRow>
+                  )}
+                </For>
               </TableHeader>
               <TableBody class="max-md:block">
-                <For each={props.orders}>
-                  {order => {
-                    const orderStatus = orderStatusDisplay(order.status)
-                    const paymentStatus = paymentStatusDisplay(order.paymentStatus)
-
-                    return (
-                      <TableRow class="max-md:grid max-md:grid-cols-2 max-md:py-1">
-                        <TableCell class="max-md:col-span-2 max-md:block max-md:px-3 max-md:py-2">
-                          <a
-                            class="font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            href={props.orderHref(order.id)}
+                <For each={table.getRowModel().rows}>
+                  {row => (
+                    <TableRow class="max-md:grid max-md:grid-cols-2 max-md:py-1">
+                      <For each={row.getVisibleCells()}>
+                        {cell => (
+                          <TableCell
+                            class={`${recentOrderMobileClass[cell.column.id] ?? ''} max-md:gap-2 max-md:px-3 max-md:py-2 ${
+                              cell.column.id === 'lineCount' || cell.column.id === 'totalMnt'
+                                ? 'md:text-right'
+                                : ''
+                            }`}
                           >
-                            {order.number}
-                          </a>
-                          <p class="mt-0.5 text-xs text-muted-foreground">{order.customerName}</p>
-                        </TableCell>
-                        <TableCell class="max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:gap-2 max-md:px-3 max-md:py-2">
-                          <span class="text-xs text-muted-foreground md:hidden">Order status</span>
-                          <StatusBadge tone={orderStatus.tone}>{orderStatus.label}</StatusBadge>
-                        </TableCell>
-                        <TableCell class="max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:gap-2 max-md:px-3 max-md:py-2">
-                          <span class="text-xs text-muted-foreground md:hidden">Payment</span>
-                          <div class="flex items-center gap-2">
-                            <StatusBadge tone={paymentStatus.tone}>
-                              {paymentStatus.label}
-                            </StatusBadge>
-                            <span class="text-xs text-muted-foreground">
-                              {paymentMethodLabel(order.paymentMethod)}
+                            <span class="text-xs text-muted-foreground md:hidden">
+                              {typeof cell.column.columnDef.header === 'string'
+                                ? cell.column.columnDef.header
+                                : cell.column.id}
                             </span>
-                          </div>
-                        </TableCell>
-                        <TableCell class="text-right tabular-nums max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
-                          <span class="text-xs text-muted-foreground md:hidden">Items</span>
-                          {order.lineCount}
-                        </TableCell>
-                        <TableCell class="text-right font-medium tabular-nums max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
-                          <span class="text-xs text-muted-foreground md:hidden">Total</span>
-                          {formatMoney(order.totalMnt)}
-                        </TableCell>
-                        <TableCell class="max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
-                          <span class="text-xs text-muted-foreground md:hidden">Placed</span>
-                          <time dateTime={dateTime(order.createdAt)}>
-                            {formatDate(order.createdAt)}
-                          </time>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  }}
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        )}
+                      </For>
+                    </TableRow>
+                  )}
                 </For>
               </TableBody>
             </Table>
@@ -244,6 +347,14 @@ function LowStock(props: {
     variantId: AdminLowStockVariant['variantId'],
   ) => string
 }) {
+  const table = createSolidTable({
+    get data() {
+      return props.variants
+    },
+    columns: lowStockTableColumns(props.catalogHref),
+    getCoreRowModel: getCoreRowModel(),
+  })
+
   return (
     <section aria-labelledby="low-stock-title">
       <div class="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -266,43 +377,38 @@ function LowStock(props: {
                 The eight active variants with the lowest stock
               </TableCaption>
               <TableHeader class="max-md:hidden">
-                <TableRow class="hover:bg-transparent">
-                  <TableHead>Product</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Inventory</TableHead>
-                  <TableHead>Updated</TableHead>
-                </TableRow>
+                <For each={table.getHeaderGroups()}>
+                  {headerGroup => (
+                    <TableRow class="hover:bg-transparent">
+                      <For each={headerGroup.headers}>
+                        {header => (
+                          <TableHead>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </TableHead>
+                        )}
+                      </For>
+                    </TableRow>
+                  )}
+                </For>
               </TableHeader>
               <TableBody class="max-md:block">
-                <For each={props.variants}>
-                  {variant => (
+                <For each={table.getRowModel().rows}>
+                  {row => (
                     <TableRow class="max-md:grid max-md:grid-cols-2 max-md:py-1">
-                      <TableCell class="max-md:col-span-2 max-md:block max-md:px-3 max-md:py-2">
-                        <a
-                          class="font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          href={props.catalogHref(variant.productId, variant.variantId)}
-                        >
-                          {variant.productName}
-                        </a>
-                        <p class="mt-0.5 text-xs text-muted-foreground">{variant.variantName}</p>
-                      </TableCell>
-                      <TableCell class="font-mono text-xs max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
-                        <span class="font-sans text-muted-foreground md:hidden">SKU</span>
-                        {variant.sku}
-                      </TableCell>
-                      <TableCell class="max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:gap-2 max-md:px-3 max-md:py-2">
-                        <span class="text-xs text-muted-foreground md:hidden">Inventory</span>
-                        <div class="flex items-center gap-2">
-                          <span class="font-medium tabular-nums">{variant.stockQuantity}</span>
-                          <InventoryStatus stockQuantity={variant.stockQuantity} />
-                        </div>
-                      </TableCell>
-                      <TableCell class="max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:gap-2 max-md:px-3 max-md:py-2">
-                        <span class="text-xs text-muted-foreground md:hidden">Updated</span>
-                        <time dateTime={dateTime(variant.updatedAt)}>
-                          {formatDate(variant.updatedAt)}
-                        </time>
-                      </TableCell>
+                      <For each={row.getVisibleCells()}>
+                        {cell => (
+                          <TableCell class="max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:gap-2 max-md:px-3 max-md:py-2">
+                            <span class="text-xs text-muted-foreground md:hidden">
+                              {typeof cell.column.columnDef.header === 'string'
+                                ? cell.column.columnDef.header
+                                : cell.column.id}
+                            </span>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        )}
+                      </For>
                     </TableRow>
                   )}
                 </For>
