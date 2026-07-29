@@ -51,12 +51,12 @@ export const orderStatusDisplay = (status: OrderStatus) =>
     taggedStatus(status),
     'status',
   )<StatusDisplay>({
-    new: () => ({ label: 'New', tone: 'information' }),
-    confirmed: () => ({ label: 'Confirmed', tone: 'information' }),
-    preparing: () => ({ label: 'Preparing', tone: 'warning' }),
-    delivering: () => ({ label: 'Delivering', tone: 'information' }),
-    completed: () => ({ label: 'Completed', tone: 'success' }),
-    cancelled: () => ({ label: 'Cancelled', tone: 'destructive' }),
+    new: () => ({ label: 'Шинэ', tone: 'information' }),
+    confirmed: () => ({ label: 'Баталгаажсан', tone: 'information' }),
+    preparing: () => ({ label: 'Бэлтгэж байна', tone: 'warning' }),
+    delivering: () => ({ label: 'Хүргэж байна', tone: 'information' }),
+    completed: () => ({ label: 'Дууссан', tone: 'success' }),
+    cancelled: () => ({ label: 'Цуцалсан', tone: 'destructive' }),
   })
 
 export const paymentStatusDisplay = (status: PaymentStatus) =>
@@ -64,11 +64,11 @@ export const paymentStatusDisplay = (status: PaymentStatus) =>
     taggedStatus(status),
     'status',
   )<StatusDisplay>({
-    pending: () => ({ label: 'Pending', tone: 'neutral' }),
-    claimed: () => ({ label: 'Claimed', tone: 'warning' }),
-    confirming: () => ({ label: 'Confirming', tone: 'warning' }),
-    paid: () => ({ label: 'Paid', tone: 'success' }),
-    failed: () => ({ label: 'Failed', tone: 'destructive' }),
+    pending: () => ({ label: 'Хүлээгдэж байна', tone: 'neutral' }),
+    claimed: () => ({ label: 'Шилжүүлсэн гэж мэдэгдсэн', tone: 'warning' }),
+    confirming: () => ({ label: 'Шалгаж байна', tone: 'warning' }),
+    paid: () => ({ label: 'Төлөгдсөн', tone: 'success' }),
+    failed: () => ({ label: 'Амжилтгүй', tone: 'destructive' }),
   })
 
 export const paymentMethodLabel = (method: PaymentMethod) =>
@@ -77,7 +77,7 @@ export const paymentMethodLabel = (method: PaymentMethod) =>
     'method',
   )<string>({
     qpay: () => 'QPay',
-    bank_transfer: () => 'Bank transfer',
+    bank_transfer: () => 'Банкны шилжүүлэг',
   })
 
 const transitionActionLabel = (status: OrderStatus) =>
@@ -85,12 +85,12 @@ const transitionActionLabel = (status: OrderStatus) =>
     taggedStatus(status),
     'status',
   )<string>({
-    new: () => 'Update status',
-    confirmed: () => 'Update status',
-    preparing: () => 'Start preparing',
-    delivering: () => 'Start delivery',
-    completed: () => 'Complete order',
-    cancelled: () => 'Cancel order',
+    new: () => 'Төлөв шинэчлэх',
+    confirmed: () => 'Төлөв шинэчлэх',
+    preparing: () => 'Бэлтгэж эхлэх',
+    delivering: () => 'Хүргэлтэд гаргах',
+    completed: () => 'Захиалга дуусгах',
+    cancelled: () => 'Захиалга цуцлах',
   })
 
 const noTransitionMessage = (order: AdminOrderDetail) =>
@@ -99,12 +99,12 @@ const noTransitionMessage = (order: AdminOrderDetail) =>
     'status',
   )<string>({
     new: () =>
-      `Payment is ${paymentStatusDisplay(order.payment.status).label.toLowerCase()}. The payment workflow controls confirmation, so no manual status change is available.`,
-    confirmed: () => 'The server has not provided a manual transition for this confirmed order.',
-    preparing: () => 'The server has not provided a manual transition for this preparing order.',
-    delivering: () => 'The server has not provided a manual transition for this delivery.',
-    completed: () => 'This order is completed and has no further status changes.',
-    cancelled: () => 'This order is cancelled and has no further status changes.',
+      `Төлбөрийн төлөв: ${paymentStatusDisplay(order.payment.status).label.toLowerCase()}. Төлбөр баталгаажих хүртэл захиалгын төлөвийг гараар өөрчлөх боломжгүй.`,
+    confirmed: () => 'Энэ баталгаажсан захиалгад хийх дараагийн өөрчлөлт алга.',
+    preparing: () => 'Энэ бэлтгэж буй захиалгад хийх дараагийн өөрчлөлт алга.',
+    delivering: () => 'Энэ хүргэлтэд хийх дараагийн өөрчлөлт алга.',
+    completed: () => 'Захиалга дууссан тул төлөвийг дахин өөрчлөх боломжгүй.',
+    cancelled: () => 'Захиалга цуцлагдсан тул төлөвийг дахин өөрчлөх боломжгүй.',
   })
 
 export function OrderStatusBadge(props: { status: OrderStatus }) {
@@ -124,7 +124,7 @@ const validationMessages = (errors: readonly unknown[]) =>
         ? error
         : typeof error === 'object' && error !== null && 'message' in error
           ? String(error.message)
-          : 'Select a valid status.',
+          : 'Зөв төлөв сонгоно уу.',
   }))
 
 type OrderStatusFormProps = {
@@ -159,7 +159,7 @@ function OrderStatusForm(props: OrderStatusFormProps) {
         const result = await props.onSave(value)
         if (result.isErr()) setFailure(result.error)
       } catch {
-        setTransportError('Check your connection, then try the status update again.')
+        setTransportError('Интернэт холболтоо шалгаад төлөвийг дахин шинэчилнэ үү.')
       }
     },
   }))
@@ -168,8 +168,8 @@ function OrderStatusForm(props: OrderStatusFormProps) {
 
   return (
     <form
-      aria-label="Change order status"
-      class="border-y bg-card px-3 py-3 sm:px-4"
+      aria-label="Захиалгын төлөв өөрчлөх"
+      class="-mx-4 border-y bg-card px-4 py-4 sm:mx-0 sm:rounded-lg sm:border-x"
       noValidate
       onSubmit={event => {
         event.preventDefault()
@@ -179,18 +179,18 @@ function OrderStatusForm(props: OrderStatusFormProps) {
     >
       <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div class="max-w-xl">
-          <h2 class="text-sm font-semibold">Order status</h2>
-          <p class="mt-0.5 text-xs text-muted-foreground">
-            Use only the next status supplied by the server. Payment and stock do not change here.
+          <h2 class="text-base font-semibold">Захиалгын төлөв</h2>
+          <p class="mt-1 text-sm leading-5 text-muted-foreground">
+            Энд зөвхөн захиалгын явцыг өөрчилнө. Төлбөр болон барааны үлдэгдэл өөрчлөгдөхгүй.
           </p>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-start">
           <form.Field name="status">
             {field => (
-              <Field class="sm:max-w-56">
-                <FieldLabel for={`${props.order.id}-next-status`}>Next status</FieldLabel>
+              <Field class="sm:max-w-64">
+                <FieldLabel for={`${props.order.id}-next-status`}>Дараагийн төлөв</FieldLabel>
                 <NativeSelect
-                  class="w-full"
+                  class="min-h-12! w-full lg:min-h-8!"
                   id={`${props.order.id}-next-status`}
                   value={field().state.value}
                   aria-invalid={!field().state.meta.isValid}
@@ -210,9 +210,7 @@ function OrderStatusForm(props: OrderStatusFormProps) {
                     )}
                   </For>
                 </NativeSelect>
-                <FieldDescription>
-                  Status changes cannot be reversed in this screen.
-                </FieldDescription>
+                <FieldDescription>Энэ дэлгэцээс төлөвийг буцаах боломжгүй.</FieldDescription>
                 <FieldError errors={validationMessages(field().state.meta.errors)} />
               </Field>
             )}
@@ -226,7 +224,7 @@ function OrderStatusForm(props: OrderStatusFormProps) {
           >
             {state => (
               <Button
-                class="mt-0 w-40 sm:mt-5"
+                class="mt-0 min-h-12! w-full sm:mt-5 sm:w-48 lg:min-h-8!"
                 disabled={!state().canSubmit || state().pending}
                 type="submit"
                 variant={state().status === 'cancelled' ? 'destructive' : 'default'}
@@ -234,7 +232,7 @@ function OrderStatusForm(props: OrderStatusFormProps) {
                 <Show when={state().pending}>
                   <Spinner aria-hidden="true" />
                 </Show>
-                {state().pending ? 'Updating…' : transitionActionLabel(state().status)}
+                {state().pending ? 'Шинэчилж байна…' : transitionActionLabel(state().status)}
               </Button>
             )}
           </form.Subscribe>
@@ -252,11 +250,13 @@ function OrderStatusForm(props: OrderStatusFormProps) {
                     type="button"
                     variant="outline"
                   >
-                    Reload current data
+                    Одоогийн мэдээллийг дахин авах
                   </Button>
                 </Show>
               }
-              title={conflict() ? 'Order data changed' : 'Could not update order status'}
+              title={
+                conflict() ? 'Захиалгын мэдээлэл өөрчлөгдсөн' : 'Захиалгын төлөв шинэчилж чадсангүй'
+              }
               tone="destructive"
             >
               {text()}
@@ -274,15 +274,15 @@ function OrderStatusForm(props: OrderStatusFormProps) {
       >
         <DialogContent class="max-w-md rounded-lg border bg-popover p-4">
           <DialogHeader>
-            <DialogTitle>Cancel this order?</DialogTitle>
+            <DialogTitle>Энэ захиалгыг цуцлах уу?</DialogTitle>
             <DialogDescription>
-              Cancellation is permanent in this screen. Payment and stock are not changed by this
-              action.
+              Цуцалсны дараа энэ дэлгэцээс буцаах боломжгүй. Төлбөр болон барааны үлдэгдэл
+              өөрчлөгдөхгүй.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter class="mt-5">
             <DialogClose as={Button} type="button" variant="outline">
-              Keep order
+              Захиалгыг хэвээр үлдээх
             </DialogClose>
             <Button
               onClick={() => {
@@ -293,7 +293,7 @@ function OrderStatusForm(props: OrderStatusFormProps) {
               type="button"
               variant="destructive"
             >
-              Cancel order
+              Захиалга цуцлах
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -307,7 +307,7 @@ export function OrderStatusControl(props: OrderStatusFormProps) {
     <Show
       when={props.order.allowedTransitions.length > 0}
       fallback={
-        <InlineAlert title="No manual status change">
+        <InlineAlert title="Гараар өөрчлөх төлөв алга">
           {noTransitionMessage(props.order)}
         </InlineAlert>
       }

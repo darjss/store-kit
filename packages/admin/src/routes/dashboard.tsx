@@ -17,8 +17,14 @@ export const createDashboardRoute = <TParentRoute extends AnyRoute>(
     component: () => (
       <DashboardPage
         catalogHref={options.catalogHref}
+        catalogRequest={options.catalogRequest}
+        inventoryHref={options.inventoryHref}
+        newProductHref={options.newProductHref}
         orderHref={options.orderHref}
+        ordersHref={options.ordersHref}
         request={options.request}
+        settingsHref={options.settingsHref}
+        storefrontHref={options.storefrontHref}
       />
     ),
   })

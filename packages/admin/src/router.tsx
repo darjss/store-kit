@@ -60,8 +60,14 @@ const settingsRequests: SettingsRequests = {
 const dashboardRoute = createDashboardRoute({
   getParentRoute: () => rootRoute,
   request: () => api.api.admin.dashboard.get(),
+  catalogRequest: () => catalogApi.products.get({ query: { limit: 1, offset: 0 } }),
   orderHref: orderId => `/admin/orders/${orderId}`,
+  ordersHref: status => `/admin/orders${status ? `?status=${status}` : ''}`,
+  inventoryHref: '/admin/catalog?inventory=low',
   catalogHref: productId => `/admin/catalog/${productId}`,
+  newProductHref: '/admin/catalog/new',
+  settingsHref: '/admin/settings',
+  storefrontHref: '/',
 })
 const catalogRoutes = createCatalogRoutes(rootRoute, catalogRequests)
 const orderRoutes = createOrderRoutes(rootRoute, orderRequests)

@@ -1,6 +1,6 @@
 import { Skeleton } from '@store-kit/ui'
 import { useMutation, useQueryClient } from '@tanstack/solid-query'
-import { Match, Switch } from 'solid-js'
+import { For, Match, Switch } from 'solid-js'
 import { toast } from 'solid-sonner'
 
 import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
@@ -11,42 +11,41 @@ import { settingsKeys, settingsMutation, settingsQuery } from './query-options'
 
 function SettingsFormSkeleton() {
   return (
-    <div aria-busy="true" class="mt-4 border-y bg-card" role="status">
-      <span class="sr-only">Loading store settings…</span>
-      <div class="grid gap-5 px-4 py-5 sm:px-5 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-8">
-        <div>
-          <Skeleton class="h-4 w-40 max-w-full" />
-          <Skeleton class="mt-2 h-3 w-full" />
-          <Skeleton class="mt-1 h-3 w-4/5" />
-        </div>
-        <div>
-          <div class="border-b pb-4">
-            <Skeleton class="h-3 w-24" />
-            <Skeleton class="mt-2 h-8 w-full max-w-xs" />
-            <Skeleton class="mt-2 h-3 w-72 max-w-full" />
-          </div>
-          <div class="grid gap-4 border-b py-4 md:grid-cols-2">
-            <div>
-              <Skeleton class="h-3 w-20" />
-              <Skeleton class="mt-2 h-8 w-full" />
-              <Skeleton class="mt-2 h-3 w-48 max-w-full" />
-            </div>
-            <div>
-              <Skeleton class="h-3 w-24" />
-              <Skeleton class="mt-2 h-8 w-full" />
-              <Skeleton class="mt-2 h-3 w-48 max-w-full" />
-            </div>
-          </div>
-          <div class="pt-4">
-            <Skeleton class="h-3 w-28" />
-            <Skeleton class="mt-2 h-8 w-full max-w-md" />
-            <Skeleton class="mt-2 h-3 w-64 max-w-full" />
-          </div>
-        </div>
+    <div
+      aria-busy="true"
+      class="-mx-4 mt-4 border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x"
+      role="status"
+    >
+      <span class="sr-only">Дэлгүүрийн тохиргоог ачаалж байна…</span>
+      <div class="border-b px-4 py-5 sm:px-6">
+        <Skeleton class="h-5 w-64 max-w-full" />
+        <Skeleton class="mt-2 h-4 w-full max-w-2xl" />
+        <Skeleton class="mt-1 h-4 w-4/5 max-w-2xl" />
       </div>
-      <div class="flex min-h-12 items-center justify-between border-t bg-popover px-4 py-2 sm:px-5">
-        <Skeleton class="h-3 w-24" />
-        <Skeleton class="h-8 w-32" />
+      <div class="mx-auto max-w-2xl px-4 sm:px-6">
+        <For each={[0, 1]}>
+          {index => (
+            <section class={index === 0 ? 'border-b py-5' : 'py-5'}>
+              <Skeleton class="h-5 w-36" />
+              <Skeleton class="mt-2 h-4 w-full max-w-lg" />
+              <Skeleton class="mt-5 h-4 w-28" />
+              <Skeleton class="mt-2 h-12 w-full" />
+              <Skeleton class="mt-2 h-3 w-72 max-w-full" />
+              {index === 1 && (
+                <>
+                  <Skeleton class="mt-5 h-4 w-36" />
+                  <Skeleton class="mt-2 h-12 w-full" />
+                  <Skeleton class="mt-5 h-4 w-28" />
+                  <Skeleton class="mt-2 h-12 w-full" />
+                </>
+              )}
+            </section>
+          )}
+        </For>
+      </div>
+      <div class="flex min-h-16 items-center justify-between border-t bg-popover px-4 py-2 sm:px-6">
+        <Skeleton class="h-4 w-40" />
+        <Skeleton class="h-12 w-36" />
       </div>
     </div>
   )
@@ -65,14 +64,14 @@ export function SettingsPage(props: SettingsPageProps) {
 
   const saved = () => {
     void queryClient.invalidateQueries({ queryKey: settingsKeys.all })
-    toast.success('Store settings saved.')
+    toast.success('Дэлгүүрийн тохиргоо хадгалагдлаа.')
   }
 
   return (
-    <section class="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-7">
+    <section class="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 lg:px-7">
       <PageHeader
-        description="Manage the delivery fee and bank-transfer details used by new checkouts."
-        title="Store settings"
+        description="Шинэ захиалгад ашиглах хүргэлтийн үнэ болон банкны дансыг удирдана."
+        title="Дэлгүүрийн тохиргоо"
         titleId="store-settings-title"
       />
 
@@ -83,7 +82,7 @@ export function SettingsPage(props: SettingsPageProps) {
         <Match when={query.isError}>
           <div class="mt-4">
             <RetryState
-              message="Check your connection, then retry the store settings request."
+              message="Интернэт холболтоо шалгаад дэлгүүрийн тохиргоог дахин ачаална уу."
               onRetry={() => {
                 void query.refetch()
               }}
@@ -97,8 +96,8 @@ export function SettingsPage(props: SettingsPageProps) {
               <InlineAlert
                 title={
                   error()._tag === 'StoreSettingsMissing'
-                    ? 'Store settings need setup'
-                    : 'Store settings are unavailable'
+                    ? 'Дэлгүүрийн тохиргоог эхлүүлэх шаардлагатай'
+                    : 'Дэлгүүрийн тохиргоо авах боломжгүй байна'
                 }
                 tone="destructive"
               >

@@ -9,6 +9,7 @@ import {
   Input,
   NativeSelect,
   NativeSelectOption,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -24,13 +25,7 @@ import {
 } from '@tanstack/solid-table'
 import { For, Show, createSignal } from 'solid-js'
 
-import {
-  AdminEmptyState,
-  InlineAlert,
-  PageHeader,
-  RetryState,
-  TableSkeleton,
-} from '../components/foundation'
+import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
 import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
 import { useQueryResult } from '../query-options/result'
 import type { OrderRequests } from './query-options'
@@ -54,21 +49,9 @@ const dateTime = (value: number) => new Date(value).toISOString()
 
 const columnHelper = createColumnHelper<AdminOrderListItem>()
 
-const orderColumnLabel: Record<string, string> = {
-  status: 'Order status',
-  payment: 'Payment',
-  lineCount: 'Items',
-  totalMnt: 'Total',
-}
-
-const mobileCellClass = (columnId: string) =>
-  columnId === 'number' || columnId === 'customerName'
-    ? 'max-md:col-span-2 max-md:block max-md:px-3 max-md:py-2'
-    : `${columnId === 'payment' ? 'max-md:col-span-2' : ''} max-md:flex max-md:min-h-9 max-md:items-center max-md:justify-between max-md:gap-3 max-md:px-3 max-md:py-2`
-
 const orderColumns = (orderHref: (orderId: string) => string) => [
   columnHelper.accessor('number', {
-    header: 'Order',
+    header: 'Захиалга',
     cell: info => (
       <div class="min-w-32">
         <a
@@ -86,7 +69,7 @@ const orderColumns = (orderHref: (orderId: string) => string) => [
     ),
   }),
   columnHelper.accessor('customerName', {
-    header: 'Customer',
+    header: 'Хэрэглэгч',
     cell: info => (
       <div class="min-w-40">
         <div class="font-medium">{info.getValue()}</div>
@@ -97,14 +80,14 @@ const orderColumns = (orderHref: (orderId: string) => string) => [
     ),
   }),
   columnHelper.accessor('status', {
-    header: 'Order status',
+    header: 'Захиалгын төлөв',
     cell: info => <OrderStatusBadge status={info.getValue()} />,
   }),
   columnHelper.display({
     id: 'payment',
-    header: 'Payment',
+    header: 'Төлбөр',
     cell: info => (
-      <div class="min-w-0 md:min-w-32">
+      <div class="min-w-32">
         <PaymentStatusBadge status={info.row.original.paymentStatus} />
         <div class="mt-1 text-xs text-muted-foreground">
           {paymentMethodLabel(info.row.original.paymentMethod)}
@@ -113,11 +96,11 @@ const orderColumns = (orderHref: (orderId: string) => string) => [
     ),
   }),
   columnHelper.accessor('lineCount', {
-    header: 'Items',
+    header: 'Бараа',
     cell: info => <span class="tabular-nums">{info.getValue()}</span>,
   }),
   columnHelper.accessor('totalMnt', {
-    header: 'Total',
+    header: 'Нийт',
     cell: info => (
       <span class="font-medium whitespace-nowrap tabular-nums">{formatMoney(info.getValue())}</span>
     ),
@@ -127,6 +110,164 @@ const orderColumns = (orderHref: (orderId: string) => string) => [
 export type OrderListSearch = AdminOrderListFilters & {
   limit: number
   offset: number
+}
+
+type FilterFieldsProps = {
+  idSuffix: string
+  search: OrderListSearch
+  setSearch: (patch: Partial<OrderListSearch>) => void
+  clearFilters: () => void
+  hasFilters: boolean
+}
+
+function FilterFields(props: FilterFieldsProps) {
+  return (
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+      <label
+        class="flex flex-1 flex-col gap-1.5 text-sm font-medium"
+        for={`order-status-filter-${props.idSuffix}`}
+      >
+        Захиалгын төлөв
+        <NativeSelect
+          class="min-h-12! w-full lg:min-h-8! lg:w-48"
+          id={`order-status-filter-${props.idSuffix}`}
+          value={props.search.status ?? 'all'}
+          onChange={event => {
+            const value = event.currentTarget.value
+            props.setSearch({
+              status:
+                value === 'new' ||
+                value === 'confirmed' ||
+                value === 'preparing' ||
+                value === 'delivering' ||
+                value === 'completed' ||
+                value === 'cancelled'
+                  ? value
+                  : undefined,
+            })
+          }}
+        >
+          <NativeSelectOption value="all">Бүх төлөв</NativeSelectOption>
+          <NativeSelectOption value="new">Шинэ</NativeSelectOption>
+          <NativeSelectOption value="confirmed">Баталгаажсан</NativeSelectOption>
+          <NativeSelectOption value="preparing">Бэлтгэж байна</NativeSelectOption>
+          <NativeSelectOption value="delivering">Хүргэж байна</NativeSelectOption>
+          <NativeSelectOption value="completed">Дууссан</NativeSelectOption>
+          <NativeSelectOption value="cancelled">Цуцалсан</NativeSelectOption>
+        </NativeSelect>
+      </label>
+      <label
+        class="flex flex-1 flex-col gap-1.5 text-sm font-medium"
+        for={`payment-status-filter-${props.idSuffix}`}
+      >
+        Төлбөрийн төлөв
+        <NativeSelect
+          class="min-h-12! w-full lg:min-h-8! lg:w-48"
+          id={`payment-status-filter-${props.idSuffix}`}
+          value={props.search.paymentStatus ?? 'all'}
+          onChange={event => {
+            const value = event.currentTarget.value
+            props.setSearch({
+              paymentStatus:
+                value === 'pending' ||
+                value === 'claimed' ||
+                value === 'confirming' ||
+                value === 'paid' ||
+                value === 'failed'
+                  ? value
+                  : undefined,
+            })
+          }}
+        >
+          <NativeSelectOption value="all">Бүх төлөв</NativeSelectOption>
+          <NativeSelectOption value="pending">Хүлээгдэж байна</NativeSelectOption>
+          <NativeSelectOption value="claimed">Шилжүүлсэн гэж мэдэгдсэн</NativeSelectOption>
+          <NativeSelectOption value="confirming">Шалгаж байна</NativeSelectOption>
+          <NativeSelectOption value="paid">Төлөгдсөн</NativeSelectOption>
+          <NativeSelectOption value="failed">Амжилтгүй</NativeSelectOption>
+        </NativeSelect>
+      </label>
+      <Show when={props.hasFilters}>
+        <Button
+          class="min-h-12! lg:min-h-8!"
+          onClick={props.clearFilters}
+          type="button"
+          variant="outline"
+        >
+          Шүүлтүүр арилгах
+        </Button>
+      </Show>
+    </div>
+  )
+}
+
+function OrderListSkeleton() {
+  return (
+    <div aria-busy="true" class="-mx-4 divide-y border-y sm:mx-0 sm:rounded-lg sm:border-x">
+      <span class="sr-only" role="status">
+        Захиалгуудыг ачаалж байна…
+      </span>
+      <For each={[0, 1, 2, 3, 4]}>
+        {() => (
+          <div class="min-h-28 px-4 py-4">
+            <div class="flex justify-between gap-4">
+              <Skeleton class="h-4 w-28" />
+              <Skeleton class="h-4 w-24" />
+            </div>
+            <Skeleton class="mt-2 h-4 w-40" />
+            <div class="mt-3 flex gap-2">
+              <Skeleton class="h-5 w-20" />
+              <Skeleton class="h-5 w-24" />
+            </div>
+          </div>
+        )}
+      </For>
+    </div>
+  )
+}
+
+function MobileOrderList(props: {
+  orders: AdminOrderListItem[]
+  orderHref: (orderId: string) => string
+}) {
+  return (
+    <ol
+      aria-label="Дэлгүүрийн захиалгууд"
+      class="-mx-4 divide-y border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x lg:hidden"
+    >
+      <For each={props.orders}>
+        {order => (
+          <li>
+            <a
+              aria-label={`${order.number}, ${order.customerName}, ${formatMoney(order.totalMnt)}`}
+              class="block min-h-28 px-4 py-4 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              href={props.orderHref(order.id)}
+            >
+              <span class="flex items-start justify-between gap-4">
+                <span class="min-w-0">
+                  <span class="block text-base font-semibold tabular-nums">{order.number}</span>
+                  <span class="mt-1 block truncate text-base">{order.customerName}</span>
+                </span>
+                <span class="shrink-0 text-base font-semibold tabular-nums">
+                  {formatMoney(order.totalMnt)}
+                </span>
+              </span>
+              <span class="mt-3 flex flex-wrap items-center gap-2">
+                <PaymentStatusBadge status={order.paymentStatus} />
+                <OrderStatusBadge status={order.status} />
+                <time
+                  class="ml-auto text-xs text-muted-foreground tabular-nums"
+                  dateTime={dateTime(order.createdAt)}
+                >
+                  {formatDate(order.createdAt)}
+                </time>
+              </span>
+            </a>
+          </li>
+        )}
+      </For>
+    </ol>
+  )
 }
 
 type OrderListPageProps = {
@@ -152,6 +293,10 @@ export function OrderListPage(props: OrderListPageProps) {
   const setSearch = (patch: Partial<OrderListSearch>) =>
     props.onSearchChange({ ...props.search, ...patch, offset: patch.offset ?? 0 })
   const clearFilters = () => props.onSearchChange({ limit: props.search.limit, offset: 0 })
+  const hasFilters = () =>
+    Boolean(props.search.query || props.search.status || props.search.paymentStatus)
+  const filterCount = () =>
+    Number(Boolean(props.search.status)) + Number(Boolean(props.search.paymentStatus))
   const rowIds = () => table.getRowModel().rows.map(row => row.original.id)
   const onTableKeyDown = (
     event: KeyboardEvent & { currentTarget: HTMLDivElement; target: Element },
@@ -163,117 +308,69 @@ export function OrderListPage(props: OrderListPageProps) {
   return (
     <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
       <PageHeader
-        description="Find customer orders, review payment state, and move eligible orders through fulfillment."
-        title="Orders"
+        description="Төлбөр, бэлтгэл, хүргэлтийн явцаар захиалгаа хурдан олж ажиллана."
+        title="Захиалга"
         titleId="orders-title"
       />
 
-      <div class="mt-4 flex flex-col gap-2 border-y bg-card px-3 py-3 sm:px-4 lg:flex-row lg:items-end">
-        <label class="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium" for="order-search">
-          Search orders
+      <div class="-mx-4 mt-4 border-y bg-card px-4 py-3 sm:mx-0 sm:rounded-lg sm:border-x">
+        <label class="flex min-w-0 flex-col gap-1.5 text-sm font-medium" for="order-search">
+          Захиалга хайх
           <div class="relative">
             <span
               aria-hidden="true"
               class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
             >
-              <Magnifer size={16} />
+              <Magnifer size={18} />
             </span>
             <Input
-              class="pl-9!"
+              class="min-h-12! pl-10! text-base! lg:min-h-8! lg:text-sm!"
               data-admin-list-search
               id="order-search"
-              placeholder="Order number, customer, or phone"
+              placeholder="Дугаар, хэрэглэгч эсвэл утас"
               type="search"
               value={props.search.query ?? ''}
               onInput={event => setSearch({ query: event.currentTarget.value || undefined })}
             />
           </div>
         </label>
-        <label class="flex flex-col gap-1 text-xs font-medium" for="order-status-filter">
-          Order status
-          <NativeSelect
-            class="w-full lg:w-44"
-            id="order-status-filter"
-            value={props.search.status ?? 'all'}
-            onChange={event => {
-              const value = event.currentTarget.value
-              setSearch({
-                status:
-                  value === 'new' ||
-                  value === 'confirmed' ||
-                  value === 'preparing' ||
-                  value === 'delivering' ||
-                  value === 'completed' ||
-                  value === 'cancelled'
-                    ? value
-                    : undefined,
-              })
-            }}
-          >
-            <NativeSelectOption value="all">All order statuses</NativeSelectOption>
-            <NativeSelectOption value="new">New</NativeSelectOption>
-            <NativeSelectOption value="confirmed">Confirmed</NativeSelectOption>
-            <NativeSelectOption value="preparing">Preparing</NativeSelectOption>
-            <NativeSelectOption value="delivering">Delivering</NativeSelectOption>
-            <NativeSelectOption value="completed">Completed</NativeSelectOption>
-            <NativeSelectOption value="cancelled">Cancelled</NativeSelectOption>
-          </NativeSelect>
-        </label>
-        <label class="flex flex-col gap-1 text-xs font-medium" for="payment-status-filter">
-          Payment status
-          <NativeSelect
-            class="w-full lg:w-44"
-            id="payment-status-filter"
-            value={props.search.paymentStatus ?? 'all'}
-            onChange={event => {
-              const value = event.currentTarget.value
-              setSearch({
-                paymentStatus:
-                  value === 'pending' ||
-                  value === 'claimed' ||
-                  value === 'confirming' ||
-                  value === 'paid' ||
-                  value === 'failed'
-                    ? value
-                    : undefined,
-              })
-            }}
-          >
-            <NativeSelectOption value="all">All payment statuses</NativeSelectOption>
-            <NativeSelectOption value="pending">Pending</NativeSelectOption>
-            <NativeSelectOption value="claimed">Claimed</NativeSelectOption>
-            <NativeSelectOption value="confirming">Confirming</NativeSelectOption>
-            <NativeSelectOption value="paid">Paid</NativeSelectOption>
-            <NativeSelectOption value="failed">Failed</NativeSelectOption>
-          </NativeSelect>
-        </label>
-        <Button onClick={clearFilters} type="button" variant="outline">
-          Clear filters
-        </Button>
+
+        <details class="mt-3 lg:hidden">
+          <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between rounded-md border px-3 text-base font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span>Шүүлтүүр</span>
+            <span class="text-sm text-muted-foreground">
+              {filterCount() > 0 ? `${filterCount()} сонгосон` : 'Бүгд'}
+            </span>
+          </summary>
+          <div class="pt-3">
+            <FilterFields
+              clearFilters={clearFilters}
+              hasFilters={hasFilters()}
+              idSuffix="mobile"
+              search={props.search}
+              setSearch={setSearch}
+            />
+          </div>
+        </details>
+
+        <div class="mt-3 hidden lg:block">
+          <FilterFields
+            clearFilters={clearFilters}
+            hasFilters={hasFilters()}
+            idSuffix="desktop"
+            search={props.search}
+            setSearch={setSearch}
+          />
+        </div>
       </div>
 
-      <div class="mt-4">
-        <Show
-          when={!query.isPending}
-          fallback={
-            <TableSkeleton
-              columns={[
-                { label: 'Order' },
-                { label: 'Customer' },
-                { label: 'Order status' },
-                { label: 'Payment' },
-                { label: 'Items' },
-                { label: 'Total' },
-              ]}
-              rows={8}
-            />
-          }
-        >
+      <div class="mt-5">
+        <Show when={!query.isPending} fallback={<OrderListSkeleton />}>
           <Show
             when={!query.isError}
             fallback={
               <RetryState
-                message="The order list could not be loaded."
+                message="Захиалгын жагсаалтыг ачаалж чадсангүй."
                 onRetry={() => void query.refetch()}
                 pending={query.isFetching}
               />
@@ -282,35 +379,38 @@ export function OrderListPage(props: OrderListPageProps) {
             <Show
               when={!expectedError()}
               fallback={
-                <InlineAlert title="Could not load orders" tone="destructive">
-                  {expectedError()?.message ?? 'The order request failed.'}
+                <InlineAlert title="Захиалга ачаалж чадсангүй" tone="destructive">
+                  {expectedError()?.message ?? 'Захиалгын хүсэлт амжилтгүй боллоо.'}
                 </InlineAlert>
               }
             >
               <Show
                 when={(data()?.items.length ?? 0) > 0}
                 fallback={
-                  <AdminEmptyState
-                    action={
-                      <Button onClick={clearFilters} type="button" variant="outline">
-                        Clear filters
-                      </Button>
-                    }
-                    description="No orders match the current search and status filters."
-                    title="No order results"
-                  />
+                  <div class="-mx-4 border-y bg-card px-4 py-6 sm:mx-0 sm:rounded-lg sm:border-x">
+                    <h2 class="text-base font-semibold">
+                      {hasFilters() ? 'Илэрц олдсонгүй' : 'Захиалга хараахан алга'}
+                    </h2>
+                    <p class="mt-1 max-w-xl text-sm leading-5 text-muted-foreground">
+                      {hasFilters()
+                        ? 'Хайлт эсвэл шүүлтүүрээ өөрчлөөд дахин шалгана уу.'
+                        : 'Хэрэглэгч анхны захиалгаа өгөхөд энд автоматаар гарч ирнэ.'}
+                    </p>
+                  </div>
                 }
               >
+                <MobileOrderList orderHref={props.orderHref} orders={data()?.items ?? []} />
+
                 <div
                   aria-activedescendant={activeTableRowId('store-orders', rowIds(), activeRow())}
-                  aria-label="Store orders. Use Up and Down arrow keys to select a row and Enter to open it."
-                  class="rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
+                  aria-label="Дэлгүүрийн захиалгууд. Дээш, доош сумын товчоор мөр сонгоод Enter дарж нээнэ."
+                  class="hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 lg:block"
                   onKeyDown={onTableKeyDown}
                   role="group"
                   tabIndex={0}
                 >
-                  <Table aria-label="Store orders" class="max-md:block">
-                    <TableHeader class="max-md:hidden">
+                  <Table aria-label="Дэлгүүрийн захиалгууд">
+                    <TableHeader>
                       <For each={table.getHeaderGroups()}>
                         {headerGroup => (
                           <TableRow>
@@ -337,12 +437,11 @@ export function OrderListPage(props: OrderListPageProps) {
                         )}
                       </For>
                     </TableHeader>
-                    <TableBody class="max-md:block">
+                    <TableBody>
                       <For each={table.getRowModel().rows}>
                         {(row, index) => (
                           <TableRow
                             aria-selected={activeRow() === index()}
-                            class="max-md:grid max-md:grid-cols-2 max-md:py-1"
                             data-state={activeRow() === index() ? 'selected' : undefined}
                             id={tableRowId('store-orders', row.original.id)}
                             onMouseEnter={() => setActiveRow(index())}
@@ -350,19 +449,12 @@ export function OrderListPage(props: OrderListPageProps) {
                             <For each={row.getVisibleCells()}>
                               {cell => (
                                 <TableCell
-                                  class={`${mobileCellClass(cell.column.id)} ${
+                                  class={
                                     cell.column.id === 'lineCount' || cell.column.id === 'totalMnt'
-                                      ? 'md:text-right'
-                                      : ''
-                                  }`}
+                                      ? 'text-right'
+                                      : undefined
+                                  }
                                 >
-                                  <Show when={orderColumnLabel[cell.column.id]}>
-                                    {label => (
-                                      <span class="text-xs text-muted-foreground md:hidden">
-                                        {label()}
-                                      </span>
-                                    )}
-                                  </Show>
                                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </TableCell>
                               )}
@@ -373,36 +465,37 @@ export function OrderListPage(props: OrderListPageProps) {
                     </TableBody>
                   </Table>
                 </div>
+
                 <Show when={data()} keyed>
                   {orders => (
-                    <div class="mt-3 flex flex-col gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-                      <p>
-                        Showing {orders.offset + 1}–
-                        {Math.min(orders.offset + orders.items.length, orders.total)} of{' '}
-                        {orders.total}
+                    <div class="mt-4 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                      <p class="tabular-nums">
+                        {orders.total} захиалгын {orders.offset + 1}–
+                        {Math.min(orders.offset + orders.items.length, orders.total)}-г харуулж
+                        байна
                       </p>
                       <div class="flex gap-2">
                         <Button
+                          class="min-h-11! min-w-28 lg:min-h-8!"
                           disabled={orders.offset === 0 || query.isFetching}
                           onClick={() =>
                             setSearch({ offset: Math.max(0, orders.offset - orders.limit) })
                           }
-                          size="sm"
                           type="button"
                           variant="outline"
                         >
-                          Previous
+                          Өмнөх
                         </Button>
                         <Button
+                          class="min-h-11! min-w-28 lg:min-h-8!"
                           disabled={
                             orders.offset + orders.items.length >= orders.total || query.isFetching
                           }
                           onClick={() => setSearch({ offset: orders.offset + orders.limit })}
-                          size="sm"
                           type="button"
                           variant="outline"
                         >
-                          Next
+                          Дараах
                         </Button>
                       </div>
                     </div>

@@ -61,7 +61,7 @@ const optionsLabel = (line: AdminOrderLine) => {
 function DetailSkeleton() {
   return (
     <div aria-busy="true" role="status">
-      <span class="sr-only">Loading order details…</span>
+      <span class="sr-only">Захиалгын мэдээллийг ачаалж байна…</span>
       <Skeleton class="h-8 w-48" />
       <Skeleton class="mt-2 h-4 w-72 max-w-full" />
       <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.72fr)]">
@@ -69,11 +69,11 @@ function DetailSkeleton() {
           <Skeleton class="h-10 w-full" />
           <TableSkeleton
             columns={[
-              { label: 'Product' },
+              { label: 'Бараа' },
               { label: 'SKU' },
-              { label: 'Unit price' },
-              { label: 'Quantity' },
-              { label: 'Line total' },
+              { label: 'Нэгж үнэ' },
+              { label: 'Тоо' },
+              { label: 'Дүн' },
             ]}
             rows={4}
           />
@@ -89,9 +89,9 @@ function DetailSkeleton() {
 
 function DefinitionRow(props: { label: string; children: JSX.Element }) {
   return (
-    <div class="grid gap-1 border-b py-2.5 last:border-b-0 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
-      <dt class="text-xs font-medium text-muted-foreground">{props.label}</dt>
-      <dd class="min-w-0 text-[13px] wrap-break-word">{props.children}</dd>
+    <div class="grid gap-1 border-b py-3 last:border-b-0 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
+      <dt class="text-sm font-medium text-muted-foreground">{props.label}</dt>
+      <dd class="min-w-0 text-base wrap-break-word sm:text-sm">{props.children}</dd>
     </div>
   )
 }
@@ -100,16 +100,16 @@ function CustomerDelivery(props: { order: AdminOrderDetail }) {
   return (
     <section aria-labelledby="customer-delivery-title" class="border-b pb-2">
       <h2 class="border-b py-3 text-sm font-semibold" id="customer-delivery-title">
-        Customer and delivery
+        Хэрэглэгч ба хүргэлт
       </h2>
       <dl>
-        <DefinitionRow label="Customer">{props.order.customerName}</DefinitionRow>
-        <DefinitionRow label="Phone">{props.order.customerPhone}</DefinitionRow>
-        <DefinitionRow label="District">{props.order.district}</DefinitionRow>
-        <DefinitionRow label="Khoroo">{props.order.khoroo}</DefinitionRow>
-        <DefinitionRow label="Address">{props.order.address}</DefinitionRow>
-        <DefinitionRow label="Delivery notes">
-          {props.order.deliveryNotes ?? 'No delivery notes'}
+        <DefinitionRow label="Хэрэглэгч">{props.order.customerName}</DefinitionRow>
+        <DefinitionRow label="Утас">{props.order.customerPhone}</DefinitionRow>
+        <DefinitionRow label="Дүүрэг">{props.order.district}</DefinitionRow>
+        <DefinitionRow label="Хороо">{props.order.khoroo}</DefinitionRow>
+        <DefinitionRow label="Хаяг">{props.order.address}</DefinitionRow>
+        <DefinitionRow label="Хүргэлтийн тэмдэглэл">
+          {props.order.deliveryNotes ?? 'Тэмдэглэлгүй'}
         </DefinitionRow>
       </dl>
     </section>
@@ -121,15 +121,13 @@ function PaymentDetails(props: { order: AdminOrderDetail }) {
     <section aria-labelledby="payment-details-title" class="border-b pb-2">
       <div class="flex items-center justify-between gap-3 border-b py-3">
         <h2 class="text-sm font-semibold" id="payment-details-title">
-          Payment
+          Төлбөр
         </h2>
         <PaymentStatusBadge status={props.order.payment.status} />
       </div>
       <dl>
-        <DefinitionRow label="Method">
-          {paymentMethodLabel(props.order.payment.method)}
-        </DefinitionRow>
-        <DefinitionRow label="Amount">{formatMoney(props.order.payment.amountMnt)}</DefinitionRow>
+        <DefinitionRow label="Арга">{paymentMethodLabel(props.order.payment.method)}</DefinitionRow>
+        <DefinitionRow label="Дүн">{formatMoney(props.order.payment.amountMnt)}</DefinitionRow>
         <Show
           when={
             props.order.payment.claimedAt === null
@@ -139,7 +137,7 @@ function PaymentDetails(props: { order: AdminOrderDetail }) {
           keyed
         >
           {claimedAt => (
-            <DefinitionRow label="Claimed">
+            <DefinitionRow label="Мэдэгдсэн">
               <time dateTime={dateTime(claimedAt.value)}>{formatDate(claimedAt.value)}</time>
             </DefinitionRow>
           )}
@@ -151,14 +149,14 @@ function PaymentDetails(props: { order: AdminOrderDetail }) {
           keyed
         >
           {paidAt => (
-            <DefinitionRow label="Paid">
+            <DefinitionRow label="Төлөгдсөн">
               <time dateTime={dateTime(paidAt.value)}>{formatDate(paidAt.value)}</time>
             </DefinitionRow>
           )}
         </Show>
       </dl>
-      <p class="border-t py-3 text-xs leading-5 text-muted-foreground">
-        Payment status is read-only. Payment confirmation remains with the configured payment flow.
+      <p class="border-t py-3 text-sm leading-5 text-muted-foreground">
+        Төлбөрийн төлөвийг эндээс өөрчлөхгүй. Төлбөр баталгаажуулах үндсэн үйлдэл хэвээр ажиллана.
       </p>
     </section>
   )
@@ -168,16 +166,16 @@ function OrderTiming(props: { order: AdminOrderDetail }) {
   return (
     <section aria-labelledby="order-timing-title">
       <h2 class="border-b py-3 text-sm font-semibold" id="order-timing-title">
-        Order record
+        Захиалгын бүртгэл
       </h2>
       <dl>
-        <DefinitionRow label="Order ID">{props.order.id}</DefinitionRow>
-        <DefinitionRow label="Created">
+        <DefinitionRow label="Захиалгын ID">{props.order.id}</DefinitionRow>
+        <DefinitionRow label="Үүссэн">
           <time dateTime={dateTime(props.order.createdAt)}>
             {formatDate(props.order.createdAt)}
           </time>
         </DefinitionRow>
-        <DefinitionRow label="Last updated">
+        <DefinitionRow label="Сүүлд шинэчилсэн">
           <time dateTime={dateTime(props.order.updatedAt)}>
             {formatDate(props.order.updatedAt)}
           </time>
@@ -190,54 +188,75 @@ function OrderTiming(props: { order: AdminOrderDetail }) {
 function OrderLines(props: { order: AdminOrderDetail }) {
   return (
     <section aria-labelledby="order-lines-title">
-      <div class="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div class="mb-3 flex items-end justify-between gap-4">
         <div>
-          <h2 class="text-sm font-semibold" id="order-lines-title">
-            Order items
+          <h2 class="text-base font-semibold" id="order-lines-title">
+            Захиалсан бараа
           </h2>
-          <p class="mt-0.5 text-xs text-muted-foreground">
-            Product and price details are immutable checkout snapshots.
+          <p class="mt-1 text-sm text-muted-foreground">
+            Захиалга өгөх үеийн нэр, үнэ хадгалагдсан.
           </p>
         </div>
-        <span class="text-xs text-muted-foreground">
-          {props.order.lines.length} {props.order.lines.length === 1 ? 'line' : 'lines'}
+        <span class="shrink-0 text-sm text-muted-foreground tabular-nums">
+          {props.order.lines.length} мөр
         </span>
       </div>
-      <div class="rounded-lg border bg-card">
-        <Table aria-label="Order line items" class="max-md:block">
-          <TableHeader class="max-md:hidden">
+
+      <ul class="-mx-4 divide-y border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x lg:hidden">
+        <For each={props.order.lines}>
+          {line => (
+            <li class="px-4 py-4">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <p class="text-base font-medium wrap-break-word">{line.productName}</p>
+                  <p class="mt-1 text-sm wrap-break-word text-muted-foreground">
+                    {line.variantName} · {optionsLabel(line)}
+                  </p>
+                </div>
+                <p class="shrink-0 text-base font-semibold tabular-nums">
+                  {formatMoney(line.lineTotalMnt)}
+                </p>
+              </div>
+              <div class="mt-3 flex items-center justify-between gap-4 text-sm text-muted-foreground">
+                <code class="truncate">{line.sku}</code>
+                <span class="shrink-0 tabular-nums">
+                  {formatMoney(line.unitPriceMnt)} × {line.quantity}
+                </span>
+              </div>
+            </li>
+          )}
+        </For>
+      </ul>
+
+      <div class="hidden rounded-lg border bg-card lg:block">
+        <Table aria-label="Захиалсан бараанууд">
+          <TableHeader>
             <TableRow>
-              <TableHead>Product</TableHead>
+              <TableHead>Бараа</TableHead>
               <TableHead>SKU</TableHead>
-              <TableHead class="text-right">Unit price</TableHead>
-              <TableHead class="text-right">Quantity</TableHead>
-              <TableHead class="text-right">Line total</TableHead>
+              <TableHead class="text-right">Нэгж үнэ</TableHead>
+              <TableHead class="text-right">Тоо</TableHead>
+              <TableHead class="text-right">Дүн</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody class="max-md:block">
+          <TableBody>
             <For each={props.order.lines}>
               {line => (
-                <TableRow class="max-md:grid max-md:grid-cols-2 max-md:py-1">
-                  <TableCell class="max-md:col-span-2 max-md:block max-md:px-3 max-md:py-2">
+                <TableRow>
+                  <TableCell>
                     <div class="min-w-48 font-medium">{line.productName}</div>
                     <div class="mt-0.5 text-xs text-muted-foreground">
                       {line.variantName} · {optionsLabel(line)}
                     </div>
                   </TableCell>
-                  <TableCell class="max-md:col-span-2 max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
-                    <span class="text-xs text-muted-foreground md:hidden">SKU</span>
+                  <TableCell>
                     <code class="text-xs whitespace-nowrap">{line.sku}</code>
                   </TableCell>
-                  <TableCell class="text-right whitespace-nowrap tabular-nums max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
-                    <span class="text-xs text-muted-foreground md:hidden">Unit price</span>
+                  <TableCell class="text-right whitespace-nowrap tabular-nums">
                     {formatMoney(line.unitPriceMnt)}
                   </TableCell>
-                  <TableCell class="text-right tabular-nums max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
-                    <span class="text-xs text-muted-foreground md:hidden">Quantity</span>
-                    {line.quantity}
-                  </TableCell>
-                  <TableCell class="col-span-2 text-right font-medium whitespace-nowrap tabular-nums max-md:flex max-md:items-center max-md:justify-between max-md:px-3 max-md:py-2">
-                    <span class="text-xs text-muted-foreground md:hidden">Line total</span>
+                  <TableCell class="text-right tabular-nums">{line.quantity}</TableCell>
+                  <TableCell class="text-right font-medium whitespace-nowrap tabular-nums">
                     {formatMoney(line.lineTotalMnt)}
                   </TableCell>
                 </TableRow>
@@ -246,16 +265,15 @@ function OrderLines(props: { order: AdminOrderDetail }) {
           </TableBody>
         </Table>
       </div>
-      <dl class="mt-3 ml-auto w-full max-w-sm border-y bg-card px-4">
-        <DefinitionRow label="Subtotal">{formatMoney(props.order.subtotalMnt)}</DefinitionRow>
-        <DefinitionRow label="Delivery fee">
+
+      <dl class="-mx-4 mt-3 border-y bg-card px-4 sm:mx-0 sm:ml-auto sm:max-w-sm sm:rounded-lg sm:border-x">
+        <DefinitionRow label="Барааны дүн">{formatMoney(props.order.subtotalMnt)}</DefinitionRow>
+        <DefinitionRow label="Хүргэлтийн үнэ">
           {formatMoney(props.order.deliveryFeeMnt)}
         </DefinitionRow>
-        <div class="grid gap-1 py-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-3">
-          <dt class="text-sm font-semibold">Total</dt>
-          <dd class="text-base font-semibold tabular-nums sm:text-right">
-            {formatMoney(props.order.totalMnt)}
-          </dd>
+        <div class="flex items-center justify-between gap-4 py-4">
+          <dt class="text-base font-semibold">Нийт</dt>
+          <dd class="text-lg font-semibold tabular-nums">{formatMoney(props.order.totalMnt)}</dd>
         </div>
       </dl>
     </section>
@@ -275,7 +293,7 @@ function DetailContent(props: DetailContentProps) {
     <>
       <PageHeader
         actions={<OrderStatusBadge status={props.order.status} />}
-        description={`Placed ${formatDate(props.order.createdAt)} by ${props.order.customerName}`}
+        description={`${formatDate(props.order.createdAt)} · ${props.order.customerName}`}
         title={props.order.number}
         titleId="order-detail-title"
       />
@@ -290,7 +308,7 @@ function DetailContent(props: DetailContentProps) {
         <div class="min-w-0">
           <OrderLines order={props.order} />
         </div>
-        <aside class="border-y bg-card px-4">
+        <aside class="-mx-4 border-y bg-card px-4 sm:mx-0 sm:rounded-lg sm:border-x">
           <CustomerDelivery order={props.order} />
           <PaymentDetails order={props.order} />
           <OrderTiming order={props.order} />
@@ -323,7 +341,7 @@ export function OrderDetailPage(props: OrderDetailPageProps) {
         queryClient.invalidateQueries({ queryKey: orderKeys.detail(props.orderId) }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
       ])
-      toast.success('Order status updated.')
+      toast.success('Захиалгын төлөв шинэчлэгдлээ.')
     }
     return result
   }
@@ -331,9 +349,14 @@ export function OrderDetailPage(props: OrderDetailPageProps) {
   return (
     <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
       <div class="mb-3">
-        <Button onClick={() => props.onBack()} size="sm" type="button" variant="ghost">
+        <Button
+          class="min-h-11! lg:min-h-8!"
+          onClick={() => props.onBack()}
+          type="button"
+          variant="ghost"
+        >
           <ArrowLeft aria-hidden="true" />
-          Back to orders
+          Захиалга руу буцах
         </Button>
       </div>
       <Show when={!query.isPending} fallback={<DetailSkeleton />}>
@@ -341,7 +364,7 @@ export function OrderDetailPage(props: OrderDetailPageProps) {
           when={!query.isError}
           fallback={
             <RetryState
-              message="The order details could not be loaded."
+              message="Захиалгын мэдээллийг ачаалж чадсангүй."
               onRetry={() => void query.refetch()}
               pending={query.isFetching}
             />
@@ -356,16 +379,16 @@ export function OrderDetailPage(props: OrderDetailPageProps) {
                   <AdminEmptyState
                     action={
                       <Button onClick={() => props.onBack()} type="button" variant="outline">
-                        Back to orders
+                        Захиалга руу буцах
                       </Button>
                     }
-                    description="This order may have been removed since the order list was loaded."
-                    title="Order not found"
+                    description="Жагсаалт ачаалснаас хойш энэ захиалга устсан байж магадгүй."
+                    title="Захиалга олдсонгүй"
                   />
                 }
               >
-                <InlineAlert title="Could not load order" tone="destructive">
-                  {expectedError()?.message ?? 'The order request failed.'}
+                <InlineAlert title="Захиалга ачаалж чадсангүй" tone="destructive">
+                  {expectedError()?.message ?? 'Захиалгын хүсэлт амжилтгүй боллоо.'}
                 </InlineAlert>
               </Show>
             }

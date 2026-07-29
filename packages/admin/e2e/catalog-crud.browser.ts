@@ -154,11 +154,57 @@ test('runs catalog, image, variant, and lifecycle CRUD through the real admin Wo
   await expect(page.getByRole('heading', { name: 'Бараа устлаа' })).toBeVisible()
 
   await page.goto(`/admin/orders/${checkout.value.orderId}`)
-  await page.getByRole('button', { name: 'Cancel order' }).click()
+  await page.getByRole('button', { name: 'Захиалга цуцлах' }).click()
   const cancellation = page.getByRole('dialog')
-  await expect(cancellation.getByText('Cancel this order?')).toBeVisible()
-  await cancellation.getByRole('button', { name: 'Cancel order' }).click()
-  await expect(page.getByText('Cancelled', { exact: true })).toBeVisible()
+  await expect(cancellation.getByText('Энэ захиалгыг цуцлах уу?')).toBeVisible()
+  await cancellation.getByRole('button', { name: 'Захиалга цуцлах' }).click()
+  await expect(page.getByText('Цуцалсан', { exact: true })).toBeVisible()
+})
+
+test('uses the mobile dashboard, order summaries, and checkout settings against the real Worker', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+
+  await page.goto('/admin')
+  await expect(page.getByRole('heading', { level: 1, name: 'Өнөөдрийн ажил' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Анхны бараагаа нэмэх/u })).toBeVisible()
+  await expect(page.getByText('Яаралтай ажил алга')).toBeVisible()
+  const recentOrder = page.getByRole('link', { name: /Browser customer/u })
+  await expect(recentOrder).toBeVisible()
+  expect((await recentOrder.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+
+  await page.goto('/admin/orders')
+  await expect(page.getByRole('heading', { level: 1, name: 'Захиалга' })).toBeVisible()
+  const search = page.getByLabel('Захиалга хайх')
+  await expect(search).toBeVisible()
+  expect((await search.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  await expect(page.getByText('Шүүлтүүр', { exact: true })).toBeVisible()
+  const orderTable = page.getByRole('table', { name: 'Дэлгүүрийн захиалгууд' })
+  await expect(orderTable).not.toBeVisible()
+  await expect(page.getByRole('link', { name: /Browser customer/u })).toBeVisible()
+  await page.setViewportSize({ width: 768, height: 1024 })
+  await expect(orderTable).not.toBeVisible()
+  await page.setViewportSize({ width: 1024, height: 800 })
+  await expect(orderTable).toBeVisible()
+  await page.setViewportSize({ width: 360, height: 800 })
+
+  await search.fill('not-a-real-order')
+  await expect(page.getByRole('heading', { level: 2, name: 'Илэрц олдсонгүй' })).toBeVisible()
+  await expect(page.getByText('Захиалга хараахан алга')).toHaveCount(0)
+  await search.fill('')
+  await expect(page.getByRole('link', { name: /Browser customer/u })).toBeVisible()
+
+  await page.goto('/admin/settings')
+  await expect(page.getByRole('heading', { level: 1, name: 'Дэлгүүрийн тохиргоо' })).toBeVisible()
+  const deliveryFee = page.getByLabel('Хүргэлтийн үнэ')
+  await expect(deliveryFee).toHaveValue('5000')
+  expect((await deliveryFee.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  await deliveryFee.fill('6500')
+  await expect(page.getByText('Хадгалаагүй өөрчлөлт байна')).toBeVisible()
+  await page.getByRole('button', { name: 'Тохиргоо хадгалах' }).click()
+  await expect(page.getByText('Бүх өөрчлөлт хадгалагдсан')).toBeVisible()
+  await expect(deliveryFee).toHaveValue('6500')
 })
 
 test('guards drafts and runs the displayed command shortcuts', async ({ page }) => {
