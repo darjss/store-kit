@@ -27,23 +27,18 @@ import { For, Show, createSignal } from 'solid-js'
 
 import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
 import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
+import { formatMnt } from '../format'
 import { useQueryResult } from '../query-options/result'
 import type { OrderRequests } from './query-options'
 import { orderQuery } from './query-options'
 import { OrderStatusBadge, PaymentStatusBadge, paymentMethodLabel } from './status'
-
-const moneyFormatter = new Intl.NumberFormat('mn-MN', {
-  style: 'currency',
-  currency: 'MNT',
-  maximumFractionDigits: 0,
-})
 
 const dateFormatter = new Intl.DateTimeFormat('mn-MN', {
   dateStyle: 'medium',
   timeStyle: 'short',
 })
 
-const formatMoney = (value: number) => moneyFormatter.format(value)
+const formatMoney = formatMnt
 const formatDate = (value: number) => dateFormatter.format(new Date(value))
 const dateTime = (value: number) => new Date(value).toISOString()
 
@@ -122,9 +117,9 @@ type FilterFieldsProps = {
 
 function FilterFields(props: FilterFieldsProps) {
   return (
-    <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+    <div class="flex flex-col gap-3 lg:w-fit lg:flex-row lg:flex-wrap lg:items-end">
       <label
-        class="flex flex-1 flex-col gap-1.5 text-sm font-medium"
+        class="flex flex-col gap-1.5 text-sm font-medium lg:flex-none"
         for={`order-status-filter-${props.idSuffix}`}
       >
         Захиалгын төлөв
@@ -157,7 +152,7 @@ function FilterFields(props: FilterFieldsProps) {
         </NativeSelect>
       </label>
       <label
-        class="flex flex-1 flex-col gap-1.5 text-sm font-medium"
+        class="flex flex-col gap-1.5 text-sm font-medium lg:flex-none"
         for={`payment-status-filter-${props.idSuffix}`}
       >
         Төлбөрийн төлөв
@@ -282,7 +277,7 @@ export function OrderListPage(props: OrderListPageProps) {
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminOrderError | undefined>({ ok: () => undefined, err: error => error })
-  const [activeRow, setActiveRow] = createSignal(0)
+  const [activeRow, setActiveRow] = createSignal<number>()
   const table = createSolidTable({
     get data() {
       return data()?.items ?? []
@@ -444,7 +439,6 @@ export function OrderListPage(props: OrderListPageProps) {
                             aria-selected={activeRow() === index()}
                             data-state={activeRow() === index() ? 'selected' : undefined}
                             id={tableRowId('store-orders', row.original.id)}
-                            onMouseEnter={() => setActiveRow(index())}
                           >
                             <For each={row.getVisibleCells()}>
                               {cell => (

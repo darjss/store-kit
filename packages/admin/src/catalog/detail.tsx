@@ -51,18 +51,13 @@ import {
 } from '../components/foundation'
 import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
 import { UnsavedChangesGuard } from '../components/unsaved-changes'
+import { formatMnt } from '../format'
 import { useQueryResult } from '../query-options/result'
 import { CatalogFailure, ProductEditor, transportMessage } from './forms'
 import { ProductGallery } from './gallery'
 import type { CatalogRequests } from './query-options'
 import { catalogKeys, catalogMutation, catalogQuery } from './query-options'
 import { VariantInspector } from './variant-sheet'
-
-const mnt = new Intl.NumberFormat('mn-MN', {
-  style: 'currency',
-  currency: 'MNT',
-  maximumFractionDigits: 0,
-})
 
 const dateTime = new Intl.DateTimeFormat('mn-MN', {
   dateStyle: 'medium',
@@ -115,7 +110,7 @@ const variantColumns = (onOpen: (variantId: string) => void) => [
   }),
   columnHelper.accessor('priceMnt', {
     header: 'Үнэ',
-    cell: info => <span class="whitespace-nowrap tabular-nums">{mnt.format(info.getValue())}</span>,
+    cell: info => <span class="whitespace-nowrap tabular-nums">{formatMnt(info.getValue())}</span>,
   }),
   columnHelper.accessor('stockQuantity', {
     header: 'Үлдэгдэл',
@@ -416,7 +411,7 @@ type VariantTableProps = {
 }
 
 function VariantTable(props: VariantTableProps) {
-  const [activeRow, setActiveRow] = createSignal(0)
+  const [activeRow, setActiveRow] = createSignal<number>()
   const table = createSolidTable({
     get data() {
       return props.product.variants
@@ -472,7 +467,7 @@ function VariantTable(props: VariantTableProps) {
                 </div>
                 <div class="text-right">
                   <div class="text-base font-semibold tabular-nums">
-                    {mnt.format(variant.priceMnt)}
+                    {formatMnt(variant.priceMnt)}
                   </div>
                   <div
                     class={`mt-1 text-sm tabular-nums ${variant.stockQuantity === 0 ? 'text-destructive' : 'text-muted-foreground'}`}
@@ -528,7 +523,6 @@ function VariantTable(props: VariantTableProps) {
                   aria-selected={activeRow() === index()}
                   data-state={activeRow() === index() ? 'selected' : undefined}
                   id={tableRowId('product-variants', row.original.id)}
-                  onMouseEnter={() => setActiveRow(index())}
                 >
                   <For each={row.getVisibleCells()}>
                     {cell => (
@@ -720,12 +714,12 @@ function LifecycleActions(props: LifecycleActionsProps) {
           <DialogHeader>
             <DialogTitle>Барааг бүрмөсөн устгах уу?</DialogTitle>
             <DialogDescription>
-              Бараа каталогоос устна. Өмнөх захиалгын мэдээлэл хэвээр үлдэнэ.
+              “{props.product.name}” каталогоос устна. Өмнөх захиалгын мэдээлэл хэвээр үлдэнэ.
             </DialogDescription>
           </DialogHeader>
           <Field class="mt-4">
             <FieldLabel for="delete-product-confirmation">
-              Баталгаажуулахын тулд барааны ID-г оруулна уу
+              Баталгаажуулахын тулд УСТГАХ гэж оруулна уу
             </FieldLabel>
             <Input
               class="font-mono"
@@ -733,14 +727,14 @@ function LifecycleActions(props: LifecycleActionsProps) {
               value={confirmation()}
               onInput={event => setConfirmation(event.currentTarget.value)}
             />
-            <FieldDescription>{props.product.id}</FieldDescription>
+            <FieldDescription>УСТГАХ</FieldDescription>
           </Field>
           <DialogFooter class="mt-5">
             <DialogClose as={Button} type="button" variant="outline">
               Болих
             </DialogClose>
             <Button
-              disabled={confirmation() !== props.product.id || deleteMutation.isPending}
+              disabled={confirmation() !== 'УСТГАХ' || deleteMutation.isPending}
               onClick={() => void remove()}
               type="button"
               variant="destructive"

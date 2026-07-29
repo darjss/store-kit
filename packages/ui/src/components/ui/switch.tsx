@@ -20,7 +20,7 @@ const Switch = <T extends ValidComponent = 'div'>(props: SwitchProps<T>) => {
   return (
     <SwitchPrimitive.Root
       class={cn(
-        'group/switch z-switch relative inline-flex items-center transition-all outline-none data-disabled:cursor-not-allowed data-disabled:opacity-50',
+        'group/switch z-switch relative inline-flex items-center transition-all outline-none',
         local.class,
       )}
       data-size={local.size}
@@ -29,7 +29,7 @@ const Switch = <T extends ValidComponent = 'div'>(props: SwitchProps<T>) => {
     >
       <SwitchPrimitive.Input class="peer sr-only" data-slot="switch-input" id={local.id} />
       <SwitchPrimitive.Control
-        class="z-switch-control absolute inset-0 flex cursor-pointer items-center rounded-full transition-colors data-disabled:cursor-not-allowed"
+        class="z-switch-control flex cursor-pointer items-center rounded-full transition-colors data-disabled:cursor-not-allowed"
         data-slot="switch-control"
         onClick={event => event.preventDefault()}
       >

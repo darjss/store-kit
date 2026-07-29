@@ -32,10 +32,8 @@ export function UnsavedChangesGuard(props: {
     >
       <DialogContent class="max-w-md rounded-lg border bg-popover p-4">
         <DialogHeader>
-          <DialogTitle>Discard unsaved changes?</DialogTitle>
-          <DialogDescription>
-            Your local product, image, or variant edits will be lost.
-          </DialogDescription>
+          <DialogTitle>Хадгалаагүй өөрчлөлтийг орхих уу?</DialogTitle>
+          <DialogDescription>Энэ хуудсанд оруулсан хадгалаагүй мэдээлэл арилна.</DialogDescription>
         </DialogHeader>
         <DialogFooter class="mt-5">
           <Button
@@ -46,7 +44,7 @@ export function UnsavedChangesGuard(props: {
             type="button"
             variant="outline"
           >
-            Keep editing
+            Үргэлжлүүлэн засах
           </Button>
           <Button
             onClick={() => {
@@ -56,7 +54,7 @@ export function UnsavedChangesGuard(props: {
             type="button"
             variant="destructive"
           >
-            Discard changes
+            Өөрчлөлтийг орхих
           </Button>
         </DialogFooter>
       </DialogContent>

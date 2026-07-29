@@ -92,7 +92,7 @@ const SheetContent = <T extends ValidComponent = 'div'>(props: SheetContentProps
             class="z-sheet-close"
           >
             <CloseCircle />
-            <span class="sr-only">Close</span>
+            <span class="sr-only">Хаах</span>
           </SheetPrimitive.CloseButton>
         </Show>
       </SheetPrimitive.Content>

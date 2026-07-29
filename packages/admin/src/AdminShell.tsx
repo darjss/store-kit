@@ -324,7 +324,7 @@ function RoutedContent() {
       fallback={(_error, reset) => (
         <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
           <RetryState
-            message="The admin page stopped rendering. Retry this view."
+            message="Админ хуудас ажиллахаа болилоо. Энэ хуудсыг дахин нээнэ үү."
             onRetry={reset}
           />
         </section>
@@ -553,7 +553,7 @@ function SessionContent(props: { storeName: string }) {
       <Match when={session.isError}>
         <CenteredPanel>
           <RetryState
-            message="Check your connection, then retry the admin session request."
+            message="Холболтоо шалгаад админ эрхийн мэдээллийг дахин ачаална уу."
             onRetry={() => {
               void session.refetch()
             }}

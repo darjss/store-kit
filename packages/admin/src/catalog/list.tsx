@@ -40,22 +40,16 @@ import {
   TableSkeleton,
 } from '../components/foundation'
 import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
+import { formatMnt } from '../format'
 import { useQueryResult } from '../query-options/result'
 import type { CatalogRequests } from './query-options'
 import { catalogQuery } from './query-options'
 
-const mnt = new Intl.NumberFormat('mn-MN', {
-  style: 'currency',
-  currency: 'MNT',
-  maximumFractionDigits: 0,
-})
-
 const priceRange = (product: AdminCatalogProductListItem) => {
   if (product.minimumPriceMnt === null || product.maximumPriceMnt === null)
     return 'Идэвхтэй үнэ байхгүй'
-  if (product.minimumPriceMnt === product.maximumPriceMnt)
-    return mnt.format(product.minimumPriceMnt)
-  return `${mnt.format(product.minimumPriceMnt)} – ${mnt.format(product.maximumPriceMnt)}`
+  if (product.minimumPriceMnt === product.maximumPriceMnt) return formatMnt(product.minimumPriceMnt)
+  return `${formatMnt(product.minimumPriceMnt)} – ${formatMnt(product.maximumPriceMnt)}`
 }
 
 const productStatusLabel = (status: AdminCatalogProductListItem['status']) => {
@@ -167,7 +161,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminCatalogError | undefined>({ ok: () => undefined, err: error => error })
-  const [activeRow, setActiveRow] = createSignal(0)
+  const [activeRow, setActiveRow] = createSignal<number>()
   const [filtersOpen, setFiltersOpen] = createSignal(false)
   const table = createSolidTable({
     get data() {
@@ -202,7 +196,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
     <label class="flex flex-col gap-1.5 text-sm font-medium" for={id}>
       Төлөв
       <NativeSelect
-        class="min-h-12! w-full md:h-8! md:w-40"
+        class="min-h-12! w-full lg:h-8! lg:w-40"
         id={id}
         value={props.search.status ?? 'all'}
         onChange={event => {
@@ -225,7 +219,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
     <label class="flex flex-col gap-1.5 text-sm font-medium" for={id}>
       Үлдэгдэл
       <NativeSelect
-        class="min-h-12! w-full md:h-8! md:w-40"
+        class="min-h-12! w-full lg:h-8! lg:w-40"
         id={id}
         value={props.search.inventory}
         onChange={event => {
@@ -246,7 +240,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
         <PageHeader
           actions={
             <Button
-              class="fixed right-4 bottom-20 z-30 min-h-12! px-5! shadow-sm md:static md:h-8! md:shadow-none"
+              class="fixed right-4 bottom-20 z-30 min-h-12! px-5! shadow-sm lg:static lg:h-8! lg:shadow-none"
               onClick={() => props.onNewProduct()}
               type="button"
             >
@@ -272,7 +266,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
             <Magnifer size={18} />
           </span>
           <Input
-            class="min-h-12! pl-10! text-base! md:h-8! md:text-sm!"
+            class="min-h-12! pl-10! text-base! lg:h-8! lg:text-sm!"
             data-admin-list-search
             id="catalog-search"
             placeholder="Нэр, брэнд эсвэл барааны кодоор хайх"
@@ -283,7 +277,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
         </div>
       </div>
 
-      <div class="mt-3 px-4 md:hidden">
+      <div class="mt-3 px-4 lg:hidden">
         <div class="flex items-center gap-2 overflow-x-auto pb-1">
           <Button
             class="min-h-11! shrink-0"
@@ -320,7 +314,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
         </div>
       </div>
 
-      <div class="mt-3 hidden items-end gap-2 border-y bg-card px-4 py-3 md:flex">
+      <div class="mt-3 hidden items-end gap-2 border-y bg-card px-4 py-3 lg:flex">
         {statusFilter('catalog-status-filter')}
         {inventoryFilter('catalog-inventory-filter')}
         <Show when={hasFilters()}>
@@ -431,7 +425,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                   </div>
                 }
               >
-                <ul aria-label="Барааны жагсаалт" class="divide-y border-y md:hidden">
+                <ul aria-label="Барааны жагсаалт" class="divide-y border-y lg:hidden">
                   <For each={data()!.items}>
                     {product => (
                       <li>
@@ -503,7 +497,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                     activeRow(),
                   )}
                   aria-label="Барааны хүснэгт. Сумтай товчоор мөр сонгож, Enter товчоор нээнэ."
-                  class="hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 md:block"
+                  class="hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 lg:block"
                   onKeyDown={onTableKeyDown}
                   role="group"
                   tabIndex={0}
@@ -544,7 +538,6 @@ export function CatalogListPage(props: CatalogListPageProps) {
                             aria-selected={activeRow() === index()}
                             data-state={activeRow() === index() ? 'selected' : undefined}
                             id={tableRowId('catalog-products', row.original.id)}
-                            onMouseEnter={() => setActiveRow(index())}
                           >
                             <For each={row.getVisibleCells()}>
                               {cell => (
@@ -576,7 +569,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                   </p>
                   <div class="flex gap-2">
                     <Button
-                      class="min-h-11! md:h-8!"
+                      class="min-h-11! lg:h-8!"
                       disabled={data()!.offset === 0 || query.isFetching}
                       onClick={() =>
                         setSearch({ offset: Math.max(0, data()!.offset - data()!.limit) })
@@ -587,7 +580,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                       Өмнөх
                     </Button>
                     <Button
-                      class="min-h-11! md:h-8!"
+                      class="min-h-11! lg:h-8!"
                       disabled={
                         data()!.offset + data()!.items.length >= data()!.total || query.isFetching
                       }

@@ -22,17 +22,16 @@ import {
 } from '@store-kit/ui'
 import { createForm } from '@tanstack/solid-form'
 import { useMutation, useQueryClient } from '@tanstack/solid-query'
-import { For, Show, createSignal } from 'solid-js'
+import { For, Show, createSignal, onCleanup } from 'solid-js'
 import { toast } from 'solid-sonner'
 
 import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
 import { UnsavedChangesGuard } from '../components/unsaved-changes'
 import { useQueryResult } from '../query-options/result'
 import { CatalogFailure, OptionRows, transportMessage, validationMessages } from './forms'
+import { ImageFilePicker } from './image-file-picker'
 import type { CatalogRequests } from './query-options'
 import { catalogKeys, catalogMutation, catalogQuery } from './query-options'
-
-const acceptedImageTypes = 'image/jpeg,image/png,image/webp,image/avif'
 
 const nameHash = (name: string) => {
   let hash = 2_166_136_261
@@ -177,6 +176,17 @@ function CreateProductForm(props: CreateProductFormProps) {
   const [created, setCreated] = createSignal(false)
   const [image, setImage] = createSignal<File>()
   const [imageAlt, setImageAlt] = createSignal('')
+  const [imagePreview, setImagePreview] = createSignal<string>()
+  const selectImage = (file: File | undefined) => {
+    const currentPreview = imagePreview()
+    if (currentPreview) URL.revokeObjectURL(currentPreview)
+    setImage(file)
+    setImagePreview(file ? URL.createObjectURL(file) : undefined)
+  }
+  onCleanup(() => {
+    const currentPreview = imagePreview()
+    if (currentPreview) URL.revokeObjectURL(currentPreview)
+  })
   const form = createForm(() => ({
     defaultValues,
     validators: {
@@ -239,7 +249,7 @@ function CreateProductForm(props: CreateProductFormProps) {
   return (
     <form
       aria-label="Шинэ бараа үүсгэх"
-      class="pb-20"
+      class="pb-40 lg:pb-0"
       noValidate
       onSubmit={event => {
         event.preventDefault()
@@ -261,17 +271,26 @@ function CreateProductForm(props: CreateProductFormProps) {
         <div class="grid gap-5 sm:grid-cols-2">
           <Field class="sm:col-span-2">
             <FieldLabel for="new-product-image">Барааны зураг</FieldLabel>
-            <Input
-              accept={acceptedImageTypes}
-              class="min-h-12! text-base!"
-              id="new-product-image"
-              type="file"
-              onChange={event => setImage(event.currentTarget.files?.[0])}
-            />
+            <ImageFilePicker file={image()} id="new-product-image" onChange={selectImage} />
             <FieldDescription>
               JPEG, PNG, WebP эсвэл AVIF. 10 MiB хүртэл. Зургийг бараатай хамт оруулна.
             </FieldDescription>
           </Field>
+          <Show when={imagePreview()}>
+            {preview => (
+              <figure class="sm:col-span-2">
+                <img
+                  alt={imageAlt().trim() || 'Сонгосон барааны зургийн урьдчилсан харагдац'}
+                  class="aspect-square size-32 rounded-md bg-muted object-cover"
+                  data-product-image-preview
+                  src={preview()}
+                />
+                <figcaption class="mt-2 text-sm text-muted-foreground">
+                  Хадгалахаас өмнөх харагдац
+                </figcaption>
+              </figure>
+            )}
+          </Show>
           <Show when={image()}>
             <Field class="sm:col-span-2">
               <FieldLabel for="new-product-image-alt">Зургийн тайлбар</FieldLabel>
@@ -294,7 +313,7 @@ function CreateProductForm(props: CreateProductFormProps) {
                   autofocus
                   class="min-h-12! text-base!"
                   id="new-product-name"
-                  placeholder="Жишээ: Tanchjim Bunny"
+                  placeholder="Жишээ: Монгол арьсан цүнх"
                   value={field().state.value}
                   aria-invalid={!field().state.meta.isValid}
                   onBlur={() => field().handleBlur()}
@@ -393,7 +412,7 @@ function CreateProductForm(props: CreateProductFormProps) {
         </div>
       </section>
 
-      <div class="my-5 flex items-center gap-3 border-y bg-background py-3">
+      <div class="my-5 hidden items-center gap-3 border-y bg-background py-3 lg:flex">
         <form.Subscribe selector={state => state.isDirty}>
           {dirty => (
             <p class="mr-auto text-sm text-muted-foreground">
@@ -644,6 +663,32 @@ function CreateProductForm(props: CreateProductFormProps) {
           title="Барааг үүсгэж чадсангүй"
           transportError={requestError()}
         />
+      </div>
+
+      <div
+        class="fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 border-t bg-popover px-4 py-2 lg:hidden"
+        data-mobile-create-action
+      >
+        <form.Subscribe
+          selector={state => ({ canSubmit: state.canSubmit, pending: state.isSubmitting })}
+        >
+          {state => (
+            <Button
+              class="min-h-12! w-full"
+              disabled={!state().canSubmit || state().pending}
+              type="submit"
+            >
+              <Show when={state().pending}>
+                <Spinner aria-hidden="true" />
+              </Show>
+              {state().pending
+                ? uploadMutation.isPending
+                  ? 'Зураг оруулж байна…'
+                  : 'Хадгалж байна…'
+                : 'Бараа үүсгэх'}
+            </Button>
+          )}
+        </form.Subscribe>
       </div>
     </form>
   )

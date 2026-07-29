@@ -28,6 +28,7 @@ import {
   RetryState,
   TableSkeleton,
 } from '../components/foundation'
+import { formatMnt } from '../format'
 import { useQueryResult } from '../query-options/result'
 import type { OrderRequests } from './query-options'
 import { orderKeys, orderMutation, orderQuery } from './query-options'
@@ -38,18 +39,12 @@ import {
   paymentMethodLabel,
 } from './status'
 
-const moneyFormatter = new Intl.NumberFormat('mn-MN', {
-  style: 'currency',
-  currency: 'MNT',
-  maximumFractionDigits: 0,
-})
-
 const dateFormatter = new Intl.DateTimeFormat('mn-MN', {
   dateStyle: 'medium',
   timeStyle: 'short',
 })
 
-const formatMoney = (value: number) => moneyFormatter.format(value)
+const formatMoney = formatMnt
 const formatDate = (value: number) => dateFormatter.format(new Date(value))
 const dateTime = (value: number) => new Date(value).toISOString()
 

@@ -195,10 +195,10 @@ export function RetryState(props: RetryStateProps) {
           variant="outline"
         >
           {props.pending ? <Spinner aria-hidden="true" /> : <Refresh aria-hidden="true" />}
-          {props.pending ? 'Retrying…' : 'Retry'}
+          {props.pending ? 'Дахин ачаалж байна…' : 'Дахин оролдох'}
         </Button>
       }
-      title="Could not load this content"
+      title="Мэдээллийг ачаалж чадсангүй"
       tone="destructive"
     >
       {props.message}
@@ -221,8 +221,8 @@ export function TableSkeleton(props: TableSkeletonProps) {
 
   return (
     <div aria-busy="true" class="bg-card" role="status">
-      <span class="sr-only">Loading table data…</span>
-      <div class="border-y md:hidden">
+      <span class="sr-only">Хүснэгтийн мэдээллийг ачаалж байна…</span>
+      <div class="border-y lg:hidden">
         <For each={rows()}>
           {() => (
             <div class="flex min-h-20 items-center gap-3 border-b px-4 py-3 last:border-b-0">
@@ -239,7 +239,7 @@ export function TableSkeleton(props: TableSkeletonProps) {
           )}
         </For>
       </div>
-      <div class="hidden overflow-hidden rounded-lg border md:block">
+      <div class="hidden overflow-hidden rounded-lg border lg:block">
         <Table>
           <TableHeader>
             <TableRow class="hover:bg-transparent">

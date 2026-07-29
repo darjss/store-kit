@@ -36,10 +36,8 @@ export const validationMessages = (errors: readonly unknown[]) =>
           : 'Зөв утга оруулна уу.',
   }))
 
-export const transportMessage = (error: unknown) =>
-  error instanceof Error
-    ? error.message
-    : 'Хүсэлтийг илгээж чадсангүй. Холболтоо шалгаад дахин оролдоно уу.'
+export const transportMessage = (_error: unknown) =>
+  'Хүсэлтийг илгээж чадсангүй. Холболтоо шалгаад дахин оролдоно уу.'
 
 type CatalogFailureProps = {
   failure: AdminCatalogError | undefined

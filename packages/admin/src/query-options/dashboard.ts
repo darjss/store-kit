@@ -26,9 +26,9 @@ const overview = (request: AdminDashboardRequest) =>
     retry: false,
   })
 
-const catalogReadiness = (request: AdminDashboardCatalogRequest) =>
+const catalogReadiness = (request: AdminDashboardCatalogRequest, status: 'active' | 'draft') =>
   queryOptions({
-    queryKey: ['admin', 'catalog', 'list', { limit: 1, offset: 0 }],
+    queryKey: ['admin', 'catalog', 'list', { limit: 1, offset: 0, status }],
     queryFn: () => deserializeResult(request(), 'dashboard catalog readiness'),
     retry: false,
   })

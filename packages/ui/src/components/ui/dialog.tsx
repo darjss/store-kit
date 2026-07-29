@@ -82,7 +82,7 @@ const DialogContent = <T extends ValidComponent = 'div'>(props: DialogContentPro
             class="z-dialog-close"
           >
             <CloseCircle />
-            <span class="sr-only">Close</span>
+            <span class="sr-only">Хаах</span>
           </DialogPrimitive.CloseButton>
         </Show>
       </DialogPrimitive.Content>
@@ -126,7 +126,7 @@ const DialogFooter = <T extends ValidComponent = 'div'>(props: DialogFooterProps
       {local.children}
       <Show when={local.showCloseButton}>
         <DialogPrimitive.CloseButton as={Button} variant="outline">
-          Close
+          Хаах
         </DialogPrimitive.CloseButton>
       </Show>
     </div>

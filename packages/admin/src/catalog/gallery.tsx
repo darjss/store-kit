@@ -31,10 +31,9 @@ import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
 import { AdminEmptyState } from '../components/foundation'
 import { CatalogFailure, transportMessage } from './forms'
+import { ImageFilePicker } from './image-file-picker'
 import type { CatalogRequests } from './query-options'
 import { catalogKeys, catalogMutation } from './query-options'
-
-const acceptedImageTypes = 'image/jpeg,image/png,image/webp,image/avif'
 
 const sameVariantIds = (left: string[], right: string[]) =>
   left.length === right.length && left.every(id => right.includes(id))
@@ -258,16 +257,13 @@ export function ProductGallery(props: ProductGalleryProps) {
       <div class="mt-4 grid gap-3 border-y bg-card px-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,1fr)_auto] md:items-end">
         <Field>
           <FieldLabel for="catalog-image-file">Зургийн файл</FieldLabel>
-          <Input
-            accept={acceptedImageTypes}
-            class="min-h-12! text-base! md:h-8! md:text-sm!"
+          <ImageFilePicker
+            file={file()}
             id="catalog-image-file"
-            ref={element => {
+            inputRef={element => {
               fileInput = element
             }}
-            type="file"
-            onChange={event => {
-              const selected = event.currentTarget.files?.[0]
+            onChange={selected => {
               if (selected) beginUploadDraft()
               setFile(selected)
             }}

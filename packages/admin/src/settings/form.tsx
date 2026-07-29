@@ -20,14 +20,12 @@ import type { Result } from 'better-result'
 import { Show, createSignal } from 'solid-js'
 
 import { InlineAlert } from '../components/foundation'
+import { UnsavedChangesGuard } from '../components/unsaved-changes'
+import { formatMnt } from '../format'
 
 const settingsValidator = toStandardSchema(adminStoreSettingsUpdateSchema)
 
-const deliveryFeeExample = new Intl.NumberFormat('mn-MN', {
-  style: 'currency',
-  currency: 'MNT',
-  maximumFractionDigits: 0,
-}).format(5_000)
+const deliveryFeeExample = formatMnt(5_000)
 
 const formValues = (settings: AdminStoreSettings): AdminStoreSettingsUpdate => ({
   deliveryFeeMnt: settings.deliveryFeeMnt,
@@ -47,10 +45,8 @@ const validationMessages = (errors: readonly unknown[]) =>
           : 'Зөв утга оруулна уу.',
   }))
 
-const transportMessage = (error: unknown) =>
-  error instanceof Error
-    ? error.message
-    : 'Интернэт холболтоо шалгаад өөрчлөлтөө дахин хадгална уу.'
+const transportMessage = (_error: unknown) =>
+  'Интернэт холболтоо шалгаад өөрчлөлтөө дахин хадгална уу.'
 
 type SaveResult = Result<AdminStoreSettings, AdminStoreSettingsError>
 
@@ -119,6 +115,7 @@ export function StoreSettingsForm(props: StoreSettingsFormProps) {
         void form.handleSubmit()
       }}
     >
+      <UnsavedChangesGuard isDirty={() => form.state.isDirty} />
       <div class="border-b px-4 py-5 sm:px-6">
         <h2 class="text-base font-semibold">Шинэ захиалгад харагдах мэдээлэл</h2>
         <p class="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">

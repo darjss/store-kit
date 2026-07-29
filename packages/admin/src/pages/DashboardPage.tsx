@@ -9,6 +9,7 @@ import { Skeleton } from '@store-kit/ui'
 import { For, Match, Show, Switch } from 'solid-js'
 
 import { InlineAlert, PageHeader, RetryState, StatusBadge } from '../components/foundation'
+import { formatMnt } from '../format'
 import { orderStatusDisplay, paymentStatusDisplay } from '../orders/status'
 import { dashboardQuery } from '../query-options/dashboard'
 import type {
@@ -17,18 +18,12 @@ import type {
 } from '../query-options/dashboard'
 import { useQueryResult } from '../query-options/result'
 
-const moneyFormatter = new Intl.NumberFormat('mn-MN', {
-  style: 'currency',
-  currency: 'MNT',
-  maximumFractionDigits: 0,
-})
-
 const dateFormatter = new Intl.DateTimeFormat('mn-MN', {
   dateStyle: 'medium',
   timeStyle: 'short',
 })
 
-const formatMoney = (value: number) => moneyFormatter.format(value)
+const formatMoney = formatMnt
 const formatDate = (value: number) => dateFormatter.format(new Date(value))
 const dateTime = (value: number) => new Date(value).toISOString()
 
@@ -73,18 +68,19 @@ function DashboardSkeleton() {
 }
 
 type ReadinessSequenceProps = {
-  newProductHref: string
+  productAction: {
+    title: string
+    description: string
+    href: string
+    external?: boolean
+  }
   settingsHref: string
   storefrontHref: string
 }
 
 function ReadinessSequence(props: ReadinessSequenceProps) {
   const steps = [
-    {
-      title: 'Анхны бараагаа нэмэх',
-      description: 'Үнэ, үлдэгдэлтэй бараа үүсгээд худалдаанд бэлдэнэ.',
-      href: props.newProductHref,
-    },
+    props.productAction,
     {
       title: 'Төлбөр, хүргэлтийн мэдээллээ шалгах',
       description: 'Хүргэлтийн үнэ болон шилжүүлгийн дансыг баталгаажуулна.',
@@ -377,7 +373,7 @@ type DashboardContentProps = {
     productId: AdminLowStockVariant['productId'],
     variantId: AdminLowStockVariant['variantId'],
   ) => string
-  newProductHref: string
+  readinessProductAction: ReadinessSequenceProps['productAction']
   settingsHref: string
   storefrontHref: string
 }
@@ -387,7 +383,7 @@ function DashboardContent(props: DashboardContentProps) {
     <div class="mt-6 space-y-8">
       <Show when={props.isNewStore}>
         <ReadinessSequence
-          newProductHref={props.newProductHref}
+          productAction={props.readinessProductAction}
           settingsHref={props.settingsHref}
           storefrontHref={props.storefrontHref}
         />
@@ -409,13 +405,14 @@ function DashboardContent(props: DashboardContentProps) {
 
 export type DashboardPageProps = {
   request: AdminDashboardRequest
-  catalogRequest: AdminDashboardCatalogRequest
+  activeCatalogRequest: AdminDashboardCatalogRequest
+  draftCatalogRequest: AdminDashboardCatalogRequest
   orderHref: (orderId: AdminOrderListItem['id']) => string
   ordersHref: (status?: 'new' | 'confirmed' | 'preparing' | 'delivering') => string
   inventoryHref: string
   catalogHref: (
     productId: AdminLowStockVariant['productId'],
-    variantId: AdminLowStockVariant['variantId'],
+    variantId?: AdminLowStockVariant['variantId'],
   ) => string
   newProductHref: string
   settingsHref: string
@@ -424,12 +421,37 @@ export type DashboardPageProps = {
 
 export function DashboardPage(props: DashboardPageProps) {
   const query = useQueryResult(() => dashboardQuery.overview(props.request))
-  const catalogQuery = useQueryResult(() => dashboardQuery.catalogReadiness(props.catalogRequest))
-  const catalog = () =>
-    catalogQuery.data?.match<AdminCatalogProductList | undefined>({
+  const activeCatalogQuery = useQueryResult(() =>
+    dashboardQuery.catalogReadiness(props.activeCatalogRequest, 'active'),
+  )
+  const draftCatalogQuery = useQueryResult(() =>
+    dashboardQuery.catalogReadiness(props.draftCatalogRequest, 'draft'),
+  )
+  const activeCatalog = () =>
+    activeCatalogQuery.data?.match<AdminCatalogProductList | undefined>({
       ok: value => value,
       err: (_error: AdminCatalogError) => undefined,
     })
+  const draftCatalog = () =>
+    draftCatalogQuery.data?.match<AdminCatalogProductList | undefined>({
+      ok: value => value,
+      err: (_error: AdminCatalogError) => undefined,
+    })
+  const hasActiveSellableProduct = () => (activeCatalog()?.total ?? 0) > 0
+  const readinessProductAction = () => {
+    const draft = draftCatalog()?.items[0]
+    if (draft)
+      return {
+        title: 'Ноорог бараагаа дуусгах',
+        description: 'Үнэ, үлдэгдэл, төлөвийг шалгаад худалдаанд гаргана уу.',
+        href: props.catalogHref(draft.id),
+      }
+    return {
+      title: 'Анхны бараагаа нэмэх',
+      description: 'Үнэ, үлдэгдэлтэй бараа үүсгээд худалдаанд бэлдэнэ.',
+      href: props.newProductHref,
+    }
+  }
 
   return (
     <section class="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-7">
@@ -439,18 +461,23 @@ export function DashboardPage(props: DashboardPageProps) {
         titleId="dashboard-title"
       />
       <Switch>
-        <Match when={query.isPending || catalogQuery.isPending}>
+        <Match
+          when={query.isPending || activeCatalogQuery.isPending || draftCatalogQuery.isPending}
+        >
           <DashboardSkeleton />
         </Match>
-        <Match when={query.isError}>
+        <Match when={query.isError || activeCatalogQuery.isError || draftCatalogQuery.isError}>
           <div class="mt-4">
             <RetryState
               message="Интернэт холболтоо шалгаад хяналтын самбарыг дахин ачаална уу."
               onRetry={() => {
                 void query.refetch()
-                void catalogQuery.refetch()
+                void activeCatalogQuery.refetch()
+                void draftCatalogQuery.refetch()
               }}
-              pending={query.isFetching || catalogQuery.isFetching}
+              pending={
+                query.isFetching || activeCatalogQuery.isFetching || draftCatalogQuery.isFetching
+              }
             />
           </div>
         </Match>
@@ -469,9 +496,9 @@ export function DashboardPage(props: DashboardPageProps) {
               catalogHref={props.catalogHref}
               dashboard={dashboard()}
               inventoryHref={props.inventoryHref}
-              isNewStore={catalog()?.total === 0}
-              newProductHref={props.newProductHref}
+              isNewStore={!hasActiveSellableProduct()}
               orderHref={props.orderHref}
+              readinessProductAction={readinessProductAction()}
               ordersHref={props.ordersHref}
               settingsHref={props.settingsHref}
               storefrontHref={props.storefrontHref}

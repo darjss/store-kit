@@ -60,7 +60,10 @@ const settingsRequests: SettingsRequests = {
 const dashboardRoute = createDashboardRoute({
   getParentRoute: () => rootRoute,
   request: () => api.api.admin.dashboard.get(),
-  catalogRequest: () => catalogApi.products.get({ query: { limit: 1, offset: 0 } }),
+  activeCatalogRequest: () =>
+    catalogApi.products.get({ query: { limit: 1, offset: 0, status: 'active' } }),
+  draftCatalogRequest: () =>
+    catalogApi.products.get({ query: { limit: 1, offset: 0, status: 'draft' } }),
   orderHref: orderId => `/admin/orders/${orderId}`,
   ordersHref: status => `/admin/orders${status ? `?status=${status}` : ''}`,
   inventoryHref: '/admin/catalog?inventory=low',

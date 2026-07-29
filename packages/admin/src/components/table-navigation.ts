@@ -1,6 +1,11 @@
 export const tableRowId = (tableId: string, rowId: string) => `${tableId}-row-${rowId}`
 
-export const activeTableRowId = (tableId: string, rowIds: string[], activeIndex: number) => {
+export const activeTableRowId = (
+  tableId: string,
+  rowIds: string[],
+  activeIndex: number | undefined,
+) => {
+  if (activeIndex === undefined) return undefined
   const rowId = rowIds[Math.min(activeIndex, rowIds.length - 1)]
   return rowId ? tableRowId(tableId, rowId) : undefined
 }
@@ -8,7 +13,7 @@ export const activeTableRowId = (tableId: string, rowIds: string[], activeIndex:
 export const handleTableNavigation = (
   event: KeyboardEvent & { currentTarget: HTMLDivElement; target: Element },
   rowIds: string[],
-  activeIndex: number,
+  activeIndex: number | undefined,
   setActiveIndex: (index: number) => void,
   openRow: (rowId: string) => void,
 ) => {
@@ -16,12 +21,17 @@ export const handleTableNavigation = (
 
   if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
     event.preventDefault()
-    const direction = event.key === 'ArrowDown' ? 1 : -1
-    setActiveIndex(Math.min(rowIds.length - 1, Math.max(0, activeIndex + direction)))
+    const nextIndex =
+      activeIndex === undefined
+        ? event.key === 'ArrowDown'
+          ? 0
+          : rowIds.length - 1
+        : activeIndex + (event.key === 'ArrowDown' ? 1 : -1)
+    setActiveIndex(Math.min(rowIds.length - 1, Math.max(0, nextIndex)))
     return
   }
 
-  if (event.key === 'Enter') {
+  if (event.key === 'Enter' && activeIndex !== undefined) {
     event.preventDefault()
     const rowId = rowIds[Math.min(activeIndex, rowIds.length - 1)]
     if (rowId) openRow(rowId)
