@@ -1,15 +1,9 @@
-import {
-  adminProductUpdateSchema,
-  adminStockUpdateSchema,
-  adminVariantUpdateSchema,
-} from '@store-kit/contracts/admin-catalog'
+import { adminProductUpdateSchema } from '@store-kit/contracts/admin-catalog'
 import type {
   AdminCatalogError,
   AdminCatalogProductDetail,
-  AdminCatalogVariant,
+  AdminCatalogSelectors,
   AdminProductUpdate,
-  AdminStockUpdate,
-  AdminVariantUpdate,
 } from '@store-kit/contracts/admin-catalog'
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import {
@@ -17,24 +11,22 @@ import {
   Field,
   FieldDescription,
   FieldError,
-  FieldGroup,
   FieldLabel,
   Input,
   NativeSelect,
   NativeSelectOption,
   Spinner,
   Switch,
+  Textarea,
 } from '@store-kit/ui'
 import { createForm } from '@tanstack/solid-form'
 import type { Result } from 'better-result'
-import { Show, createSignal } from 'solid-js'
+import { For, Show, createEffect, createSignal, on } from 'solid-js'
+import type { JSX } from 'solid-js'
 
 import { InlineAlert } from '../components/foundation'
 
-type SaveResult = Result<AdminCatalogProductDetail, AdminCatalogError>
-type SaveHandler<Input> = (input: Input) => Promise<SaveResult>
-
-const messages = (errors: readonly unknown[]) =>
+export const validationMessages = (errors: readonly unknown[]) =>
   errors.map(error => ({
     message:
       typeof error === 'string'
@@ -44,21 +36,19 @@ const messages = (errors: readonly unknown[]) =>
           : 'Enter a valid value.',
   }))
 
-const transportMessage = (error: unknown) =>
-  error instanceof Error ? error.message : 'The save request failed. Try again.'
+export const transportMessage = (error: unknown) =>
+  error instanceof Error
+    ? error.message
+    : 'The request failed. Check your connection and try again.'
 
-const productStatus = (value: string): AdminProductUpdate['status'] => {
-  if (value === 'active') return value
-  return 'draft'
-}
-
-type FormFailureProps = {
+type CatalogFailureProps = {
   failure: AdminCatalogError | undefined
   transportError: string | undefined
-  onReload: () => void
+  onReload?: () => void
+  title?: string
 }
 
-function FormFailure(props: FormFailureProps) {
+export function CatalogFailure(props: CatalogFailureProps) {
   const message = () => props.failure?.message ?? props.transportError
   const conflict = () => props.failure?._tag === 'AdminCatalogConflict'
 
@@ -67,13 +57,13 @@ function FormFailure(props: FormFailureProps) {
       {text => (
         <InlineAlert
           action={
-            <Show when={conflict()}>
-              <Button onClick={() => props.onReload()} size="sm" type="button" variant="outline">
-                Reload current data
+            <Show when={conflict() && props.onReload}>
+              <Button onClick={() => props.onReload?.()} size="sm" type="button" variant="outline">
+                Reload current record — local edits will be discarded
               </Button>
             </Show>
           }
-          title={conflict() ? 'Catalog data changed' : 'Could not save changes'}
+          title={conflict() ? 'Catalog data changed' : (props.title ?? 'Could not save changes')}
           tone="destructive"
         >
           {text()}
@@ -83,46 +73,98 @@ function FormFailure(props: FormFailureProps) {
   )
 }
 
-type ProductVisibilityFormProps = {
+const productValues = (product: AdminCatalogProductDetail): AdminProductUpdate => ({
+  expectedUpdatedAt: product.updatedAt,
+  name: product.name,
+  slug: product.slug,
+  shortDescription: product.shortDescription,
+  description: product.description,
+  status: product.status === 'active' ? 'active' : 'draft',
+  featured: product.featured,
+  brandId: product.brand?.id ?? null,
+  categoryId: product.category?.id ?? null,
+})
+
+const sameEditableProduct = (left: AdminProductUpdate, right: AdminProductUpdate) =>
+  left.name === right.name &&
+  left.slug === right.slug &&
+  left.shortDescription === right.shortDescription &&
+  left.description === right.description &&
+  left.status === right.status &&
+  left.featured === right.featured &&
+  left.brandId === right.brandId &&
+  left.categoryId === right.categoryId
+
+type ProductEditorProps = {
   product: AdminCatalogProductDetail
-  onSave: SaveHandler<AdminProductUpdate>
-  onReload: () => void
+  selectors: AdminCatalogSelectors
+  mainAfter: JSX.Element
+  lifecycleBlocked: boolean
+  railAfter: (dirty: boolean) => JSX.Element
+  onSave: (
+    input: AdminProductUpdate,
+  ) => Promise<Result<AdminCatalogProductDetail, AdminCatalogError>>
+  onProduct: (product: AdminCatalogProductDetail) => void
+  onReload: () => Promise<AdminCatalogProductDetail | undefined>
 }
 
-export function ProductVisibilityForm(props: ProductVisibilityFormProps) {
+export function ProductEditor(props: ProductEditorProps) {
   const [failure, setFailure] = createSignal<AdminCatalogError>()
-  const [transportError, setTransportError] = createSignal<string>()
-  const validator = toStandardSchema(adminProductUpdateSchema)
-  const defaultValues: AdminProductUpdate = {
-    expectedUpdatedAt: props.product.updatedAt,
-    name: props.product.name,
-    slug: props.product.slug,
-    shortDescription: props.product.shortDescription,
-    description: props.product.description,
-    status: productStatus(props.product.status),
-    featured: props.product.featured,
-    brandId: props.product.brand?.id ?? null,
-    categoryId: props.product.category?.id ?? null,
-  }
+  const [requestError, setRequestError] = createSignal<string>()
+  let baseline = productValues(props.product)
   const form = createForm(() => ({
-    defaultValues,
-    validators: { onBlur: validator, onSubmit: validator },
+    defaultValues: baseline,
+    validators: {
+      onBlur: toStandardSchema(adminProductUpdateSchema),
+      onSubmit: toStandardSchema(adminProductUpdateSchema),
+    },
     onSubmit: async ({ value }) => {
       setFailure()
-      setTransportError()
+      setRequestError()
       try {
         const result = await props.onSave(value)
-        if (result.isErr()) setFailure(result.error)
+        result.match({
+          ok: product => {
+            baseline = productValues(product)
+            form.reset(baseline)
+            props.onProduct(product)
+          },
+          err: error => setFailure(error),
+        })
       } catch (error) {
-        setTransportError(transportMessage(error))
+        setRequestError(transportMessage(error))
       }
     },
   }))
 
+  createEffect(
+    on(
+      () => props.product,
+      product => {
+        const current = productValues(product)
+        if (!sameEditableProduct(current, baseline)) return
+        baseline = current
+        form.setFieldValue('expectedUpdatedAt', current.expectedUpdatedAt, {
+          dontUpdateMeta: true,
+          dontValidate: true,
+        })
+      },
+      { defer: true },
+    ),
+  )
+
+  const reload = async () => {
+    const product = await props.onReload()
+    if (!product) return
+    setFailure()
+    setRequestError()
+    baseline = productValues(product)
+    form.reset(baseline)
+  }
+
   return (
     <form
-      aria-label="Product visibility"
-      class="rounded-lg border bg-background p-4"
+      aria-label="Product editor"
       noValidate
       onSubmit={event => {
         event.preventDefault()
@@ -130,283 +172,330 @@ export function ProductVisibilityForm(props: ProductVisibilityFormProps) {
         void form.handleSubmit()
       }}
     >
-      <div class="mb-4 flex flex-col gap-1">
-        <h2 class="text-lg leading-6 font-semibold">Visibility</h2>
-        <p class="text-sm text-muted-foreground">
-          Control whether this product is available to the storefront and featured placements.
-        </p>
-      </div>
-      <FieldGroup class="gap-4 sm:flex-row sm:items-end">
-        <form.Field name="status">
-          {field => (
-            <Field class="sm:max-w-52">
-              <FieldLabel for={`${props.product.id}-status`}>Product status</FieldLabel>
-              <NativeSelect
-                class="w-full"
-                id={`${props.product.id}-status`}
-                value={field().state.value ?? 'draft'}
-                aria-invalid={!field().state.meta.isValid}
-                onBlur={() => field().handleBlur()}
-                onChange={event => field().handleChange(productStatus(event.currentTarget.value))}
-              >
-                <NativeSelectOption value="draft">Draft</NativeSelectOption>
-                <NativeSelectOption value="active">Active</NativeSelectOption>
-                <NativeSelectOption value="archived">Archived</NativeSelectOption>
-              </NativeSelect>
-              <FieldError errors={messages(field().state.meta.errors)} />
-            </Field>
-          )}
-        </form.Field>
-        <form.Field name="featured">
-          {field => (
-            <Field class="sm:max-w-64">
-              <div class="flex h-9 items-center justify-between gap-4 rounded-md border px-3">
-                <FieldLabel for={`${props.product.id}-featured`}>Featured product</FieldLabel>
-                <Switch
-                  checked={field().state.value ?? false}
-                  id={`${props.product.id}-featured`}
-                  onChange={checked => field().handleChange(checked)}
-                />
+      <div class="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-7">
+        <main class="min-w-0">
+          <section aria-labelledby="product-fields-title" class="border-b pb-6">
+            <div class="mb-4">
+              <h2 class="text-sm font-semibold" id="product-fields-title">
+                Product
+              </h2>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                Storefront identity and customer-facing product copy.
+              </p>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <form.Field name="name">
+                {field => (
+                  <Field>
+                    <FieldLabel for={`${props.product.id}-name`}>Name</FieldLabel>
+                    <Input
+                      id={`${props.product.id}-name`}
+                      value={field().state.value}
+                      aria-invalid={!field().state.meta.isValid}
+                      onBlur={() => field().handleBlur()}
+                      onInput={event => field().handleChange(event.currentTarget.value)}
+                    />
+                    <FieldError errors={validationMessages(field().state.meta.errors)} />
+                  </Field>
+                )}
+              </form.Field>
+              <form.Field name="slug">
+                {field => (
+                  <Field>
+                    <FieldLabel for={`${props.product.id}-slug`}>Slug</FieldLabel>
+                    <Input
+                      class="font-mono"
+                      id={`${props.product.id}-slug`}
+                      value={field().state.value}
+                      aria-invalid={!field().state.meta.isValid}
+                      onBlur={() => field().handleBlur()}
+                      onInput={event => field().handleChange(event.currentTarget.value)}
+                    />
+                    <FieldDescription>Lowercase letters, numbers, and hyphens.</FieldDescription>
+                    <FieldError errors={validationMessages(field().state.meta.errors)} />
+                  </Field>
+                )}
+              </form.Field>
+              <form.Field name="shortDescription">
+                {field => (
+                  <Field class="sm:col-span-2">
+                    <FieldLabel for={`${props.product.id}-short-description`}>
+                      Short description
+                    </FieldLabel>
+                    <Textarea
+                      class="min-h-20 resize-y"
+                      id={`${props.product.id}-short-description`}
+                      placeholder="A concise catalog summary"
+                      value={field().state.value ?? ''}
+                      aria-invalid={!field().state.meta.isValid}
+                      onBlur={() => field().handleBlur()}
+                      onInput={event =>
+                        field().handleChange(
+                          event.currentTarget.value.trim() ? event.currentTarget.value : null,
+                        )
+                      }
+                    />
+                    <FieldError errors={validationMessages(field().state.meta.errors)} />
+                  </Field>
+                )}
+              </form.Field>
+              <form.Field name="description">
+                {field => (
+                  <Field class="sm:col-span-2">
+                    <FieldLabel for={`${props.product.id}-description`}>Description</FieldLabel>
+                    <Textarea
+                      class="min-h-40 resize-y"
+                      id={`${props.product.id}-description`}
+                      placeholder="Full product description"
+                      value={field().state.value ?? ''}
+                      aria-invalid={!field().state.meta.isValid}
+                      onBlur={() => field().handleBlur()}
+                      onInput={event =>
+                        field().handleChange(
+                          event.currentTarget.value.trim() ? event.currentTarget.value : null,
+                        )
+                      }
+                    />
+                    <FieldError errors={validationMessages(field().state.meta.errors)} />
+                  </Field>
+                )}
+              </form.Field>
+            </div>
+          </section>
+          {props.mainAfter}
+        </main>
+
+        <aside class="min-w-0 border-t pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+          <div class="space-y-5 lg:sticky lg:top-16">
+            <section aria-labelledby="publishing-title" class="border-b pb-5">
+              <h2 class="mb-3 text-sm font-semibold" id="publishing-title">
+                Publishing
+              </h2>
+              <div class="space-y-4">
+                <form.Field name="status">
+                  {field => (
+                    <Field>
+                      <FieldLabel for={`${props.product.id}-status`}>Status</FieldLabel>
+                      <NativeSelect
+                        class="w-full"
+                        id={`${props.product.id}-status`}
+                        value={field().state.value}
+                        aria-invalid={!field().state.meta.isValid}
+                        onBlur={() => field().handleBlur()}
+                        onChange={event =>
+                          field().handleChange(
+                            event.currentTarget.value === 'active' ? 'active' : 'draft',
+                          )
+                        }
+                      >
+                        <NativeSelectOption value="draft">Draft</NativeSelectOption>
+                        <NativeSelectOption value="active">Active</NativeSelectOption>
+                      </NativeSelect>
+                      <FieldError errors={validationMessages(field().state.meta.errors)} />
+                    </Field>
+                  )}
+                </form.Field>
+                <form.Field name="featured">
+                  {field => (
+                    <Field>
+                      <div class="flex min-h-8 items-center justify-between gap-3 border-y py-2">
+                        <FieldLabel for={`${props.product.id}-featured`}>Featured</FieldLabel>
+                        <Switch
+                          checked={field().state.value}
+                          id={`${props.product.id}-featured`}
+                          onChange={checked => field().handleChange(checked)}
+                        />
+                      </div>
+                      <FieldDescription>
+                        Include in deliberate storefront merchandising.
+                      </FieldDescription>
+                    </Field>
+                  )}
+                </form.Field>
               </div>
-              <FieldDescription>Use only for deliberate storefront merchandising.</FieldDescription>
-            </Field>
-          )}
-        </form.Field>
-        <form.Subscribe
-          selector={state => ({ canSubmit: state.canSubmit, pending: state.isSubmitting })}
-        >
-          {state => (
-            <Button class="w-32" disabled={!state().canSubmit || state().pending} type="submit">
-              <Show when={state().pending}>
-                <Spinner aria-hidden="true" />
-              </Show>
-              {state().pending ? 'Saving…' : 'Save product'}
-            </Button>
-          )}
-        </form.Subscribe>
-      </FieldGroup>
-      <div class="mt-4">
-        <FormFailure
-          failure={failure()}
-          onReload={() => props.onReload()}
-          transportError={transportError()}
-        />
+            </section>
+
+            <section aria-labelledby="organization-title" class="border-b pb-5">
+              <h2 class="mb-3 text-sm font-semibold" id="organization-title">
+                Organization
+              </h2>
+              <div class="space-y-4">
+                <form.Field name="brandId">
+                  {field => (
+                    <Field>
+                      <FieldLabel for={`${props.product.id}-brand`}>Brand</FieldLabel>
+                      <NativeSelect
+                        class="w-full"
+                        id={`${props.product.id}-brand`}
+                        value={field().state.value ?? ''}
+                        onBlur={() => field().handleBlur()}
+                        onChange={event => field().handleChange(event.currentTarget.value || null)}
+                      >
+                        <NativeSelectOption value="">No brand</NativeSelectOption>
+                        <For each={props.selectors.brands}>
+                          {brand => (
+                            <NativeSelectOption value={brand.id}>{brand.name}</NativeSelectOption>
+                          )}
+                        </For>
+                      </NativeSelect>
+                      <FieldError errors={validationMessages(field().state.meta.errors)} />
+                    </Field>
+                  )}
+                </form.Field>
+                <form.Field name="categoryId">
+                  {field => (
+                    <Field>
+                      <FieldLabel for={`${props.product.id}-category`}>Category</FieldLabel>
+                      <NativeSelect
+                        class="w-full"
+                        id={`${props.product.id}-category`}
+                        value={field().state.value ?? ''}
+                        onBlur={() => field().handleBlur()}
+                        onChange={event => field().handleChange(event.currentTarget.value || null)}
+                      >
+                        <NativeSelectOption value="">No category</NativeSelectOption>
+                        <For each={props.selectors.categories}>
+                          {category => (
+                            <NativeSelectOption value={category.id}>
+                              {category.name}
+                              {category.active ? '' : ' (inactive)'}
+                            </NativeSelectOption>
+                          )}
+                        </For>
+                      </NativeSelect>
+                      <FieldError errors={validationMessages(field().state.meta.errors)} />
+                    </Field>
+                  )}
+                </form.Field>
+              </div>
+            </section>
+
+            <CatalogFailure
+              failure={failure()}
+              onReload={() => void reload()}
+              transportError={requestError()}
+            />
+
+            <form.Subscribe
+              selector={state => ({
+                canSubmit: state.canSubmit,
+                dirty: state.isDirty,
+                pending: state.isSubmitting,
+              })}
+            >
+              {state => (
+                <div class="border-b pb-5">
+                  <div class="mb-2 flex items-center justify-between gap-3 text-xs">
+                    <span class="text-muted-foreground">Save state</span>
+                    <span
+                      class={
+                        state().dirty
+                          ? 'text-(--admin-warning-foreground)'
+                          : 'text-muted-foreground'
+                      }
+                    >
+                      {state().pending ? 'Saving…' : state().dirty ? 'Unsaved changes' : 'Saved'}
+                    </span>
+                  </div>
+                  <Button
+                    class="w-full"
+                    disabled={!state().canSubmit || !state().dirty || state().pending}
+                    type="submit"
+                  >
+                    <Show when={state().pending}>
+                      <Spinner aria-hidden="true" />
+                    </Show>
+                    {state().pending ? 'Saving product…' : 'Save product'}
+                  </Button>
+                </div>
+              )}
+            </form.Subscribe>
+
+            <form.Subscribe selector={state => state.isDirty}>
+              {dirty => props.railAfter(dirty() || props.lifecycleBlocked)}
+            </form.Subscribe>
+          </div>
+        </aside>
       </div>
     </form>
   )
 }
 
-type VariantEditorProps = {
-  variant: AdminCatalogVariant
-  onSaveCommercial: SaveHandler<AdminVariantUpdate>
-  onSaveStock: SaveHandler<AdminStockUpdate>
-  onReload: () => void
+type OptionRowsProps = {
+  value: Record<string, string>
+  onChange: (value: Record<string, string>) => void
+  disabled?: boolean
 }
 
-export function VariantEditor(props: VariantEditorProps) {
-  const [commercialFailure, setCommercialFailure] = createSignal<AdminCatalogError>()
-  const [commercialTransportError, setCommercialTransportError] = createSignal<string>()
-  const [stockFailure, setStockFailure] = createSignal<AdminCatalogError>()
-  const [stockTransportError, setStockTransportError] = createSignal<string>()
-  const commercialValidator = toStandardSchema(adminVariantUpdateSchema)
-  const stockValidator = toStandardSchema(adminStockUpdateSchema)
-  const commercialDefaultValues: AdminVariantUpdate = {
-    expectedUpdatedAt: props.variant.updatedAt,
-    sku: props.variant.sku,
-    name: props.variant.name,
-    options: props.variant.options,
-    priceMnt: props.variant.priceMnt,
-    compareAtPriceMnt: props.variant.compareAtPriceMnt,
-    stockQuantity: props.variant.stockQuantity,
-    active: props.variant.active,
-    sortOrder: props.variant.sortOrder,
+export function OptionRows(props: OptionRowsProps) {
+  const entries = () => Object.entries(props.value)
+  const addOption = () => {
+    let index = 1
+    let key = 'Option'
+    while (key in props.value) {
+      index += 1
+      key = `Option ${index}`
+    }
+    props.onChange({ ...props.value, [key]: '' })
+  }
+  const updateKey = (oldKey: string, key: string) => {
+    if (!key || key === oldKey || key in props.value) return
+    props.onChange(
+      Object.fromEntries(entries().map(([name, value]) => [name === oldKey ? key : name, value])),
+    )
   }
 
-  const commercialForm = createForm(() => ({
-    defaultValues: commercialDefaultValues,
-    validators: { onBlur: commercialValidator, onSubmit: commercialValidator },
-    onSubmit: async ({ value }) => {
-      setCommercialFailure()
-      setCommercialTransportError()
-      try {
-        const result = await props.onSaveCommercial(value)
-        if (result.isErr()) setCommercialFailure(result.error)
-      } catch (error) {
-        setCommercialTransportError(transportMessage(error))
-      }
-    },
-  }))
-
-  const stockForm = createForm(() => ({
-    defaultValues: {
-      expectedUpdatedAt: props.variant.updatedAt,
-      stockQuantity: props.variant.stockQuantity,
-    },
-    validators: { onBlur: stockValidator, onSubmit: stockValidator },
-    onSubmit: async ({ value }) => {
-      setStockFailure()
-      setStockTransportError()
-      try {
-        const result = await props.onSaveStock(value)
-        if (result.isErr()) setStockFailure(result.error)
-      } catch (error) {
-        setStockTransportError(transportMessage(error))
-      }
-    },
-  }))
-
   return (
-    <div class="min-w-160 space-y-3">
-      <form
-        aria-label={`Commercial settings for ${props.variant.name}`}
-        class="flex items-start gap-3"
-        noValidate
-        onSubmit={event => {
-          event.preventDefault()
-          event.stopPropagation()
-          void commercialForm.handleSubmit()
-        }}
+    <div class="space-y-2">
+      <Show
+        when={entries().length > 0}
+        fallback={
+          <p class="text-xs text-muted-foreground">No options. Use this for a default variant.</p>
+        }
       >
-        <commercialForm.Field name="priceMnt">
-          {field => (
-            <Field class="w-32 shrink-0">
-              <FieldLabel class="sr-only" for={`${props.variant.id}-price`}>
-                Price in MNT
-              </FieldLabel>
+        <For each={entries()}>
+          {([name, value]) => (
+            <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2">
               <Input
-                id={`${props.variant.id}-price`}
-                min="0"
-                step="1"
-                type="number"
-                value={
-                  field().state.value === undefined || Number.isNaN(field().state.value)
-                    ? ''
-                    : field().state.value
-                }
-                aria-invalid={!field().state.meta.isValid}
-                onBlur={() => field().handleBlur()}
-                onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
+                aria-label="Option name"
+                disabled={props.disabled}
+                value={name}
+                onChange={event => updateKey(name, event.currentTarget.value.trim())}
               />
-              <FieldDescription>Price MNT</FieldDescription>
-              <FieldError errors={messages(field().state.meta.errors)} />
-            </Field>
-          )}
-        </commercialForm.Field>
-        <commercialForm.Field name="compareAtPriceMnt">
-          {field => (
-            <Field class="w-36 shrink-0">
-              <FieldLabel class="sr-only" for={`${props.variant.id}-compare-price`}>
-                Compare-at price in MNT
-              </FieldLabel>
               <Input
-                id={`${props.variant.id}-compare-price`}
-                min="0"
-                placeholder="None"
-                step="1"
-                type="number"
-                value={field().state.value ?? ''}
-                aria-invalid={!field().state.meta.isValid}
-                onBlur={() => field().handleBlur()}
+                aria-label={`${name} value`}
+                disabled={props.disabled}
+                placeholder="Value"
+                value={value}
                 onInput={event =>
-                  field().handleChange(
-                    event.currentTarget.value === '' ? null : event.currentTarget.valueAsNumber,
-                  )
+                  props.onChange({ ...props.value, [name]: event.currentTarget.value })
                 }
               />
-              <FieldDescription>Compare-at MNT</FieldDescription>
-              <FieldError errors={messages(field().state.meta.errors)} />
-            </Field>
+              <Button
+                aria-label={`Remove ${name} option`}
+                disabled={props.disabled}
+                onClick={() =>
+                  props.onChange(Object.fromEntries(entries().filter(([key]) => key !== name)))
+                }
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                Remove
+              </Button>
+            </div>
           )}
-        </commercialForm.Field>
-        <commercialForm.Field name="active">
-          {field => (
-            <Field class="w-20 shrink-0 items-center">
-              <div class="flex h-9 items-center gap-2">
-                <Switch
-                  checked={field().state.value ?? false}
-                  id={`${props.variant.id}-active`}
-                  onChange={checked => field().handleChange(checked)}
-                />
-                <FieldLabel for={`${props.variant.id}-active`}>Active</FieldLabel>
-              </div>
-            </Field>
-          )}
-        </commercialForm.Field>
-        <commercialForm.Subscribe
-          selector={state => ({ canSubmit: state.canSubmit, pending: state.isSubmitting })}
-        >
-          {state => (
-            <Button
-              class="mt-0 w-27"
-              disabled={!state().canSubmit || state().pending}
-              size="sm"
-              type="submit"
-              variant="outline"
-            >
-              <Show when={state().pending}>
-                <Spinner aria-hidden="true" />
-              </Show>
-              {state().pending ? 'Saving…' : 'Save details'}
-            </Button>
-          )}
-        </commercialForm.Subscribe>
-      </form>
-
-      <form
-        aria-label={`Inventory for ${props.variant.name}`}
-        class="flex items-start gap-3 border-t pt-3"
-        noValidate
-        onSubmit={event => {
-          event.preventDefault()
-          event.stopPropagation()
-          void stockForm.handleSubmit()
-        }}
+        </For>
+      </Show>
+      <Button
+        disabled={props.disabled || entries().length >= 20}
+        onClick={addOption}
+        size="sm"
+        type="button"
+        variant="outline"
       >
-        <stockForm.Field name="stockQuantity">
-          {field => (
-            <Field class="w-32 shrink-0">
-              <FieldLabel class="sr-only" for={`${props.variant.id}-stock`}>
-                Stock quantity
-              </FieldLabel>
-              <Input
-                id={`${props.variant.id}-stock`}
-                min="0"
-                step="1"
-                type="number"
-                value={Number.isNaN(field().state.value) ? '' : field().state.value}
-                aria-invalid={!field().state.meta.isValid}
-                onBlur={() => field().handleBlur()}
-                onInput={event => field().handleChange(event.currentTarget.valueAsNumber)}
-              />
-              <FieldDescription>Stock quantity</FieldDescription>
-              <FieldError errors={messages(field().state.meta.errors)} />
-            </Field>
-          )}
-        </stockForm.Field>
-        <stockForm.Subscribe
-          selector={state => ({ canSubmit: state.canSubmit, pending: state.isSubmitting })}
-        >
-          {state => (
-            <Button
-              class="w-27"
-              disabled={!state().canSubmit || state().pending}
-              size="sm"
-              type="submit"
-            >
-              <Show when={state().pending}>
-                <Spinner aria-hidden="true" />
-              </Show>
-              {state().pending ? 'Saving…' : 'Save stock'}
-            </Button>
-          )}
-        </stockForm.Subscribe>
-      </form>
-
-      <FormFailure
-        failure={commercialFailure() ?? stockFailure()}
-        onReload={() => props.onReload()}
-        transportError={commercialTransportError() ?? stockTransportError()}
-      />
+        Add option
+      </Button>
     </div>
   )
 }

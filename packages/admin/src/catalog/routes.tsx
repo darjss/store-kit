@@ -1,6 +1,7 @@
 import { createRoute, useParams, useRouter } from '@tanstack/solid-router'
 import type { AnyRootRoute } from '@tanstack/solid-router'
 
+import { CatalogCreatePage } from './create'
 import { CatalogDetailPage } from './detail'
 import type { CatalogListSearch } from './list'
 import { CatalogListPage } from './list'
@@ -28,7 +29,14 @@ export const normalizeCatalogSearch = (search: Record<string, unknown>): Catalog
   }
 }
 
+const normalizeCatalogDetailSearch = (search: Record<string, unknown>) => ({
+  variant:
+    typeof search.variant === 'string' && search.variant.trim() ? search.variant.trim() : undefined,
+})
+
 const catalogPath = (basepath: string) => `${basepath === '/' ? '' : basepath}/catalog`
+const newProductHref = (basepath: string) => `${catalogPath(basepath)}/new`
+const productHref = (basepath: string, productId: string) => `${catalogPath(basepath)}/${productId}`
 
 const catalogListHref = (basepath: string, search: CatalogListSearch) => {
   const parameters = new URLSearchParams()
@@ -60,9 +68,16 @@ export const createCatalogRoutes = (parentRoute: AnyRootRoute, requests: Catalog
     component: CatalogListRoute,
   })
 
+  const catalogCreateRoute = createRoute({
+    getParentRoute: () => parentRoute,
+    path: '/catalog/new',
+    component: CatalogCreateRoute,
+  })
+
   const catalogDetailRoute = createRoute({
     getParentRoute: () => parentRoute,
     path: '/catalog/$productId',
+    validateSearch: normalizeCatalogDetailSearch,
     component: CatalogDetailRoute,
   })
 
@@ -72,7 +87,8 @@ export const createCatalogRoutes = (parentRoute: AnyRootRoute, requests: Catalog
 
     return (
       <CatalogListPage
-        productHref={productId => `${catalogPath(router.basepath)}/${productId}`}
+        onNewProduct={() => void router.navigate({ href: newProductHref(router.basepath) })}
+        productHref={productId => productHref(router.basepath, productId)}
         requests={requests}
         search={search()}
         onSearchChange={nextSearch =>
@@ -85,22 +101,49 @@ export const createCatalogRoutes = (parentRoute: AnyRootRoute, requests: Catalog
     )
   }
 
-  function CatalogDetailRoute() {
-    const params = useParams({ strict: false })
+  function CatalogCreateRoute() {
     const router = useRouter()
 
     return (
-      <CatalogDetailPage
-        productId={productIdFromParams(params())}
+      <CatalogCreatePage
         requests={requests}
         onBack={() => void router.navigate({ href: catalogPath(router.basepath) })}
+        onCreated={productId =>
+          void router.navigate({ href: productHref(router.basepath, productId), replace: true })
+        }
+      />
+    )
+  }
+
+  function CatalogDetailRoute() {
+    const params = useParams({ strict: false })
+    const search = catalogDetailRoute.useSearch()
+    const router = useRouter()
+    const productId = () => productIdFromParams(params())
+
+    return (
+      <CatalogDetailPage
+        productId={productId()}
+        requests={requests}
+        variantSelection={search().variant}
+        onBack={() => void router.navigate({ href: catalogPath(router.basepath) })}
+        onVariantSelectionChange={selection => {
+          const parameters = new URLSearchParams()
+          if (selection) parameters.set('variant', selection)
+          const query = parameters.toString()
+          void router.navigate({
+            href: `${productHref(router.basepath, productId())}${query ? `?${query}` : ''}`,
+            replace: true,
+          })
+        }}
       />
     )
   }
 
   return {
     catalogListRoute,
+    catalogCreateRoute,
     catalogDetailRoute,
-    routes: [catalogListRoute, catalogDetailRoute] as const,
+    routes: [catalogListRoute, catalogCreateRoute, catalogDetailRoute] as const,
   }
 }

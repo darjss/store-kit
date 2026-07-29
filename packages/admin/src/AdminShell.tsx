@@ -1,4 +1,5 @@
 import {
+  AddCircle,
   Box,
   ClipboardList,
   DangerTriangle,
@@ -286,6 +287,11 @@ function AdminCommandPalette(props: { open: boolean; onOpenChange: (open: boolea
                 Catalog
                 <CommandShortcut>G C</CommandShortcut>
               </CommandItem>
+              <CommandItem onSelect={() => run(adminNavigation.newProduct)}>
+                <AddCircle aria-hidden="true" />
+                New product
+                <CommandShortcut>G N</CommandShortcut>
+              </CommandItem>
               <CommandItem onSelect={() => run(adminNavigation.orders)}>
                 <ClipboardList aria-hidden="true" />
                 Orders
@@ -332,6 +338,7 @@ function ApprovedWorkspace(props: { session: AdminSession; storeName: string }) 
   const [commandOpen, setCommandOpen] = createSignal(false)
   const currentPage = () => {
     const pathname = location().pathname.replace(/^\/admin/, '')
+    if (pathname === '/catalog/new') return 'New product'
     if (pathname.startsWith('/catalog')) return 'Catalog'
     if (pathname.startsWith('/orders')) return 'Orders'
     if (pathname.startsWith('/settings')) return 'Settings'

@@ -177,6 +177,9 @@ importers:
       '@tanstack/solid-table':
         specifier: ^8.21.3
         version: 8.21.3(solid-js@1.9.14)
+      '@unpic/solid':
+        specifier: ^1.0.0
+        version: 1.0.0(solid-js@1.9.14)
       better-auth:
         specifier: ^1.6.25
         version: 1.6.25(@cloudflare/workers-types@5.20260721.1)(solid-js@1.9.14)(vitest@4.1.10)
@@ -192,6 +195,9 @@ importers:
       solid-sonner:
         specifier: ^0.3.1
         version: 0.3.1(solid-js@1.9.14)
+      unpic:
+        specifier: ^4.2.2
+        version: 4.2.2
 
   packages/api:
     dependencies:

@@ -1,4 +1,4 @@
-import { Magnifer } from '@solar-icons/solid/Linear'
+import { AddCircle, Magnifer } from '@solar-icons/solid/Linear'
 import type {
   AdminCatalogError,
   AdminCatalogProductListFilters,
@@ -23,8 +23,10 @@ import {
   flexRender,
   getCoreRowModel,
 } from '@tanstack/solid-table'
+import { Image } from '@unpic/solid/base'
 import { For, Show, createSignal } from 'solid-js'
 import type { JSX } from 'solid-js'
+import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
 import {
   AdminEmptyState,
@@ -53,6 +55,11 @@ const priceRange = (product: AdminCatalogProductListItem) => {
 
 const titleCase = (value: string) => `${value.charAt(0).toUpperCase()}${value.slice(1)}`
 
+const updatedTime = new Intl.DateTimeFormat('mn-MN', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
+
 function InventoryBadge(props: { quantity: number }) {
   if (props.quantity === 0) return <StatusBadge tone="destructive">Out of stock</StatusBadge>
   if (props.quantity <= 3) return <StatusBadge tone="warning">Low · {props.quantity}</StatusBadge>
@@ -67,6 +74,7 @@ const productColumnLabel: Record<string, string> = {
   totalStockQuantity: 'Inventory',
   price: 'Active price',
   featured: 'Featured',
+  updatedAt: 'Updated',
 }
 
 const mobileCellClass = (columnId: string) =>
@@ -78,14 +86,39 @@ const productColumns = (productHref: (productId: string) => string) => [
   columnHelper.accessor('name', {
     header: 'Product',
     cell: info => (
-      <div class="min-w-48">
-        <a
-          class="font-medium whitespace-normal text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          href={productHref(info.row.original.id)}
+      <div class="flex min-w-52 items-center gap-2.5">
+        <Show
+          when={info.row.original.primaryImage}
+          fallback={<div aria-hidden="true" class="size-9 shrink-0 rounded-sm border bg-muted" />}
         >
-          {info.getValue()}
-        </a>
-        <div class="mt-0.5 text-xs text-muted-foreground">/{info.row.original.slug}</div>
+          {image => (
+            <Image
+              alt=""
+              breakpoints={[36, 72]}
+              class="size-9 shrink-0 rounded-sm bg-muted object-cover"
+              height={image().height}
+              layout="fixed"
+              operations={{ quality: 75, format: 'auto', fit: 'cover' }}
+              options={{ domain: new URL(image().url).hostname }}
+              sizes="36px"
+              src={image().url}
+              transformer={cloudflare}
+              unstyled
+              width={image().width}
+            />
+          )}
+        </Show>
+        <div class="min-w-0">
+          <a
+            class="font-medium whitespace-normal text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            href={productHref(info.row.original.id)}
+          >
+            {info.getValue()}
+          </a>
+          <div class="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+            /{info.row.original.slug}
+          </div>
+        </div>
       </div>
     ),
   }),
@@ -122,7 +155,18 @@ const productColumns = (productHref: (productId: string) => string) => [
   }),
   columnHelper.accessor('featured', {
     header: 'Featured',
-    cell: info => <span class="text-sm">{info.getValue() ? 'Yes' : 'No'}</span>,
+    cell: info => <span class="text-sm">{info.getValue() ? 'Yes' : '—'}</span>,
+  }),
+  columnHelper.accessor('updatedAt', {
+    header: 'Updated',
+    cell: info => (
+      <time
+        class="text-xs whitespace-nowrap text-muted-foreground tabular-nums"
+        datetime={new Date(info.getValue()).toISOString()}
+      >
+        {updatedTime.format(info.getValue())}
+      </time>
+    ),
   }),
 ]
 
@@ -137,6 +181,7 @@ type CatalogListPageProps = {
   search: CatalogListSearch
   onSearchChange: (search: CatalogListSearch) => void
   productHref: (productId: string) => string
+  onNewProduct: () => void
 }
 
 export function CatalogListPage(props: CatalogListPageProps) {
@@ -179,6 +224,12 @@ export function CatalogListPage(props: CatalogListPageProps) {
   return (
     <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
       <PageHeader
+        actions={
+          <Button onClick={() => props.onNewProduct()} type="button">
+            <AddCircle aria-hidden="true" />
+            New product
+          </Button>
+        }
         description="Review product visibility, commercial details, and current inventory."
         title="Catalog"
         titleId="catalog-title"
@@ -261,6 +312,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                 { label: 'Inventory' },
                 { label: 'Active price' },
                 { label: 'Featured' },
+                { label: 'Updated' },
               ]}
               rows={8}
             />
@@ -287,15 +339,33 @@ export function CatalogListPage(props: CatalogListPageProps) {
               <Show
                 when={(data()?.items.length ?? 0) > 0}
                 fallback={
-                  <AdminEmptyState
-                    action={
-                      <Button onClick={clearFilters} type="button" variant="outline">
-                        Clear filters
-                      </Button>
+                  <Show
+                    when={Boolean(
+                      props.search.query || props.search.status || props.search.inventory !== 'all',
+                    )}
+                    fallback={
+                      <AdminEmptyState
+                        action={
+                          <Button onClick={() => props.onNewProduct()} type="button">
+                            <AddCircle aria-hidden="true" />
+                            New product
+                          </Button>
+                        }
+                        description="Create the first product with its required initial variant."
+                        title="No products yet"
+                      />
                     }
-                    description="No products match the current search and filters."
-                    title="No catalog results"
-                  />
+                  >
+                    <AdminEmptyState
+                      action={
+                        <Button onClick={clearFilters} type="button" variant="outline">
+                          Clear filters
+                        </Button>
+                      }
+                      description="No products match the current search and filters."
+                      title="No catalog results"
+                    />
+                  </Show>
                 }
               >
                 <div
@@ -315,6 +385,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                                 <TableHead
                                   class={
                                     header.column.id === 'activeVariantCount' ||
+                                    header.column.id === 'totalStockQuantity' ||
                                     header.column.id === 'price'
                                       ? 'text-right'
                                       : undefined
@@ -346,6 +417,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                                 <TableCell
                                   class={`${mobileCellClass(cell.column.id)} ${
                                     cell.column.id === 'activeVariantCount' ||
+                                    cell.column.id === 'totalStockQuantity' ||
                                     cell.column.id === 'price'
                                       ? 'md:text-right'
                                       : ''
