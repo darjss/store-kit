@@ -1,6 +1,12 @@
 import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
 
 import { pluggedDevelopmentMediaBaseUrl } from './catalog-seed-target.ts'
+import {
+  moshpitProductSlug,
+  remoteCatalogImage,
+  smokeCatalogLimit,
+  requiredMoshpitCutout,
+} from './deployment-smoke-contract.ts'
 
 const argumentValue = (args: string[], name: string) => {
   const index = args.indexOf(name)
@@ -40,7 +46,8 @@ const get = async (path: string) => {
 }
 
 await get('/api/system/status')
-const catalogResponse = await get('/api/products?limit=1')
+await Promise.all([get('/products'), get(`/products/${moshpitProductSlug}`), get('/checkout')])
+const catalogResponse = await get(`/api/products?limit=${smokeCatalogLimit}`)
 const catalogText = await catalogResponse.text()
 const homeResponse = await get('/')
 const homeHtml = await homeResponse.text()
@@ -49,29 +56,25 @@ if (catalogText.includes(legacyMediaPath) || homeHtml.includes(legacyMediaPath))
   throw new Error('Smoke output contains a legacy Worker media path.')
 }
 
-const originalImage = catalogText.match(
-  new RegExp(`${mediaBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^"\\\\]+`),
-)?.[0]
-if (!originalImage) throw new Error('Catalog response contains no selected remote R2 image.')
-
-const transformedImage = homeHtml
-  .replaceAll('&amp;', '&')
-  .match(/https:\/\/[^"' ]+\/cdn-cgi\/image\/[^"' ]+/)?.[0]
-if (!transformedImage) throw new Error('Home HTML contains no Cloudflare image transformation.')
+const originalImage = remoteCatalogImage(catalogText, mediaBaseUrl)
+const cutoutPath = requiredMoshpitCutout(homeHtml)
 
 const imageResponses = await Promise.all(
   (
     [
       ['R2 custom-domain image', originalImage],
-      ['Cloudflare transformed image', transformedImage],
+      ['Bundled moshpit cutout', new URL(cutoutPath, appOrigin)],
     ] as const
   ).map(async ([label, url]) => ({
     label,
-    response: await fetch(url, { method: 'HEAD', redirect: 'error' }),
+    response: await fetch(url, { redirect: 'error' }),
   })),
 )
 for (const { label, response } of imageResponses) {
-  if (!response.ok) throw new Error(`${label} returned ${response.status}.`)
+  if (response.status !== 200) throw new Error(`${label} returned ${response.status}.`)
+  if (!response.headers.get('content-type')?.startsWith('image/')) {
+    throw new Error(`${label} did not return image content.`)
+  }
   if (label === 'R2 custom-domain image' && !response.headers.has('cache-control')) {
     throw new Error('R2 custom-domain image is missing Cache-Control.')
   }

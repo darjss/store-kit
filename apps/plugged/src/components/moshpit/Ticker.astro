@@ -1,0 +1,20 @@
+---
+interface Props {
+  text: string;
+  class?: string;
+  reverse?: boolean;
+  durationMs?: number;
+}
+
+const { text, class: className, reverse = false, durationMs = 16000 } = Astro.props;
+const doubled = `${text} ${text} ${text} `;
+---
+
+<div class={`overflow-hidden ${className ?? ""}`} aria-hidden="true">
+  <div
+    class="flex w-max font-mono tracking-[0.25em] whitespace-nowrap uppercase"
+    style={`animation: ${reverse ? "ticker-reverse" : "ticker"} ${durationMs}ms linear infinite;`}
+  >
+    <span>{doubled}</span><span>{doubled}</span>
+  </div>
+</div>

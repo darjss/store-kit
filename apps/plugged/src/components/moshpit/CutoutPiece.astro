@@ -1,0 +1,27 @@
+---
+interface Props {
+  slug: string;
+  name: string;
+  price?: string;
+  class?: string;
+  bob?: "a" | "b" | "c";
+  priority?: boolean;
+  depth?: number;
+}
+
+const { slug, name, price, class: className, bob, priority = false, depth } = Astro.props;
+---
+
+<a href={`/products/${slug}`} class={`piece absolute z-10 no-underline ${className ?? ""}`} data-depth={depth}>
+  <img
+    class={`moshpit-cut block w-full ${bob ? `bob-${bob}` : ""}`}
+    src={`/cut/${slug}.webp`}
+    alt={name}
+    width="1400"
+    height="1260"
+    loading={priority ? "eager" : "lazy"}
+    fetchpriority={priority ? "high" : "auto"}
+    decoding="async"
+  />
+  {price && <span class="chip-price absolute right-[4%] bottom-[2%] text-[0.92em]">{price}</span>}
+</a>

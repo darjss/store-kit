@@ -26,7 +26,7 @@ type WranglerEnvironment = {
   images: { binding: string }
   vars: Record<string, string>
   secrets: { required: string[] }
-  routes: { pattern: string; custom_domain: boolean }[]
+  routes: { pattern: string; custom_domain?: boolean; zone_name?: string }[]
 }
 type WranglerConfig = {
   $schema: string
@@ -42,7 +42,7 @@ type WranglerConfig = {
   images: { binding: string }
   secrets: { required: string[] }
   vars: Record<string, string>
-  env: { development: WranglerEnvironment }
+  env: { development: WranglerEnvironment; production: WranglerEnvironment }
   observability: { enabled: boolean }
 }
 
@@ -76,12 +76,52 @@ describe('Plugged Wrangler deployment configuration', () => {
       },
       vars: {
         DEPLOYMENT_ENV: 'production',
-        PUBLIC_APP_URL: 'https://plugged.mn',
+        PUBLIC_APP_URL: 'https://pluggedaudio.store',
         PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
         QPAY_BASE_URL: 'https://merchant.qpay.mn',
       },
       observability: { enabled: true },
     })
+  })
+
+  test('pins production to Store Kit resources and the Plugged custom route', async () => {
+    const production = (await readConfig()).env.production
+    const database = production.d1_databases.find(({ binding }) => binding === 'DB')
+    const namespaces = Object.fromEntries(
+      production.kv_namespaces.map(({ binding, id }) => [binding, id]),
+    )
+
+    expect(production.name).toBe('plugged')
+    expect(database).toEqual({
+      binding: 'DB',
+      database_name: 'store-kit-plugged-production',
+      database_id: '058685a7-d13c-4eb3-8464-b5286945a759',
+      migrations_dir: '../../packages/db/migrations',
+      migrations_pattern: '../../packages/db/migrations/*/migration.sql',
+    })
+    expect(namespaces).toEqual({
+      CACHE: expect.stringMatching(/^[0-9a-f]{32}$/u),
+      AUTH_KV: expect.stringMatching(/^[0-9a-f]{32}$/u),
+      SESSION: expect.stringMatching(/^[0-9a-f]{32}$/u),
+    })
+    expect(new Set(Object.values(namespaces)).size).toBe(3)
+    expect(production.vars).toEqual({
+      DEPLOYMENT_ENV: 'production',
+      PUBLIC_APP_URL: 'https://pluggedaudio.store',
+      PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
+      QPAY_BASE_URL: 'https://merchant.qpay.mn',
+    })
+    expect(production.secrets.required).toEqual([
+      'QPAY_USERNAME',
+      'QPAY_PASSWORD',
+      'QPAY_INVOICE_CODE',
+    ])
+    expect(production.routes).toEqual([
+      {
+        pattern: 'pluggedaudio.store/*',
+        zone_name: 'pluggedaudio.store',
+      },
+    ])
   })
 
   test('pins the client demo to explicit development resources', async () => {

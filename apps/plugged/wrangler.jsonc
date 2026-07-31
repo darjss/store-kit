@@ -27,11 +27,52 @@
   },
   "vars": {
     "DEPLOYMENT_ENV": "production",
-    "PUBLIC_APP_URL": "https://plugged.mn",
+    "PUBLIC_APP_URL": "https://pluggedaudio.store",
     "PUBLIC_MEDIA_BASE_URL": "https://plugged.storekitcdn.darjs.dev/",
     "QPAY_BASE_URL": "https://merchant.qpay.mn",
   },
   "env": {
+    "production": {
+      "name": "plugged",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "store-kit-plugged-production",
+          "database_id": "058685a7-d13c-4eb3-8464-b5286945a759",
+          "migrations_dir": "../../packages/db/migrations",
+          "migrations_pattern": "../../packages/db/migrations/*/migration.sql",
+        },
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CACHE",
+          "id": "3e4c7e4019f5499a98a0f6d7755e97e3",
+        },
+        {
+          "binding": "AUTH_KV",
+          "id": "ccc868c159be4dd28c1f5e59b2efa5c6",
+        },
+        {
+          "binding": "SESSION",
+          "id": "25da21dde4484cf1a80352173d6d423d",
+        },
+      ],
+      "vars": {
+        "DEPLOYMENT_ENV": "production",
+        "PUBLIC_APP_URL": "https://pluggedaudio.store",
+        "PUBLIC_MEDIA_BASE_URL": "https://plugged.storekitcdn.darjs.dev/",
+        "QPAY_BASE_URL": "https://merchant.qpay.mn",
+      },
+      "secrets": {
+        "required": ["QPAY_USERNAME", "QPAY_PASSWORD", "QPAY_INVOICE_CODE"],
+      },
+      "routes": [
+        {
+          "pattern": "pluggedaudio.store/*",
+          "zone_name": "pluggedaudio.store",
+        },
+      ],
+    },
     "development": {
       "name": "plugged-client-demo",
       "d1_databases": [

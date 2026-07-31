@@ -1,0 +1,16 @@
+---
+interface Props {
+  text: string;
+  class?: string;
+  id?: string;
+}
+
+const { text, class: className, id } = Astro.props;
+const splitId = id ?? `stack-${text.slice(0, 8).toLowerCase().replaceAll(/[^\p{Letter}]/gu, "")}`;
+---
+
+<div class={`title-stack font-body leading-[0.78] font-black tracking-[-0.04em] ${className ?? ""}`} role="heading" aria-level="1" aria-label={text}>
+  <span class="title-copy title-copy-blue" aria-hidden="true">{text}</span>
+  <span class="title-copy title-copy-orange" aria-hidden="true">{text}</span>
+  <h1 id={splitId} class="title-copy title-copy-front">{text}</h1>
+</div>

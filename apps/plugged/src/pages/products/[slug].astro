@@ -2,6 +2,7 @@
 import { commerce } from "@store-kit/commerce";
 import { formatMnt } from "@store-kit/storefront/format";
 import { ProductPurchase } from "~/components/ProductPurchase";
+import TitleStack from "~/components/moshpit/TitleStack.astro";
 import Layout from "~/layouts/Layout.astro";
 import { toPublicImage } from "~/public-image";
 
@@ -48,50 +49,53 @@ const formatFact = (key: string, value: string | number | boolean | string[]) =>
 ---
 
 <Layout title={`${product.name} · Plugged`} description={product.shortDescription} publicPage>
-  <main id="main-content" tabindex="-1" class="bg-petrol pb-24 text-paper">
-    <header class="relative overflow-hidden border-b-4 border-paper/30 px-gutter pt-[clamp(2rem,6vw,5rem)] pb-[clamp(1.5rem,4vw,3rem)]">
-      <div class="pointer-events-none absolute top-1/2 right-[-4rem] h-px w-[45vw] rotate-[-7deg] bg-cyan/60" aria-hidden="true"></div>
-      <a class="mb-5 inline-flex border-b-2 border-cyan pb-1 text-sm font-black text-paper no-underline" href={`/products?category=${product.category?.slug}`}>← {product.category?.name ?? "БҮХ БАРАА"}</a>
-      <div class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-6 max-md:block">
+  <main id="main-content" tabindex="-1" class="bg-ink pb-24 text-paper xl:ml-36">
+    <header class="relative z-10 overflow-hidden border-b border-paper/15 px-gutter pt-[clamp(1.25rem,3vw,2.5rem)] pb-[clamp(1rem,2.5vw,2rem)]">
+      <div class="strobe-bar absolute inset-x-0 top-0" aria-hidden="true"></div>
+      <div class="pointer-events-none absolute inset-0 grain-flick opacity-25" aria-hidden="true"></div>
+      <a class="relative mb-5 inline-flex border-b-2 border-signal pb-1 text-sm font-black text-paper no-underline" href={`/products?category=${product.category?.slug}`}>← {product.category?.name ?? "БҮХ БАРАА"}</a>
+      <div class="relative grid grid-cols-[minmax(0,1fr)_auto] items-end gap-6 max-md:block">
         <div>
-          <p class="m-0 font-black text-cyan">{product.brand?.name ?? "PLUGGED"} / {availableStock > 0 ? "STOCK CONFIRMED" : "OUT OF STOCK"}</p>
-          <h1 class="m-0 mt-2 max-w-[16ch] font-body text-[clamp(2.75rem,7vw,6rem)] leading-[0.9] font-black tracking-[-0.035em] text-balance">{product.name}</h1>
+          <p class="m-0 font-mono text-[0.7rem] font-extrabold tracking-[0.3em] text-acid uppercase">{product.brand?.name ?? "PLUGGED"} / {availableStock > 0 ? "STOCK CONFIRMED" : "OUT OF STOCK"}</p>
+          <TitleStack text={product.name} class="mt-2 pb-2 font-display text-[clamp(2.4rem,5.5vw,4.75rem)] leading-[0.9] uppercase" />
         </div>
-        <div class="clip-cut texture-paper min-w-[16rem] rotate-1 px-6 py-4 text-right text-ink max-md:mt-6 max-md:inline-block max-md:min-w-0 max-md:text-left">
+        <div class="jitter rotate-2 border-2 border-ink bg-signal px-6 py-4 text-right text-ink shadow-[0.35rem_0.4rem_0_rgb(0_0_0/0.7)] max-md:mt-6 max-md:inline-block max-md:text-left">
           <span class="block text-xs font-black">ҮНЭ</span>
           <strong class="text-[clamp(1.75rem,4vw,3.25rem)] leading-none tabular-nums">{formatMnt(lowestPrice)}{highestPrice > lowestPrice ? "-С" : ""}</strong>
         </div>
       </div>
     </header>
 
-    <ProductPurchase product={purchaseProduct} client:only="solid-js" />
+    <div class="lg:-mt-14">
+      <ProductPurchase product={purchaseProduct} client:only="solid-js" />
+    </div>
 
-    <section class="texture-paper relative z-2 mx-gutter mt-[clamp(2rem,7vw,6rem)] grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] text-ink shadow-[0.65rem_0.7rem_0_var(--color-ink)] max-lg:grid-cols-1" aria-labelledby="about-title">
-      <div class="border-r-4 border-ink p-[clamp(1.25rem,4vw,4rem)] max-lg:border-r-0 max-lg:border-b-4">
-        <p class="m-0 font-black text-cyan-deep">LISTENING FILE / {product.brand?.name}</p>
+    <section class="relative z-2 mx-gutter mt-[clamp(2rem,7vw,6rem)] grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] border-y border-paper/15 py-[clamp(1.5rem,4vw,3.5rem)] max-lg:grid-cols-1" aria-labelledby="about-title">
+      <div class="p-[clamp(1.25rem,4vw,4rem)] max-lg:pb-0">
+        <p class="m-0 font-mono text-[0.7rem] font-extrabold tracking-[0.3em] text-acid uppercase">LISTENING FILE / {product.brand?.name}</p>
         <h2 id="about-title" class="mt-3 mb-5 font-body text-[clamp(2rem,5vw,4rem)] leading-[0.95] font-black tracking-[-0.03em] text-balance">ЯАГААД ЭНЭ ЗАГВАР ВЭ?</h2>
         <div class="flex flex-wrap gap-2">
-          {product.useCases.map((item) => <span class="border-2 border-ink bg-cyan px-3 py-2 text-sm font-black">{useCaseLabels[item] ?? item}</span>)}
+          {product.useCases.map((item) => <span class="border-2 border-signal px-3 py-2 text-sm font-black">{useCaseLabels[item] ?? item}</span>)}
         </div>
       </div>
       <div class="p-[clamp(1.25rem,4vw,4rem)]">
         <p class="m-0 max-w-[58ch] text-[clamp(1.35rem,2.6vw,2.2rem)] leading-[1.2] font-extrabold text-pretty">{product.shortDescription}</p>
-        {product.description && <p class="mt-6 max-w-[68ch] text-lg leading-7 text-pretty">{product.description}</p>}
-        <div class="mt-8 flex flex-wrap gap-x-8 gap-y-3 border-y-3 border-ink py-4 text-sm font-black">
-          <span>УБ ХҮРГЭЛТ</span><span>QPAY / ДАНСААР</span><span>ТӨЛБӨРИЙН ДАРАА ҮЛДЭГДЭЛ БАТАЛГААЖНА</span>
+        {product.description && <p class="mt-6 max-w-[68ch] text-lg leading-7 text-pretty text-paper/70">{product.description}</p>}
+        <div class="mt-8 flex flex-wrap gap-x-8 gap-y-3 border-y border-paper/25 py-4 font-mono text-[0.72rem] font-extrabold tracking-[0.2em]">
+          <span>УБ ХҮРГЭЛТ</span><span class="text-signal">QPAY / ДАНСААР</span><span>ТӨЛБӨРИЙН ДАРАА ҮЛДЭГДЭЛ БАТАЛГААЖНА</span>
         </div>
       </div>
     </section>
 
-    <section class="mt-[clamp(3rem,8vw,7rem)] border-y-4 border-paper/30 bg-ink px-gutter py-[clamp(2rem,5vw,4rem)]" aria-labelledby="facts-title">
+    <section class="mt-[clamp(3rem,8vw,7rem)] border-t border-paper/15 px-gutter py-[clamp(2rem,5vw,4rem)]" aria-labelledby="facts-title">
       <div class="mb-8 flex items-end justify-between gap-6 max-md:block">
-        <h2 class="m-0 max-w-[12ch] font-body text-[clamp(2.5rem,6vw,5rem)] leading-[0.92] font-black tracking-[-0.035em]" id="facts-title">ТЕХНИКИЙН ҮЗҮҮЛЭЛТ</h2>
+        <h2 class="m-0 max-w-[12ch] font-body text-[clamp(2.5rem,6vw,5rem)] leading-[0.92] font-black tracking-[-0.035em]" id="facts-title">ТЕХНИКИЙН <span class="text-signal">ҮЗҮҮЛЭЛТ</span></h2>
         <p class="m-0 max-w-[32ch] text-paper/70 max-md:mt-4">Каталогт баталгаажсан мэдээлэл. Хувилбарын үнэ болон үлдэгдлийг дээрээс сонгож шалгана уу.</p>
       </div>
       <div class="grid grid-cols-2 border-t-2 border-paper/30 max-md:grid-cols-1">
         {Object.entries(product.details).map(([key, value], index) => (
           <dl class:list={["m-0 grid grid-cols-[minmax(8rem,0.7fr)_1.3fr] gap-4 border-b-2 border-paper/30 py-5 max-[340px]:grid-cols-1 max-[340px]:gap-1", index % 2 === 0 ? "md:border-r-2 md:pr-6" : "md:pl-6"]}>
-            <dt class="font-black text-cyan">{factLabels[key] ?? key}</dt>
+            <dt class="font-black text-signal">{factLabels[key] ?? key}</dt>
             <dd class="m-0 font-extrabold text-paper">{formatFact(key, value)}</dd>
           </dl>
         ))}

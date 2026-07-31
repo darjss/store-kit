@@ -138,8 +138,11 @@ Astro selects the named Cloudflare environment at build time with
 `CLOUDFLARE_ENV=development`. The guarded command validates `env.development`, builds it, and gives
 Wrangler Astro's generated flattened config from `dist/server/wrangler.json`.
 
-The smoke task checks the system and catalog routes, direct R2 image access, responsive Cloudflare
-transformation output, object cache headers, and the absence of the removed Worker media route.
+The smoke task checks the system, catalog, product, and checkout GET routes; the moshpit home copy
+and bundled hero cutout; direct R2 image access and cache headers; and the absence of the removed
+Worker media route. It creates and pays no QPay invoice. The moshpit home uses bundled
+`/cut/<slug>.webp` product cutouts; transformed catalog images remain valid elsewhere but are not
+required in its raw HTML.
 
 ## Production release
 
