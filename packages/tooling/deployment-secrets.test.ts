@@ -55,10 +55,22 @@ describe('Plugged development secrets file', () => {
   })
 
   test.each([
+    [
+      'a missing auth secret',
+      authSecrets.slice(1).concat(requiredSecrets().split('\n').slice(3)).join('\n'),
+    ],
+    [
+      'a malformed Better Auth secret',
+      requiredSecrets().replace(authSecrets[0], 'BETTER_AUTH_SECRETS=1:too-short'),
+    ],
     ['a partial Telegram group', 'TELEGRAM_BOT_TOKEN=bot-token'],
     ['an unsupported key', 'EXTRA_SECRET=value'],
-  ])('rejects %s', async (_, extra) => {
-    const path = await writeSecrets(requiredSecrets([extra]))
+  ])('rejects %s', async (scenario, sourceOrExtra) => {
+    const source =
+      scenario.startsWith('a missing') || scenario.startsWith('a malformed')
+        ? sourceOrExtra
+        : requiredSecrets([sourceOrExtra])
+    const path = await writeSecrets(source)
 
     await expect(validateDevelopmentSecretsFile(path)).rejects.toThrow()
   })

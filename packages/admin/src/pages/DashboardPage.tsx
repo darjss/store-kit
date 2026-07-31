@@ -268,7 +268,7 @@ function RecentOrders(props: {
               return (
                 <li>
                   <a
-                    aria-label={`${order.number}, ${order.customerName}, ${formatMoney(order.totalMnt)}`}
+                    aria-label={`${order.number}, ${order.customerName}, ${formatMoney(order.totalMnt)}, ${paymentStatus().label}, ${orderStatus().label}, ${formatDate(order.createdAt)}`}
                     class="block min-h-24 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     href={props.orderHref(order.id)}
                   >

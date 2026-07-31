@@ -157,6 +157,13 @@ const catalogConflict = (productId: string, variantId?: string) => ({
   message: 'This catalog record changed. Reload the current data and try again.',
 })
 
+const catalogDeletionBlocked = (productId: string, variantId?: string) => ({
+  _tag: 'CatalogDeletionBlocked' as const,
+  productId,
+  ...(variantId ? { variantId } : {}),
+  message: 'Resolve or cancel active orders before permanently deleting this catalog record.',
+})
+
 const productSlugTaken = (slug: string) => ({
   _tag: 'ProductSlugTaken' as const,
   slug,
@@ -480,6 +487,10 @@ export const deleteAdminCatalogProduct = async (
     }
     return Result.ok<AdminProductDeleteOutcome, AdminCatalogError>(outcome)
   }
+  if (write.blocked)
+    return Result.err<AdminProductDeleteOutcome, AdminCatalogError>(
+      catalogDeletionBlocked(productId),
+    )
   if (!write.persisted)
     return Result.err<AdminProductDeleteOutcome, AdminCatalogError>(productNotFound(productId))
   if (write.persisted.updatedAt !== input.expectedUpdatedAt)
@@ -660,6 +671,10 @@ export const deleteAdminCatalogVariant = async (
     ...input,
     updatedAt,
   })
+  if (write.blocked)
+    return Result.err<AdminVariantDeleteOutcome, AdminCatalogError>(
+      catalogDeletionBlocked(productId, variantId),
+    )
   if (!write.deleted)
     return Result.err<AdminVariantDeleteOutcome, AdminCatalogError>(
       catalogConflict(productId, variantId),

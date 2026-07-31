@@ -97,6 +97,7 @@ export const updateAdminOrderStatus = async (input: AdminOrderStatusWrite) => {
     .where(
       and(
         eq(payment.orderId, order.id),
+        eq(payment.method, 'bank_transfer'),
         or(eq(payment.status, 'pending'), eq(payment.status, 'failed')),
       ),
     )

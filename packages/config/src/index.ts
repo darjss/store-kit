@@ -5,6 +5,27 @@ import { Value } from 'typebox/value'
 export const STORE_LOCALE = 'mn-MN'
 export const STORE_CURRENCY = 'MNT'
 
+export type BetterAuthSecret = { version: number; value: string }
+
+export const parseBetterAuthSecrets = (input: string): BetterAuthSecret[] =>
+  input.split(',').map(rawEntry => {
+    const entry = rawEntry.trim()
+    const separator = entry.indexOf(':')
+    const versionSource = entry.slice(0, separator)
+    const value = entry.slice(separator + 1).trim()
+    if (
+      separator < 1 ||
+      !/^\d+$/u.test(versionSource) ||
+      !Number.isSafeInteger(Number(versionSource)) ||
+      value.length < 32
+    )
+      throw new Error(
+        'BETTER_AUTH_SECRETS must contain versioned secrets of at least 32 characters.',
+      )
+
+    return { version: Number(versionSource), value }
+  })
+
 export const storeConfigSchema = Type.Object(
   {
     id: Type.String(),

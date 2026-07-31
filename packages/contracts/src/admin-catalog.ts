@@ -466,6 +466,16 @@ export const variantMustBeInactiveSchema = Type.Object(
   { additionalProperties: false },
 )
 
+export const catalogDeletionBlockedSchema = Type.Object(
+  {
+    _tag: Type.Literal('CatalogDeletionBlocked'),
+    productId: productIdSchema,
+    variantId: Type.Optional(variantIdSchema),
+    message: trimmedNonBlankTextSchema,
+  },
+  { additionalProperties: false },
+)
+
 export const imageUploadRejectedSchema = Type.Object(
   {
     _tag: Type.Literal('ImageUploadRejected'),
@@ -495,6 +505,7 @@ export const adminCatalogErrorSchema = Type.Union([
   catalogReferenceNotFoundSchema,
   productMustBeArchivedSchema,
   variantMustBeInactiveSchema,
+  catalogDeletionBlockedSchema,
   imageUploadRejectedSchema,
   mediaStorageUnavailableSchema,
 ])
@@ -537,6 +548,7 @@ export type VariantSkuTaken = Static<typeof variantSkuTakenSchema>
 export type CatalogReferenceNotFound = Static<typeof catalogReferenceNotFoundSchema>
 export type ProductMustBeArchived = Static<typeof productMustBeArchivedSchema>
 export type VariantMustBeInactive = Static<typeof variantMustBeInactiveSchema>
+export type CatalogDeletionBlocked = Static<typeof catalogDeletionBlockedSchema>
 export type ImageUploadRejected = Static<typeof imageUploadRejectedSchema>
 export type MediaStorageUnavailable = Static<typeof mediaStorageUnavailableSchema>
 export type AdminCatalogError = Static<typeof adminCatalogErrorSchema>

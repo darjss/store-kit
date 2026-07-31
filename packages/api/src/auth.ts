@@ -1,17 +1,13 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
+import { parseBetterAuthSecrets } from '@store-kit/config'
 import { authSchema, db } from '@store-kit/db'
 import { createId } from '@store-kit/db/ids'
 import { betterAuth } from 'better-auth'
 import { env } from 'cloudflare:workers'
 
 const rateLimitKeyPrefix = 'better-auth:rate-limit:'
-const authSecrets = env.BETTER_AUTH_SECRETS.split(',').map(entry => {
-  const separator = entry.indexOf(':')
-  return {
-    version: Number(entry.slice(0, separator)),
-    value: entry.slice(separator + 1),
-  }
-})
+const rateLimitWindowSeconds = 60
+const authSecrets = parseBetterAuthSecrets(env.BETTER_AUTH_SECRETS)
 const authIdEntities = {
   user: 'authUser',
   session: 'authSession',
@@ -49,7 +45,7 @@ export const auth = betterAuth({
   },
   rateLimit: {
     enabled: true,
-    window: 60,
+    window: rateLimitWindowSeconds,
     customStorage: {
       get: key =>
         env.AUTH_KV.get<{ count: number; key: string; lastRequest: number }>(
@@ -58,7 +54,7 @@ export const auth = betterAuth({
         ),
       set: (key, value) =>
         env.AUTH_KV.put(`${rateLimitKeyPrefix}${key}`, JSON.stringify(value), {
-          expirationTtl: 60,
+          expirationTtl: rateLimitWindowSeconds,
         }),
     },
   },
@@ -66,7 +62,8 @@ export const auth = betterAuth({
     database: {
       generateId: ({ model }) => {
         const entity = authIdEntities[model as keyof typeof authIdEntities]
-        return entity ? createId(entity) : false
+        if (!entity) throw new Error(`Unsupported Better Auth model: ${model}`)
+        return createId(entity)
       },
     },
   },

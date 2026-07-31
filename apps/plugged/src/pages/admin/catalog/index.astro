@@ -1,0 +1,7 @@
+---
+import AdminLayout from '~/layouts/AdminLayout.astro'
+
+const search = Object.fromEntries(Astro.url.searchParams)
+---
+
+<AdminLayout route={{ name: 'catalog-list', search }} />

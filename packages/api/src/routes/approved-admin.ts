@@ -3,6 +3,7 @@ import { database } from '@store-kit/db'
 import { Elysia } from 'elysia'
 
 import { auth } from '~/auth'
+import { localAdminEnabled } from '~/local-admin'
 
 const unauthenticated = { _tag: 'Unauthenticated' as const }
 const approvalRequired = { _tag: 'ApprovalRequired' as const }
@@ -20,6 +21,8 @@ export const createApprovedAdminRoutes = (scope: `/${string}`) => {
       if (pathname !== routePrefix && !pathname.startsWith(`${routePrefix}/`)) return
 
       set.headers['cache-control'] = 'private, no-store'
+      if (localAdminEnabled()) return
+
       const adminSession = await auth.api.getSession({ headers: request.headers })
       if (!adminSession) return status(401, unauthenticated)
 

@@ -38,6 +38,14 @@ import { catalogKeys, catalogMutation } from './query-options'
 const sameVariantIds = (left: string[], right: string[]) =>
   left.length === right.length && left.every(id => right.includes(id))
 
+const imageDomain = (url: string) => {
+  try {
+    return new URL(url).hostname || undefined
+  } catch {
+    return undefined
+  }
+}
+
 const cleanupMessage = (cleanup: MediaCleanup) => {
   if (cleanup === 'pending')
     return 'Барааны бүртгэл устсан боловч зургийн файлыг цэвэрлэх шаардлагатай байна.'
@@ -411,6 +419,10 @@ function ImageEditor(props: ImageEditorProps) {
   const [baselineVariantIds, setBaselineVariantIds] = createSignal([...props.image.variantIds])
   const [expectedUpdatedAt, setExpectedUpdatedAt] = createSignal(props.productUpdatedAt)
   const [saving, setSaving] = createSignal(false)
+  const transformerOptions = () => {
+    const domain = imageDomain(props.image.url)
+    return domain ? { domain } : undefined
+  }
   const [removeOpen, setRemoveOpen] = createSignal(false)
   let installedResetVersion = props.resetVersion
   const dirty = () => alt() !== baselineAlt() || !sameVariantIds(variantIds(), baselineVariantIds())
@@ -471,7 +483,7 @@ function ImageEditor(props: ImageEditorProps) {
         height={props.image.height}
         layout="fixed"
         operations={{ quality: 80, format: 'auto', fit: 'scale-down' }}
-        options={{ domain: new URL(props.image.url).hostname }}
+        options={transformerOptions()}
         sizes="112px"
         src={props.image.url}
         transformer={cloudflare}

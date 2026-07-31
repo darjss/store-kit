@@ -2,6 +2,8 @@ import { readFile, stat } from 'node:fs/promises'
 import { isAbsolute } from 'node:path'
 import { parseEnv } from 'node:util'
 
+import { parseBetterAuthSecrets } from '@store-kit/config'
+
 const authSecretNames = ['BETTER_AUTH_SECRETS', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const
 const qpaySecretNames = ['QPAY_USERNAME', 'QPAY_PASSWORD', 'QPAY_INVOICE_CODE'] as const
 const telegramSecretNames = [
@@ -33,9 +35,11 @@ export const validateDevelopmentSecretsFile = async (pathValue: string | undefin
   if (unknown.length > 0) {
     throw new Error('PLUGGED_SECRETS_FILE contains an unsupported secret name.')
   }
-  if (authSecretNames.some(name => !secrets[name]?.trim())) {
+  const betterAuthSecrets = secrets.BETTER_AUTH_SECRETS?.trim()
+  if (!betterAuthSecrets || authSecretNames.some(name => !secrets[name]?.trim())) {
     throw new Error('PLUGGED_SECRETS_FILE must contain every non-empty auth secret.')
   }
+  parseBetterAuthSecrets(betterAuthSecrets)
   if (qpaySecretNames.some(name => !secrets[name]?.trim())) {
     throw new Error('PLUGGED_SECRETS_FILE must contain every non-empty QPay secret.')
   }

@@ -1,3 +1,4 @@
+import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -5,6 +6,7 @@ import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-worker
 import { defineConfig } from 'vite-plus'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
+const migrationRoot = path.join(root, 'packages/db/migrations')
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
@@ -17,18 +19,18 @@ export default defineConfig({
           DEPLOYMENT_ENV: 'production',
           TEST_MIGRATIONS: (
             await Promise.all(
-              [
-                '20260723180551_old_karnak',
-                '20260727160704_parallel_starhawk',
-                '20260729022502_massive_captain_marvel',
-              ].map(async directory =>
-                (await readD1Migrations(path.join(root, 'packages/db/migrations', directory))).map(
-                  migration => ({
+              (
+                await readdir(migrationRoot, { withFileTypes: true })
+              )
+                .filter(entry => entry.isDirectory())
+                .map(entry => entry.name)
+                .toSorted()
+                .map(async directory =>
+                  (await readD1Migrations(path.join(migrationRoot, directory))).map(migration => ({
                     ...migration,
                     name: `${directory}/${migration.name}`,
-                  }),
+                  })),
                 ),
-              ),
             )
           ).flat(),
           BETTER_AUTH_SECRETS:

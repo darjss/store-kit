@@ -25,7 +25,7 @@ import {
 import { createForm } from '@tanstack/solid-form'
 import type { Result } from 'better-result'
 import { match } from 'dismatch'
-import { For, Show, createSignal } from 'solid-js'
+import { For, Show, createEffect, createSignal, on } from 'solid-js'
 
 import { InlineAlert, StatusBadge } from '../components/foundation'
 import type { StatusTone } from '../components/foundation'
@@ -163,6 +163,18 @@ function OrderStatusForm(props: OrderStatusFormProps) {
       }
     },
   }))
+  createEffect(
+    on(
+      () => props.order.updatedAt,
+      () => {
+        form.reset({
+          expectedUpdatedAt: props.order.updatedAt,
+          status: props.order.allowedTransitions[0] ?? props.order.status,
+        })
+      },
+      { defer: true },
+    ),
+  )
   const message = () => failure()?.message ?? transportError()
   const conflict = () => failure()?._tag === 'AdminOrderConflict'
 

@@ -10,7 +10,7 @@ import type {
   AdminVariantUpdate,
 } from '@store-kit/contracts/admin-catalog'
 import { env } from 'cloudflare:workers'
-import { and, asc, count, desc, eq, exists, gte, inArray, lte, ne, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, exists, inArray, ne, notInArray, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 
@@ -24,7 +24,7 @@ import {
   productVariant,
   productVariantImage,
 } from '../schema/catalog'
-import { orderLine } from '../schema/shopping'
+import { order as customerOrder, orderLine } from '../schema/shopping'
 import type { ProductListFilters } from '../schemas/catalog'
 
 export type PublishedProduct = typeof product.$inferSelect & {
@@ -236,8 +236,35 @@ export const listAdminProducts = async (filters: AdminCatalogProductListFilters 
 
   if (filters.status) conditions.push(eq(product.status, filters.status))
   if (filters.inventory === 'low')
-    conditions.push(gte(totalActiveStock, 1), lte(totalActiveStock, 3))
-  if (filters.inventory === 'out') conditions.push(eq(totalActiveStock, 0))
+    conditions.push(
+      exists(
+        db
+          .select({ value: sql`1` })
+          .from(productVariant)
+          .where(
+            and(
+              eq(productVariant.productId, product.id),
+              eq(productVariant.active, true),
+              sql`${productVariant.stockQuantity} between 1 and 3`,
+            ),
+          ),
+      ),
+    )
+  if (filters.inventory === 'out')
+    conditions.push(
+      exists(
+        db
+          .select({ value: sql`1` })
+          .from(productVariant)
+          .where(
+            and(
+              eq(productVariant.productId, product.id),
+              eq(productVariant.active, true),
+              eq(productVariant.stockQuantity, 0),
+            ),
+          ),
+      ),
+    )
   if (filters.query) {
     const search = `%${filters.query
       .toLowerCase()
@@ -426,8 +453,8 @@ export const createAdminProduct = async (input: AdminProductCreateWrite) => {
     env.DB.prepare(
       `insert into product
         (id, slug, brand_id, category_id, name, short_description, description, status,
-         featured, use_cases, created_at, updated_at)
-       values (?, ?, ?, ?, ?, ?, ?, ?, ?, '[]', ?, ?)`,
+         featured, details, use_cases, created_at, updated_at)
+       values (?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', '[]', ?, ?)`,
     ).bind(
       productId,
       input.slug,
@@ -541,11 +568,38 @@ export const restoreAdminProduct = async (input: {
   return { updated: updated.length === 1, persisted: await findAdminProduct(input.productId) }
 }
 
+const hasUnresolvedOrderReference = async (input: { productId: string; variantId?: string }) => {
+  const conditions = [
+    eq(orderLine.productId, input.productId),
+    notInArray(customerOrder.status, ['completed', 'cancelled']),
+  ]
+  if (input.variantId) conditions.push(eq(orderLine.variantId, input.variantId))
+  const [reference] = await db
+    .select({ value: sql`1` })
+    .from(orderLine)
+    .innerJoin(customerOrder, eq(customerOrder.id, orderLine.orderId))
+    .where(and(...conditions))
+    .limit(1)
+  return reference !== undefined
+}
+
 export const deleteAdminProduct = async (input: {
   productId: string
   expectedUpdatedAt: number
 }) => {
   const before = await findAdminProduct(input.productId)
+  const unresolvedOrderReference = exists(
+    db
+      .select({ value: sql`1` })
+      .from(orderLine)
+      .innerJoin(customerOrder, eq(customerOrder.id, orderLine.orderId))
+      .where(
+        and(
+          eq(orderLine.productId, product.id),
+          notInArray(customerOrder.status, ['completed', 'cancelled']),
+        ),
+      ),
+  )
   const deleted = await db
     .delete(product)
     .where(
@@ -553,15 +607,22 @@ export const deleteAdminProduct = async (input: {
         eq(product.id, input.productId),
         eq(product.updatedAt, input.expectedUpdatedAt),
         eq(product.status, 'archived'),
+        sql`not ${unresolvedOrderReference}`,
       ),
     )
     .returning({ id: product.id })
   if (deleted.length === 0)
-    return { deleted: false, persisted: await findAdminProduct(input.productId), media: [] }
+    return {
+      blocked: await hasUnresolvedOrderReference({ productId: input.productId }),
+      deleted: false,
+      persisted: await findAdminProduct(input.productId),
+      media: [],
+    }
 
   const keys = before?.images.map(({ r2Key }) => r2Key) ?? []
   const referenced = await findReferencedR2Keys(keys)
   return {
+    blocked: false,
     deleted: true,
     persisted: undefined,
     media: keys.map(r2Key => ({ r2Key, referenced: referenced.has(r2Key) })),
@@ -747,11 +808,22 @@ export const deleteAdminVariant = async (input: {
   updatedAt: number
 }) => {
   const current = await findAdminVariant(input.productId, input.variantId)
-  if (!current) return { deleted: false, persisted: await findAdminProduct(input.productId) }
+  if (!current)
+    return {
+      blocked: false,
+      deleted: false,
+      persisted: await findAdminProduct(input.productId),
+    }
   const [deleted, version] = await env.DB.batch([
     env.DB.prepare(
       `delete from product_variant
        where id = ? and product_id = ? and updated_at = ? and active = 0
+         and not exists (
+           select 1 from order_line
+           join customer_order on customer_order.id = order_line.order_id
+           where order_line.variant_id = product_variant.id
+             and customer_order.status not in ('completed', 'cancelled')
+         )
          and exists (
            select 1 from product
            where id = ? and updated_at = ? and status != 'archived'
@@ -778,6 +850,12 @@ export const deleteAdminVariant = async (input: {
     ),
   ])
   return {
+    blocked:
+      deleted.meta.changes === 0 &&
+      (await hasUnresolvedOrderReference({
+        productId: input.productId,
+        variantId: input.variantId,
+      })),
     deleted: deleted.meta.changes > 0 && version.meta.changes === 1,
     persisted: await findAdminProduct(input.productId),
   }

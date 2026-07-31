@@ -102,6 +102,28 @@ describe('admin authentication', () => {
     expect(await response.json()).toEqual({ _tag: 'Unauthenticated' })
   })
 
+  it('does not expose unsupported email-and-password sign-up', async () => {
+    const before = await env.DB.prepare('select count(*) as count from user').first<{
+      count: number
+    }>()
+    const response = await postJson(
+      '/api/auth/sign-up/email',
+      { name: 'Unexpected User', email: 'unexpected@example.com', password: 'password123' },
+      { origin: 'https://plugged.mn' },
+      'https://plugged.mn',
+    )
+    const after = await env.DB.prepare('select count(*) as count from user').first<{
+      count: number
+    }>()
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({
+      code: 'EMAIL_PASSWORD_SIGN_UP_DISABLED',
+      message: 'Email and password sign up is not enabled',
+    })
+    expect(after?.count).toBe(before?.count)
+  })
+
   it('checks the current D1 approval value for a real Better Auth session', async () => {
     const unapprovedResponse = await app.handle(
       new Request('https://plugged.mn/api/admin/session', {

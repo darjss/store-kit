@@ -174,9 +174,6 @@ importers:
       '@tanstack/solid-query':
         specifier: 'catalog:'
         version: 5.101.3(solid-js@1.9.14)
-      '@tanstack/solid-router':
-        specifier: ^1.170.18
-        version: 1.170.18(solid-js@1.9.14)
       '@tanstack/solid-table':
         specifier: ^8.21.3
         version: 8.21.3(solid-js@1.9.14)
@@ -210,6 +207,9 @@ importers:
       '@store-kit/commerce':
         specifier: workspace:*
         version: link:../commerce
+      '@store-kit/config':
+        specifier: workspace:*
+        version: link:../config
       '@store-kit/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -346,6 +346,9 @@ importers:
 
   packages/tooling:
     dependencies:
+      '@store-kit/config':
+        specifier: workspace:*
+        version: link:../config
       '@store-kit/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -2321,11 +2324,6 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
-  '@solidjs/meta@0.29.4':
-    resolution: {integrity: sha512-zdIWBGpR9zGx1p1bzIPqF5Gs+Ks/BH8R6fWhmUa/dcK1L2rUC8BAcZJzNRYBQv74kScf1TSOs0EY//Vd/I0V8g==}
-    peerDependencies:
-      solid-js: '>=1.8.4'
-
   '@solidjs/testing-library@0.8.10':
     resolution: {integrity: sha512-qdeuIerwyq7oQTIrrKvV0aL9aFeuwTd86VYD3afdq5HYEwoox1OBTJy4y8A3TFZr8oAR0nujYgCzY/8wgHGfeQ==}
     engines: {node: '>= 14'}
@@ -2464,20 +2462,12 @@ packages:
   '@tanstack/form-core@1.33.2':
     resolution: {integrity: sha512-F60zJd15bGrXKonc1kpRYnNRNfiES7F+hgvrPMrsZznPLqZtO2DIg76OU6R25kCYkqYQY5xvuKteuWcUsc587A==}
 
-  '@tanstack/history@1.162.0':
-    resolution: {integrity: sha512-79pf/RkhteYZTRgcR4F9kbk84P2N8rugQJswxfIqovlbRiT3yI7eBE+5QorIrZaOKktsgzRlXh1l/du/xpl4iA==}
-    engines: {node: '>=20.19'}
-
   '@tanstack/pacer-lite@0.1.1':
     resolution: {integrity: sha512-y/xtNPNt/YeyoVxE/JCx+T7yjEzpezmbb+toK8DDD1P4m7Kzs5YR956+7OKexG3f8aXgC3rLZl7b1V+yNUSy5w==}
     engines: {node: '>=18'}
 
   '@tanstack/query-core@5.101.3':
     resolution: {integrity: sha512-pWLyu7AjFFVM5G+frjcL81kKEW9R8GCCPKnL3uaWbMwd2f3ZINFCuy+PtKkdz/+pKw/f/XMsFsYq/H+uJHM4GQ==}
-
-  '@tanstack/router-core@1.171.15':
-    resolution: {integrity: sha512-IILCDcLaItMZQ2jEmCABHY1Nhjjn5XUvwpQp3e4Nmu+vfg0BgYFuu/QASz2SwE2ZNbVMrvt8X/wxa+Gg5aErxA==}
-    engines: {node: '>=20.19'}
 
   '@tanstack/solid-form@1.33.2':
     resolution: {integrity: sha512-jdUdVtr2ARotBmKV5SQubQNM7z8CGg53u4gB4773ggqNzWUxZbsYR2Vjy6/fkDX/1Lk1NMzqejszCW9m2HVp3Q==}
@@ -2488,12 +2478,6 @@ packages:
     resolution: {integrity: sha512-bD+jOPg0JTQ4AxPPR7uN9S23iIla2kjrrDYO/PLMFHHsL8cXOy7IpzJ93sQV4Zm7Zi51ElRCF/kUBmHVSGR7/Q==}
     peerDependencies:
       solid-js: ^1.6.0
-
-  '@tanstack/solid-router@1.170.18':
-    resolution: {integrity: sha512-Og4LS3bfBMa8qzRrWMsxBq1qc982wG8l5XEWMReossEphUnTua4ffMnC6Eq6HTCrZ1QlsBQCWQRaAX3lwAxaHw==}
-    engines: {node: '>=20.19'}
-    peerDependencies:
-      solid-js: ^1.9.10
 
   '@tanstack/solid-store@0.11.0':
     resolution: {integrity: sha512-2isL0ZnnyI1iN0V+QPrxE3OcPndohBgVlBcHZYoAOIAiU1WoWjVy0q5gb0suPu1Id0h5cKC23JnwzQTxWDZD0w==}
@@ -3088,9 +3072,6 @@ packages:
   cookie-es@1.2.3:
     resolution: {integrity: sha512-lXVyvUvrNXblMqzIRrxHb57UUVmqsSWlxqt3XIjCkUP0wDAf6uicO6KMbEgYrMNtEvWgWHwe42CKxPu9MYAnWw==}
 
-  cookie-es@3.1.1:
-    resolution: {integrity: sha512-UaXxwISYJPTr9hwQxMFYZ7kNhSXboMXP+Z3TRX6f1/NyaGPfuNUZOWP1pUEb75B2HjfklIYLVRfWiFZJyC6Npg==}
-
   cookie@1.1.1:
     resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
     engines: {node: '>=18'}
@@ -3537,10 +3518,6 @@ packages:
   is-what@4.1.16:
     resolution: {integrity: sha512-ZhMwEosbFJkA0YhFnNDgTM4ZxDRsS6HqTo7qsZM08fehyRYIYa0yHu5R6mgo1n/8MgaPBXiPimPD77baVFYg+A==}
     engines: {node: '>=12.13'}
-
-  isbot@5.2.1:
-    resolution: {integrity: sha512-dJ+LpKyClQZ7NG+j3OensC/mAZkGpukE9YUrgPYvAZj2doVL0edfDgywTUh5CXa0o+nW9a1V9e5+CJTX8+SxRw==}
-    engines: {node: '>=18'}
 
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
@@ -5949,10 +5926,6 @@ snapshots:
     dependencies:
       solid-js: 1.9.14
 
-  '@solidjs/meta@0.29.4(solid-js@1.9.14)':
-    dependencies:
-      solid-js: 1.9.14
-
   '@solidjs/testing-library@0.8.10(solid-js@1.9.14)':
     dependencies:
       '@testing-library/dom': 10.4.1
@@ -6047,18 +6020,9 @@ snapshots:
       '@tanstack/pacer-lite': 0.1.1
       '@tanstack/store': 0.11.0
 
-  '@tanstack/history@1.162.0': {}
-
   '@tanstack/pacer-lite@0.1.1': {}
 
   '@tanstack/query-core@5.101.3': {}
-
-  '@tanstack/router-core@1.171.15':
-    dependencies:
-      '@tanstack/history': 1.162.0
-      cookie-es: 3.1.1
-      seroval: 1.5.6
-      seroval-plugins: 1.5.6(seroval@1.5.6)
 
   '@tanstack/solid-form@1.33.2(solid-js@1.9.14)':
     dependencies:
@@ -6069,15 +6033,6 @@ snapshots:
   '@tanstack/solid-query@5.101.3(solid-js@1.9.14)':
     dependencies:
       '@tanstack/query-core': 5.101.3
-      solid-js: 1.9.14
-
-  '@tanstack/solid-router@1.170.18(solid-js@1.9.14)':
-    dependencies:
-      '@solid-primitives/refs': 1.1.4(solid-js@1.9.14)
-      '@solidjs/meta': 0.29.4(solid-js@1.9.14)
-      '@tanstack/history': 1.162.0
-      '@tanstack/router-core': 1.171.15
-      isbot: 5.2.1
       solid-js: 1.9.14
 
   '@tanstack/solid-store@0.11.0(solid-js@1.9.14)':
@@ -6628,8 +6583,6 @@ snapshots:
 
   cookie-es@1.2.3: {}
 
-  cookie-es@3.1.1: {}
-
   cookie@1.1.1: {}
 
   cookie@2.0.1: {}
@@ -6980,8 +6933,6 @@ snapshots:
   is-potential-custom-element-name@1.0.1: {}
 
   is-what@4.1.16: {}
-
-  isbot@5.2.1: {}
 
   jiti@2.7.0: {}
 

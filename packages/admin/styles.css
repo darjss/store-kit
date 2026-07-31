@@ -244,7 +244,7 @@
 
   & .z-table-head {
     position: sticky !important;
-    top: 3.5rem !important;
+    top: calc(3.5rem + env(safe-area-inset-top)) !important;
     z-index: 10 !important;
     height: 2.5rem !important;
     background: var(--admin-table-header) !important;
@@ -353,88 +353,6 @@
     min-height: 2.75rem;
   }
 
-  @media (max-width: 47.999rem) {
-    & [aria-label^='Catalog products'],
-    & [aria-label^='Store orders'] {
-      margin-inline: -1rem;
-      border-right: 0 !important;
-      border-left: 0 !important;
-      border-radius: 0 !important;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-row,
-    & [aria-label^='Store orders'] .z-table-row {
-      padding-block: 0.375rem !important;
-      background: var(--card) !important;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-cell,
-    & [aria-label^='Store orders'] .z-table-cell {
-      height: auto !important;
-      min-height: 2.25rem;
-      padding: 0.375rem 1rem !important;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(2),
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(4),
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(7),
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(8),
-    & [aria-label^='Store orders'] .z-table-cell:nth-child(5) {
-      display: none !important;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-cell:first-child,
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(3),
-    & [aria-label^='Store orders'] .z-table-cell:nth-child(2) {
-      grid-column: 1 / -1 !important;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(5),
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(6) {
-      align-items: flex-start;
-      flex-direction: column;
-      gap: 0.125rem !important;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(5) {
-      grid-column: 1 !important;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-cell:nth-child(6) {
-      grid-column: 2 !important;
-    }
-
-    & [aria-label^='Store orders'] .z-table-cell:first-child {
-      grid-column: 1 !important;
-      grid-row: 1;
-    }
-
-    & [aria-label^='Store orders'] .z-table-cell:nth-child(3) {
-      grid-column: 1 !important;
-    }
-
-    & [aria-label^='Store orders'] .z-table-cell:nth-child(4) {
-      grid-column: 2 !important;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-cell:first-child .font-mono {
-      display: none;
-    }
-
-    & [aria-label^='Catalog products'] .z-table-cell:first-child > .flex > :first-child {
-      width: 3.5rem !important;
-      height: 3.5rem !important;
-    }
-
-    & [aria-label^='Store orders'] .z-table-cell:nth-child(6) {
-      grid-column: 2;
-      grid-row: 1;
-      align-self: start;
-      justify-content: flex-end;
-      padding-top: 0.5rem !important;
-    }
-  }
-
   @media (hover: hover) and (pointer: fine) {
     & .z-button:not(:disabled):hover {
       transition-duration: 120ms !important;
@@ -456,6 +374,10 @@
   }
 
   @media (min-width: 64rem) {
+    & .z-table-head {
+      top: 3.5rem !important;
+    }
+
     & [data-admin-topbar] {
       height: 3.5rem;
       padding-top: 0;

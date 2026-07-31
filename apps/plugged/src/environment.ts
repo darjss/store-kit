@@ -1,3 +1,4 @@
+import { parseBetterAuthSecrets } from '@store-kit/config'
 import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import { createEnv } from '@t3-oss/env-core'
@@ -34,6 +35,7 @@ export type PluggedRuntimeEnvironment = {
   DEPLOYMENT_ENV?: string
   GOOGLE_CLIENT_ID?: string
   GOOGLE_CLIENT_SECRET?: string
+  LOCAL_ADMIN_BYPASS?: string
   PUBLIC_APP_URL?: string
   PUBLIC_MEDIA_BASE_URL?: string
   QPAY_BASE_URL?: string
@@ -77,12 +79,13 @@ export const validatePluggedEnvironment = (
 
   const environment = createEnv({
     server: {
-      BETTER_AUTH_SECRETS: toStandardSchema(
-        Type.String({ pattern: '^(?:\\d+:[^,]{32,})(?:,\\d+:[^,]{32,})*$' }),
-      ),
+      BETTER_AUTH_SECRETS: toStandardSchema(Type.String({ minLength: 1 })),
       DEPLOYMENT_ENV: deploymentEnvironment,
       GOOGLE_CLIENT_ID: toStandardSchema(Type.String({ minLength: 1 })),
       GOOGLE_CLIENT_SECRET: toStandardSchema(Type.String({ minLength: 1 })),
+      LOCAL_ADMIN_BYPASS: toStandardSchema(
+        Type.Union([Type.Literal('true'), Type.Literal('false'), Type.Undefined()]),
+      ),
       QPAY_BASE_URL: url,
       QPAY_USERNAME: optionalSecret,
       QPAY_PASSWORD: optionalSecret,
@@ -108,6 +111,17 @@ export const validatePluggedEnvironment = (
 
   assertCompleteGroup(environment, 'QPay', qpayCredentialNames)
   assertCompleteGroup(environment, 'Telegram', telegramCredentialNames)
+  try {
+    parseBetterAuthSecrets(environment.BETTER_AUTH_SECRETS)
+  } catch (error) {
+    throw new Error('Invalid Plugged environment. BETTER_AUTH_SECRETS: malformed value.', {
+      cause: error,
+    })
+  }
+
+  if (environment.DEPLOYMENT_ENV === 'production' && environment.LOCAL_ADMIN_BYPASS === 'true') {
+    throw new Error('LOCAL_ADMIN_BYPASS is only available in development.')
+  }
 
   const mediaBaseUrl = remoteMediaBaseUrl(environment.PUBLIC_MEDIA_BASE_URL)
   if (environment.DEPLOYMENT_ENV === 'production' && mediaBaseUrl !== productionMediaBaseUrl) {

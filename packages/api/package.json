@@ -9,6 +9,7 @@
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.25",
     "@store-kit/commerce": "workspace:*",
+    "@store-kit/config": "workspace:*",
     "@store-kit/contracts": "workspace:*",
     "@store-kit/db": "workspace:*",
     "better-auth": "^1.6.25",

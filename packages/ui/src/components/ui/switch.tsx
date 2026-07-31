@@ -31,7 +31,6 @@ const Switch = <T extends ValidComponent = 'div'>(props: SwitchProps<T>) => {
       <SwitchPrimitive.Control
         class="z-switch-control flex cursor-pointer items-center rounded-full transition-colors data-disabled:cursor-not-allowed"
         data-slot="switch-control"
-        onClick={event => event.preventDefault()}
       >
         <SwitchPrimitive.Thumb
           class="z-switch-thumb pointer-events-none block rounded-full ring-0 transition-transform"

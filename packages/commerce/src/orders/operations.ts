@@ -6,7 +6,7 @@ import type {
   AdminOrderStatusUpdate,
 } from '@store-kit/contracts/admin-orders'
 import type { OrderStatus } from '@store-kit/contracts/orders'
-import type { PaymentStatus } from '@store-kit/contracts/payments'
+import type { PaymentStatus, PaymentMethod } from '@store-kit/contracts/payments'
 import type { PrivateOrderError } from '@store-kit/contracts/private-orders'
 import { database } from '@store-kit/db'
 import { Result } from 'better-result'
@@ -26,9 +26,13 @@ const getPrivateStatus = async (orderId: string, statusToken: string) => {
 const allowedAdminTransitions = (
   status: OrderStatus,
   paymentStatus: PaymentStatus,
+  paymentMethod: PaymentMethod,
 ): OrderStatus[] => {
   if (status === 'new')
-    return paymentStatus === 'pending' || paymentStatus === 'failed' ? ['cancelled'] : []
+    return paymentMethod === 'bank_transfer' &&
+      (paymentStatus === 'pending' || paymentStatus === 'failed')
+      ? ['cancelled']
+      : []
   if (status === 'confirmed') return ['preparing']
   if (status === 'preparing') return ['delivering']
   if (status === 'delivering') return ['completed']
@@ -70,7 +74,11 @@ const toAdminOrderDetail = (
       claimedAt: order.payment.claimedAt,
       paidAt: order.payment.paidAt,
     },
-    allowedTransitions: allowedAdminTransitions(order.status, order.payment.status),
+    allowedTransitions: allowedAdminTransitions(
+      order.status,
+      order.payment.status,
+      order.payment.method,
+    ),
   }
 }
 
@@ -123,6 +131,7 @@ export const updateAdminOrderStatus = async (orderId: string, input: AdminOrderS
   const allowedStatuses = allowedAdminTransitions(
     write.persisted.status,
     write.persisted.payment.status,
+    write.persisted.payment.method,
   )
   return Result.err<AdminOrderDetail, AdminOrderError>({
     _tag: 'OrderStatusTransitionNotAllowed',

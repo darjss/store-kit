@@ -291,7 +291,7 @@ function VariantForm(props: VariantFormProps) {
         void form.handleSubmit()
       }}
     >
-      <UnsavedChangesGuard includeSearchChanges isDirty={() => form.state.isDirty && !saved()} />
+      <UnsavedChangesGuard isDirty={() => form.state.isDirty && !saved()} />
       <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
         <Show
           when={props.variant}

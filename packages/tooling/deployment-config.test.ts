@@ -76,6 +76,7 @@ describe('Plugged Wrangler deployment configuration', () => {
       },
       vars: {
         DEPLOYMENT_ENV: 'production',
+        LOCAL_ADMIN_BYPASS: 'false',
         PUBLIC_APP_URL: 'https://pluggedaudio.store',
         PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
         QPAY_BASE_URL: 'https://merchant.qpay.mn',
@@ -107,11 +108,15 @@ describe('Plugged Wrangler deployment configuration', () => {
     expect(new Set(Object.values(namespaces)).size).toBe(3)
     expect(production.vars).toEqual({
       DEPLOYMENT_ENV: 'production',
+      LOCAL_ADMIN_BYPASS: 'false',
       PUBLIC_APP_URL: 'https://pluggedaudio.store',
       PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
       QPAY_BASE_URL: 'https://merchant.qpay.mn',
     })
     expect(production.secrets.required).toEqual([
+      'BETTER_AUTH_SECRETS',
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET',
       'QPAY_USERNAME',
       'QPAY_PASSWORD',
       'QPAY_INVOICE_CODE',
@@ -156,6 +161,7 @@ describe('Plugged Wrangler deployment configuration', () => {
     expect(development.images).toEqual({ binding: 'IMAGES' })
     expect(development.vars).toEqual({
       DEPLOYMENT_ENV: 'development',
+      LOCAL_ADMIN_BYPASS: 'false',
       PUBLIC_APP_URL: 'https://storekit.plugged.darjs.dev',
       PUBLIC_MEDIA_BASE_URL: 'https://storekitcdn.plugged.darjs.dev/',
       QPAY_BASE_URL: 'https://merchant.qpay.mn',

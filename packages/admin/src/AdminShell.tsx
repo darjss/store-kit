@@ -20,15 +20,23 @@ import {
   Spinner,
   Toaster,
 } from '@store-kit/ui'
-import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/solid-query'
-import { Link, useLocation } from '@tanstack/solid-router'
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+} from '@tanstack/solid-query'
 import { ErrorBoundary, For, Match, Show, Switch, createSignal, onCleanup, onMount } from 'solid-js'
 import type { JSX } from 'solid-js'
 
+import { AdminPage } from './AdminPage'
+import type { AdminRoute } from './AdminPage'
 import { authCommand } from './auth-client'
 import { InlineAlert, RetryState } from './components/foundation'
-import { adminMutation, adminQuery } from './query-options/session'
-import { AdminRouter, AdminRouterProvider, adminNavigation } from './router'
+import { isAdminSessionInvalidError } from './query-options/result'
+import { adminMutation, adminQuery, adminSessionKey } from './query-options/session'
 
 const pageClass = 'store-kit-admin min-h-dvh bg-background text-base text-foreground'
 
@@ -109,26 +117,72 @@ function ApprovalRequired(props: { storeName: string }) {
 const navigationLinkClass =
   'admin-navigation-link flex items-center rounded-md px-3 text-sm font-medium text-sidebar-foreground outline-none transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring/70 data-[status=active]:bg-sidebar-accent data-[status=active]:text-sidebar-accent-foreground'
 
-function AdminNavigation() {
+const routeIsActive = (
+  route: AdminRoute,
+  section: 'dashboard' | 'catalog' | 'orders' | 'settings',
+) => {
+  if (section === 'dashboard') return route.name === 'dashboard'
+  if (section === 'catalog') return route.name.startsWith('catalog')
+  if (section === 'orders') return route.name.startsWith('order')
+  return route.name === 'settings'
+}
+
+function NavigationLink(props: {
+  'active': boolean
+  'children': JSX.Element
+  'class': string
+  'data-admin-bottom-navigation-link'?: true
+  'href': string
+}) {
+  return (
+    <a
+      aria-current={props.active ? 'page' : undefined}
+      class={props.class}
+      data-admin-bottom-navigation-link={props['data-admin-bottom-navigation-link']}
+      data-status={props.active ? 'active' : undefined}
+      href={props.href}
+    >
+      {props.children}
+    </a>
+  )
+}
+
+function AdminNavigation(props: { route: AdminRoute }) {
   return (
     <nav aria-label="Админ цэс" class="space-y-1 px-2 py-4" lang="mn">
-      <Link activeOptions={{ exact: true }} class={navigationLinkClass} to="/">
+      <NavigationLink
+        active={routeIsActive(props.route, 'dashboard')}
+        class={navigationLinkClass}
+        href="/admin"
+      >
         Нүүр
-      </Link>
-      <Link class={navigationLinkClass} to="/catalog">
+      </NavigationLink>
+      <NavigationLink
+        active={routeIsActive(props.route, 'catalog')}
+        class={navigationLinkClass}
+        href="/admin/catalog"
+      >
         Бараа
-      </Link>
-      <Link class={navigationLinkClass} to="/orders">
+      </NavigationLink>
+      <NavigationLink
+        active={routeIsActive(props.route, 'orders')}
+        class={navigationLinkClass}
+        href="/admin/orders"
+      >
         Захиалга
-      </Link>
-      <Link class={navigationLinkClass} to="/settings">
+      </NavigationLink>
+      <NavigationLink
+        active={routeIsActive(props.route, 'settings')}
+        class={navigationLinkClass}
+        href="/admin/settings"
+      >
         Тохиргоо
-      </Link>
+      </NavigationLink>
     </nav>
   )
 }
 
-function AdminBottomNavigation() {
+function AdminBottomNavigation(props: { route: AdminRoute }) {
   return (
     <nav
       aria-label="Үндсэн цэс"
@@ -136,35 +190,38 @@ function AdminBottomNavigation() {
       data-admin-bottom-navigation
       lang="mn"
     >
-      <Link
-        activeOptions={{ exact: true }}
+      <NavigationLink
+        active={routeIsActive(props.route, 'dashboard')}
         class="flex items-center justify-center px-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         data-admin-bottom-navigation-link
-        to="/"
+        href="/admin"
       >
         Нүүр
-      </Link>
-      <Link
+      </NavigationLink>
+      <NavigationLink
+        active={routeIsActive(props.route, 'catalog')}
         class="flex items-center justify-center px-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         data-admin-bottom-navigation-link
-        to="/catalog"
+        href="/admin/catalog"
       >
         Бараа
-      </Link>
-      <Link
+      </NavigationLink>
+      <NavigationLink
+        active={routeIsActive(props.route, 'orders')}
         class="flex items-center justify-center px-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         data-admin-bottom-navigation-link
-        to="/orders"
+        href="/admin/orders"
       >
         Захиалга
-      </Link>
-      <Link
+      </NavigationLink>
+      <NavigationLink
+        active={routeIsActive(props.route, 'settings')}
         class="flex items-center justify-center px-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         data-admin-bottom-navigation-link
-        to="/settings"
+        href="/admin/settings"
       >
         Тохиргоо
-      </Link>
+      </NavigationLink>
     </nav>
   )
 }
@@ -208,11 +265,11 @@ function SidebarBrand(props: { storeName: string }) {
   )
 }
 
-function DesktopSidebar(props: { storeName: string } & SidebarAccountProps) {
+function DesktopSidebar(props: { route: AdminRoute; storeName: string } & SidebarAccountProps) {
   return (
     <aside class="sticky top-0 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
       <SidebarBrand storeName={props.storeName} />
-      <AdminNavigation />
+      <AdminNavigation route={props.route} />
       <SidebarAccount onSignOut={props.onSignOut} pending={props.pending} session={props.session} />
     </aside>
   )
@@ -270,9 +327,9 @@ function MobileAccount(props: MobileAccountProps) {
 }
 
 function AdminCommandPalette(props: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const run = (command: () => Promise<unknown>) => {
+  const run = (href: string) => {
     props.onOpenChange(false)
-    void command()
+    window.location.assign(href)
   }
 
   return (
@@ -290,23 +347,23 @@ function AdminCommandPalette(props: { open: boolean; onOpenChange: (open: boolea
           <CommandList class="p-1" lang="mn">
             <CommandEmpty>Илэрц олдсонгүй.</CommandEmpty>
             <CommandGroup heading="Шилжих">
-              <CommandItem onSelect={() => run(adminNavigation.dashboard)}>
+              <CommandItem onSelect={() => run('/admin')}>
                 Нүүр
                 <CommandShortcut>G D</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => run(adminNavigation.catalog)}>
+              <CommandItem onSelect={() => run('/admin/catalog')}>
                 Бараа
                 <CommandShortcut>G C</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => run(adminNavigation.newProduct)}>
+              <CommandItem onSelect={() => run('/admin/catalog/new')}>
                 Шинэ бараа
                 <CommandShortcut>G N</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => run(adminNavigation.orders)}>
+              <CommandItem onSelect={() => run('/admin/orders')}>
                 Захиалга
                 <CommandShortcut>G O</CommandShortcut>
               </CommandItem>
-              <CommandItem onSelect={() => run(adminNavigation.settings)}>
+              <CommandItem onSelect={() => run('/admin/settings')}>
                 Тохиргоо
                 <CommandShortcut>G S</CommandShortcut>
               </CommandItem>
@@ -318,7 +375,7 @@ function AdminCommandPalette(props: { open: boolean; onOpenChange: (open: boolea
   )
 }
 
-function RoutedContent() {
+function RoutedContent(props: { route: AdminRoute }) {
   return (
     <ErrorBoundary
       fallback={(_error, reset) => (
@@ -330,7 +387,7 @@ function RoutedContent() {
         </section>
       )}
     >
-      <AdminRouter />
+      <AdminPage route={props.route} />
     </ErrorBoundary>
   )
 }
@@ -339,17 +396,15 @@ const isEditableTarget = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable || target.matches('input, textarea, select, [role="textbox"]'))
 
-function ApprovedWorkspace(props: { session: AdminSession; storeName: string }) {
+function ApprovedWorkspace(props: { route: AdminRoute; session: AdminSession; storeName: string }) {
   const signOut = useMutation(() => adminMutation.signOut())
-  const location = useLocation()
   const [mobileAccountOpen, setMobileAccountOpen] = createSignal(false)
   const [commandOpen, setCommandOpen] = createSignal(false)
   const currentPage = () => {
-    const pathname = location().pathname.replace(/^\/admin/, '')
-    if (pathname === '/catalog/new') return 'Шинэ бараа'
-    if (pathname.startsWith('/catalog')) return 'Бараа'
-    if (pathname.startsWith('/orders')) return 'Захиалга'
-    if (pathname.startsWith('/settings')) return 'Тохиргоо'
+    if (props.route.name === 'catalog-create') return 'Шинэ бараа'
+    if (props.route.name.startsWith('catalog')) return 'Бараа'
+    if (props.route.name.startsWith('order')) return 'Захиалга'
+    if (props.route.name === 'settings') return 'Тохиргоо'
     return 'Нүүр'
   }
 
@@ -362,11 +417,11 @@ function ApprovedWorkspace(props: { session: AdminSession; storeName: string }) 
       goTimer = undefined
     }
     const goCommands = {
-      d: adminNavigation.dashboard,
-      c: adminNavigation.catalog,
-      n: adminNavigation.newProduct,
-      o: adminNavigation.orders,
-      s: adminNavigation.settings,
+      d: '/admin',
+      c: '/admin/catalog',
+      n: '/admin/catalog/new',
+      o: '/admin/orders',
+      s: '/admin/settings',
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -386,9 +441,9 @@ function ApprovedWorkspace(props: { session: AdminSession; storeName: string }) 
         }
         if (goPending && key in goCommands) {
           event.preventDefault()
-          const command = goCommands[key as keyof typeof goCommands]
+          const href = goCommands[key as keyof typeof goCommands]
           resetGoShortcut()
-          void command()
+          window.location.assign(href)
           return
         }
         resetGoShortcut()
@@ -420,6 +475,7 @@ function ApprovedWorkspace(props: { session: AdminSession; storeName: string }) 
       <DesktopSidebar
         onSignOut={() => signOut.mutate()}
         pending={signOut.isPending}
+        route={props.route}
         session={props.session}
         storeName={props.storeName}
       />
@@ -469,19 +525,17 @@ function ApprovedWorkspace(props: { session: AdminSession; storeName: string }) 
             </InlineAlert>
           </div>
         </Show>
-        <RoutedContent />
+        <RoutedContent route={props.route} />
         <AdminCommandPalette onOpenChange={setCommandOpen} open={commandOpen()} />
-        <AdminBottomNavigation />
+        <AdminBottomNavigation route={props.route} />
       </div>
     </div>
   )
 }
 
-function Approved(props: { session: AdminSession; storeName: string }) {
+function Approved(props: { route: AdminRoute; session: AdminSession; storeName: string }) {
   return (
-    <AdminRouterProvider>
-      <ApprovedWorkspace session={props.session} storeName={props.storeName} />
-    </AdminRouterProvider>
+    <ApprovedWorkspace route={props.route} session={props.session} storeName={props.storeName} />
   )
 }
 
@@ -542,7 +596,7 @@ function SessionSkeleton() {
   )
 }
 
-function SessionContent(props: { storeName: string }) {
+function SessionContent(props: { route: AdminRoute; storeName: string }) {
   const session = useQuery(() => adminQuery.session())
 
   return (
@@ -568,21 +622,28 @@ function SessionContent(props: { storeName: string }) {
         <ApprovalRequired storeName={props.storeName} />
       </Match>
       <Match when={session.data?._tag === 'AdminSession' ? session.data : undefined}>
-        {data => <Approved session={data()} storeName={props.storeName} />}
+        {data => <Approved route={props.route} session={data()} storeName={props.storeName} />}
       </Match>
     </Switch>
   )
 }
 
-export function AdminShell(props: { storeName: string }) {
-  const queryClient = new QueryClient({
+export function AdminShell(props: { route: AdminRoute; storeName: string }) {
+  let queryClient: QueryClient
+  const refreshSession = (error: unknown) => {
+    if (isAdminSessionInvalidError(error))
+      void queryClient.invalidateQueries({ queryKey: adminSessionKey })
+  }
+  queryClient = new QueryClient({
+    mutationCache: new MutationCache({ onError: refreshSession }),
+    queryCache: new QueryCache({ onError: refreshSession }),
     defaultOptions: { queries: { refetchOnWindowFocus: false } },
   })
 
   return (
     <ColorModeProvider initialColorMode="light">
       <QueryClientProvider client={queryClient}>
-        <SessionContent storeName={props.storeName} />
+        <SessionContent route={props.route} storeName={props.storeName} />
         <Toaster />
       </QueryClientProvider>
     </ColorModeProvider>

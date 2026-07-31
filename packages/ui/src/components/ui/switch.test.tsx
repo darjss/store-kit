@@ -23,9 +23,25 @@ test('shows focus on the visible control and toggles from the keyboard', async (
   await user.tab()
 
   expect(document.activeElement).toBe(input)
-  expect(control.classList.contains('z-switch-control')).toBe(true)
-
   await user.keyboard(' ')
+
+  expect(checked()).toBe(true)
+  expect(input.checked).toBe(true)
+})
+
+test('toggles when the visible control is clicked', async () => {
+  const user = userEvent.setup()
+  const [checked, setChecked] = createSignal(false)
+  const view = render(() => (
+    <Switch aria-label="Featured product" checked={checked()} onChange={setChecked} />
+  ))
+  const input = view.getByRole('switch')
+  const control = view.container.querySelector('[data-slot="switch-control"]')
+
+  if (!(input instanceof HTMLInputElement) || !(control instanceof HTMLElement))
+    throw new Error('Expected the switch input and visible control.')
+
+  await user.click(control)
 
   expect(checked()).toBe(true)
   expect(input.checked).toBe(true)

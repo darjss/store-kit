@@ -2,6 +2,7 @@ import { Value } from 'typebox/value'
 import { describe, expect, it } from 'vite-plus/test'
 
 import {
+  adminCatalogImageMaxBytes,
   adminProductCreateSchema,
   adminProductImageOrderSchema,
   adminProductImageUploadSchema,
@@ -127,5 +128,22 @@ describe('admin catalog write contracts', () => {
     })
     expect((converted as { file: File }).file).toBe(file)
     expect(Value.Check(adminProductImageUploadSchema, converted)).toBe(true)
+  })
+
+  it('rejects oversized and unsupported multipart files after conversion', () => {
+    const base = { alt: 'Product image', expectedUpdatedAt: '42' }
+    const oversized = convertMultipartContract(adminProductImageUploadSchema, {
+      ...base,
+      file: new File([new Uint8Array(adminCatalogImageMaxBytes + 1)], 'large.jpg', {
+        type: 'image/jpeg',
+      }),
+    })
+    const unsupported = convertMultipartContract(adminProductImageUploadSchema, {
+      ...base,
+      file: new File(['image'], 'image.gif', { type: 'image/gif' }),
+    })
+
+    expect(Value.Check(adminProductImageUploadSchema, oversized)).toBe(false)
+    expect(Value.Check(adminProductImageUploadSchema, unsupported)).toBe(false)
   })
 })

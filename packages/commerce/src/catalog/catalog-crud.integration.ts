@@ -169,6 +169,8 @@ describe('catalog product and variant operations', () => {
 
     const published = expectOk(await commerce.catalog.getProduct(slug))
     expect(published.id).toBe(created.id)
+    expect(published.details).toEqual({})
+    expect(published.useCases).toEqual([])
 
     const duplicateSlug = await commerce.catalog.createAdminProduct(
       productInput(slug, unique('UNIQUE-SKU')),
@@ -195,6 +197,60 @@ describe('catalog product and variant operations', () => {
       .first<{ products: number; variants: number }>()
     expect(duplicateSlugProducts).toBe(1)
     expect(partial).toEqual({ products: 0, variants: 1 })
+  })
+
+  it('filters inventory by individual active variants instead of product totals', async () => {
+    const lowProduct = expectOk(
+      await commerce.catalog.createAdminProduct(
+        productInput(unique('low-stock-product'), unique('LOW-STOCK-HIGH'), {
+          initialVariant: {
+            ...productInput('unused', 'unused').initialVariant,
+            sku: unique('LOW-STOCK-HIGH'),
+            stockQuantity: 10,
+          },
+        }),
+      ),
+    )
+    await commerce.catalog.createAdminVariant(lowProduct.id, {
+      expectedProductUpdatedAt: lowProduct.updatedAt,
+      sku: unique('LOW-STOCK-LOW'),
+      name: 'Low stock option',
+      options: { color: 'Silver' },
+      priceMnt: 120_000,
+      compareAtPriceMnt: null,
+      stockQuantity: 2,
+      active: true,
+      sortOrder: 10,
+    })
+
+    const outProduct = expectOk(
+      await commerce.catalog.createAdminProduct(
+        productInput(unique('out-stock-product'), unique('OUT-STOCK-HIGH'), {
+          initialVariant: {
+            ...productInput('unused', 'unused').initialVariant,
+            sku: unique('OUT-STOCK-HIGH'),
+            stockQuantity: 10,
+          },
+        }),
+      ),
+    )
+    await commerce.catalog.createAdminVariant(outProduct.id, {
+      expectedProductUpdatedAt: outProduct.updatedAt,
+      sku: unique('OUT-STOCK-OUT'),
+      name: 'Out of stock option',
+      options: { color: 'Silver' },
+      priceMnt: 120_000,
+      compareAtPriceMnt: null,
+      stockQuantity: 0,
+      active: true,
+      sortOrder: 10,
+    })
+
+    const low = expectOk(await commerce.catalog.listAdminProducts({ inventory: 'low' }))
+    const out = expectOk(await commerce.catalog.listAdminProducts({ inventory: 'out' }))
+
+    expect(low.items.map(item => item.id)).toContain(lowProduct.id)
+    expect(out.items.map(item => item.id)).toContain(outProduct.id)
   })
 
   it('edits lifecycle and variants with optimistic versions and catalog invariants', async () => {
@@ -634,7 +690,7 @@ describe('catalog media and order references', () => {
     }
   })
 
-  it('retains order-referenced media and immutable snapshots after hard product deletion', async () => {
+  it('blocks active-order references, then retains completed snapshots after deletion', async () => {
     await installCheckoutSettings()
     const created = expectOk(
       await commerce.catalog.createAdminProduct(
@@ -678,11 +734,42 @@ describe('catalog media and order references', () => {
       .bind(checkout.orderId)
       .first<Record<string, string | number | null>>()
 
-    const archived = expectOk(
-      await commerce.catalog.archiveAdminProduct(created.id, {
-        expectedUpdatedAt: withImage.updatedAt,
+    const draft = expectOk(
+      await commerce.catalog.updateAdminProduct(
+        created.id,
+        productWriteInput(withImage, { status: 'draft', featured: false }),
+      ),
+    )
+    const variant = draft.variants[0]!
+    const inactive = expectOk(
+      await commerce.catalog.updateAdminVariantActivation(created.id, variant.id, {
+        expectedUpdatedAt: variant.updatedAt,
+        active: false,
       }),
     )
+    expectErrorTag(
+      await commerce.catalog.deleteAdminVariant(created.id, variant.id, {
+        expectedProductUpdatedAt: inactive.updatedAt,
+        expectedVariantUpdatedAt: inactive.variants[0]!.updatedAt,
+      }),
+      'CatalogDeletionBlocked',
+    )
+
+    const archived = expectOk(
+      await commerce.catalog.archiveAdminProduct(created.id, {
+        expectedUpdatedAt: inactive.updatedAt,
+      }),
+    )
+    expectErrorTag(
+      await commerce.catalog.deleteAdminProduct(created.id, {
+        expectedUpdatedAt: archived.updatedAt,
+      }),
+      'CatalogDeletionBlocked',
+    )
+
+    await env.DB.prepare("update customer_order set status = 'cancelled' where id = ?")
+      .bind(checkout.orderId)
+      .run()
     const deleted = expectOk(
       await commerce.catalog.deleteAdminProduct(created.id, {
         expectedUpdatedAt: archived.updatedAt,

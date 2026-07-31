@@ -54,6 +54,26 @@ const insertClaimedOrder = async (suffix: number, productId: string, variantId: 
   return { orderId, telegramMessageId }
 }
 
+const insertPendingOrder = async (suffix: number, method: 'qpay' | 'bank_transfer') => {
+  const now = Date.now() - 5_000
+  const orderId = entityId('ord', suffix)
+  await env.DB.batch([
+    env.DB.prepare(
+      `insert into customer_order
+        (id, number, status_token_hash, status, customer_name, customer_phone, district, khoroo,
+         address, subtotal_mnt, delivery_fee_mnt, total_mnt, created_at, updated_at)
+       values (?, ?, ?, 'new', 'Customer', '99112233', 'Сүхбаатар', '1', 'Address',
+         10000, 0, 10000, ?, ?)`,
+    ).bind(orderId, `PENDING-ORDER-${suffix}`, `pending-hash-${suffix}`, now, now),
+    env.DB.prepare(
+      `insert into payment
+        (id, order_id, method, status, amount_mnt, created_at, updated_at)
+       values (?, ?, ?, 'pending', 10000, ?, ?)`,
+    ).bind(entityId('pay', suffix), orderId, method, now, now),
+  ])
+  return orderId
+}
+
 const checkoutInput = (variantId: string) => ({
   items: [{ variantId, quantity: 1 }],
   customer: { name: 'Customer', phone: '99112233' },
@@ -180,6 +200,41 @@ describe('admin commerce foundation', () => {
       order_status: 'preparing',
       payment_status: 'paid',
       stock_quantity: 1,
+    })
+  })
+
+  it('allows manual cancellation only for pending bank transfers', async () => {
+    const qpayOrderId = await insertPendingOrder(831, 'qpay')
+    const bankOrderId = await insertPendingOrder(832, 'bank_transfer')
+    const qpay = await commerce.orders.getAdminOrder(qpayOrderId)
+    const bank = await commerce.orders.getAdminOrder(bankOrderId)
+
+    expect(qpay).toMatchObject({
+      status: 'ok',
+      value: { allowedTransitions: [] },
+    })
+    expect(bank).toMatchObject({
+      status: 'ok',
+      value: { allowedTransitions: ['cancelled'] },
+    })
+    if (qpay.status === 'error' || bank.status === 'error') return
+
+    const qpayCancellation = await commerce.orders.updateAdminStatus(qpayOrderId, {
+      status: 'cancelled',
+      expectedUpdatedAt: qpay.value.updatedAt,
+    })
+    const bankCancellation = await commerce.orders.updateAdminStatus(bankOrderId, {
+      status: 'cancelled',
+      expectedUpdatedAt: bank.value.updatedAt,
+    })
+
+    expect(qpayCancellation).toMatchObject({
+      status: 'error',
+      error: { _tag: 'OrderStatusTransitionNotAllowed' },
+    })
+    expect(bankCancellation).toMatchObject({
+      status: 'ok',
+      value: { status: 'cancelled' },
     })
   })
 })

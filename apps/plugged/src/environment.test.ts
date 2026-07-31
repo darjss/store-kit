@@ -32,6 +32,23 @@ test('accepts local development without provider credentials', () => {
   expectTypeOf(environment.QPAY_USERNAME).toEqualTypeOf<string | undefined>()
 })
 
+test('accepts the local admin bypass only in development', () => {
+  const environment = validatePluggedEnvironment({
+    ...localEnvironment,
+    LOCAL_ADMIN_BYPASS: 'true',
+  })
+
+  expect(environment.LOCAL_ADMIN_BYPASS).toBe('true')
+  expect(() =>
+    validatePluggedEnvironment({
+      ...localEnvironment,
+      DEPLOYMENT_ENV: 'production',
+      LOCAL_ADMIN_BYPASS: 'true',
+      PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
+    }),
+  ).toThrow('LOCAL_ADMIN_BYPASS is only available in development.')
+})
+
 test('accepts complete provider credential groups', () => {
   const environment = validatePluggedEnvironment({
     ...localEnvironment,

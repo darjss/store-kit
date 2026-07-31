@@ -485,7 +485,12 @@ describe('admin catalog API', () => {
       expect(outcome.unapprovedResponse.status).toBe(403)
       expect(outcome.unapprovedBody).toEqual({ _tag: 'ApprovalRequired' })
       expect(outcome.approvedResponse.status).toBe(200)
-      expect(outcome.approvedResult.status).toMatch(/^(ok|error)$/u)
+      if (outcome.approvedResult.status === 'error') {
+        expect(outcome.approvedResult.error._tag).not.toBe('Unauthenticated')
+        expect(outcome.approvedResult.error._tag).not.toBe('ApprovalRequired')
+      } else {
+        expect(outcome.approvedResult.value).toBeDefined()
+      }
       for (const response of [
         outcome.unauthenticatedResponse,
         outcome.unapprovedResponse,
@@ -1205,7 +1210,7 @@ describe('admin catalog API', () => {
         cookie: approved.cookie,
       }),
     )
-    expect(expectOk(outResult).items.map(item => item.id)).toEqual([draft.id])
+    expect(expectOk(outResult).items).toEqual([])
 
     const searchResult = await deserializeCatalog<AdminCatalogProductList>(
       await requestCatalog('/api/admin/catalog/products?query=Special-Low-Sku', {

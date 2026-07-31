@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { BrowserContext, Locator, Page } from '@playwright/test'
+import { makeSignature } from 'better-auth/crypto'
 
 const appUrl = 'http://127.0.0.1:4321'
 const authSecret = 'admin-browser-auth-secret-at-least-thirty-two-characters'
@@ -56,18 +57,7 @@ const expectAdminFocusVisible = async (page: Page, target: Locator) => {
 }
 
 const authenticate = async (context: BrowserContext) => {
-  const signatureBytes = await crypto.subtle.sign(
-    'HMAC',
-    await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(authSecret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign'],
-    ),
-    new TextEncoder().encode(authToken),
-  )
-  const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)))
+  const signature = await makeSignature(authToken, authSecret)
   await context.addCookies([
     {
       name: 'better-auth.session_token',
@@ -83,6 +73,30 @@ test.beforeEach(async ({ context, page }) => {
   await authenticate(context)
   const session = await page.request.get(`${appUrl}/api/admin/session`)
   expect(session.status()).toBe(200)
+})
+
+test.afterEach(async ({ page }) => {
+  const response = await page.request.get(`${appUrl}/api/admin/settings/store`)
+  if (response.status() !== 200) return
+  const current = (await response.json()) as {
+    status: 'ok' | 'error'
+    value?: {
+      bankName: string
+      bankAccountName: string
+      bankAccountNumber: string
+      updatedAt: number
+    }
+  }
+  if (current.status !== 'ok' || !current.value) return
+  await page.request.put(`${appUrl}/api/admin/settings/store`, {
+    data: {
+      deliveryFeeMnt: 5000,
+      bankName: current.value.bankName,
+      bankAccountName: current.value.bankAccountName,
+      bankAccountNumber: current.value.bankAccountNumber,
+      expectedUpdatedAt: current.value.updatedAt,
+    },
+  })
 })
 
 test('keeps readiness after a real draft and uses the tablet catalog ledger', async ({ page }) => {
@@ -251,6 +265,14 @@ test('runs catalog, image, variant, and lifecycle CRUD through the real admin Wo
   await page.getByRole('dialog').getByRole('button', { name: 'Бүрмөсөн устгах' }).click()
   await expect(page.getByRole('button', { name: `${secondVariantName} edited` })).toHaveCount(0)
 
+  await page.goto(`/admin/orders/${checkout.value.orderId}`)
+  await page.getByRole('button', { name: 'Захиалга цуцлах' }).click()
+  const cancellation = page.getByRole('dialog')
+  await expect(cancellation.getByText('Энэ захиалгыг цуцлах уу?')).toBeVisible()
+  await cancellation.getByRole('button', { name: 'Захиалга цуцлах' }).click()
+  await expect(page.getByText('Цуцалсан', { exact: true })).toBeVisible()
+  await page.goto(`/admin/catalog/${productId}`)
+
   await page.getByRole('button', { name: 'Барааг архивлах' }).click()
   await expect(page.getByText('Энэ барааг одоогоор засах боломжгүй.')).toBeVisible()
   await page.getByRole('button', { name: 'Ноорог төлөвт сэргээх' }).click()
@@ -263,13 +285,6 @@ test('runs catalog, image, variant, and lifecycle CRUD through the real admin Wo
   await page.getByLabel('Баталгаажуулахын тулд УСТГАХ гэж оруулна уу').fill('УСТГАХ')
   await page.getByRole('dialog').getByRole('button', { name: 'Бүрмөсөн устгах' }).click()
   await expect(page.getByRole('heading', { name: 'Бараа устлаа' })).toBeVisible()
-
-  await page.goto(`/admin/orders/${checkout.value.orderId}`)
-  await page.getByRole('button', { name: 'Захиалга цуцлах' }).click()
-  const cancellation = page.getByRole('dialog')
-  await expect(cancellation.getByText('Энэ захиалгыг цуцлах уу?')).toBeVisible()
-  await cancellation.getByRole('button', { name: 'Захиалга цуцлах' }).click()
-  await expect(page.getByText('Цуцалсан', { exact: true })).toBeVisible()
 })
 
 test('uses the mobile dashboard, order summaries, and checkout settings against the real Worker', async ({
@@ -346,10 +361,12 @@ test('uses the mobile dashboard, order summaries, and checkout settings against 
   await page.getByRole('button', { name: 'Тохиргоо хадгалах' }).click()
   await expect(page.getByText('Тохиргоо өөрчлөгдсөн байна')).toBeVisible()
   await expect(deliveryFee).toHaveValue('6750')
-  await page.getByRole('link', { name: 'Бараа', exact: true }).click()
-  const settingsGuard = page.getByRole('dialog')
-  await expect(settingsGuard.getByText('Хадгалаагүй өөрчлөлтийг орхих уу?')).toBeVisible()
-  await settingsGuard.getByRole('button', { name: 'Үргэлжлүүлэн засах' }).click()
+  const settingsGuardPromise = page.waitForEvent('dialog')
+  const navigation = page.getByRole('link', { name: 'Бараа', exact: true }).click()
+  const settingsGuard = await settingsGuardPromise
+  expect(settingsGuard.type()).toBe('beforeunload')
+  await settingsGuard.dismiss()
+  await navigation
   await expect(page).toHaveURL(/\/admin\/settings$/u)
   await expect(deliveryFee).toHaveValue('6750')
 })
@@ -403,17 +420,19 @@ test('guards drafts and runs the displayed command shortcuts', async ({ page }) 
   await expect(page).toHaveURL(/\/admin\/catalog\/new$/u)
 
   await page.getByLabel('Барааны нэр', { exact: true }).fill('Хадгалаагүй ноорог бараа')
-  await page
-    .getByRole('button', { name: 'Барааны жагсаалт руу буцах' })
-    .evaluate(element => element.dispatchEvent(new MouseEvent('click', { bubbles: true })))
-  const dialog = page.getByRole('dialog')
-  await expect(dialog.getByText('Хадгалаагүй өөрчлөлтийг орхих уу?')).toBeVisible()
-  await dialog.getByRole('button', { name: 'Үргэлжлүүлэн засах' }).click()
+  const backButton = page.getByRole('button', { name: 'Барааны жагсаалт руу буцах' })
+  const stayDialogPromise = page.waitForEvent('dialog')
+  const stayNavigation = backButton.click()
+  const stayDialog = await stayDialogPromise
+  expect(stayDialog.type()).toBe('beforeunload')
+  await stayDialog.dismiss()
+  await stayNavigation
   await expect(page).toHaveURL(/\/admin\/catalog\/new$/u)
 
-  await page
-    .getByRole('button', { name: 'Барааны жагсаалт руу буцах' })
-    .evaluate(element => element.dispatchEvent(new MouseEvent('click', { bubbles: true })))
-  await page.getByRole('dialog').getByRole('button', { name: 'Өөрчлөлтийг орхих' }).click()
+  const leaveDialogPromise = page.waitForEvent('dialog')
+  const leaveNavigation = backButton.click()
+  const leaveDialog = await leaveDialogPromise
+  await leaveDialog.accept()
+  await leaveNavigation
   await expect(page).toHaveURL(/\/admin\/catalog(?:\?.*)?$/u)
 })

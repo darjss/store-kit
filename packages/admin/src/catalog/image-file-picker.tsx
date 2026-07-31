@@ -19,7 +19,7 @@ export function ImageFilePicker(props: ImageFilePickerProps) {
     <div class="flex min-w-0 flex-wrap items-center gap-3">
       <input
         accept={acceptedImageTypes}
-        class="hidden"
+        class="sr-only"
         id={props.id}
         ref={element => {
           inputElement = element
