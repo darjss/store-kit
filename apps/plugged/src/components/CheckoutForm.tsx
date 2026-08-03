@@ -161,14 +161,6 @@ function DomainErrorNotice(props: {
 function FormOwner() {
   const checkout = useCheckout()
   const created = checkout.created
-  const domainFailure = () => {
-    const failure = checkout.errors.state()
-    return failure.type === 'domain' ? failure : undefined
-  }
-  const transportFailure = () => {
-    const failure = checkout.errors.state()
-    return failure.type === 'transport' ? failure : undefined
-  }
 
   return (
     <Switch>
@@ -267,32 +259,32 @@ function FormOwner() {
                   </Show>
                 )}
               </checkout.form.ErrorSummary>
-              <Show when={domainFailure()} keyed>
-                {failure => (
+              <Checkout.Errors
+                domain={(failure, correct) => (
                   <DomainErrorNotice
                     error={failure.error}
                     actions={failure.actions}
-                    correct={checkout.errors.performAction}
+                    correct={correct}
                   />
                 )}
-              </Show>
-              <Show when={transportFailure()}>
-                <ErrorNotice title="Холболт амжилтгүй.">
-                  <p>Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.</p>
-                  <Show when={transportFailure()?.actions.includes('retry')}>
-                    <AlertAction>
-                      <Button
-                        class="min-h-11"
-                        type="button"
-                        variant="outline"
-                        onClick={() => checkout.errors.performAction('retry')}
-                      >
-                        Дахин оролдох
-                      </Button>
-                    </AlertAction>
-                  </Show>
-                </ErrorNotice>
-              </Show>
+                transport={(failure, correct) => (
+                  <ErrorNotice title="Холболт амжилтгүй.">
+                    <p>Сүлжээний алдаа гарлаа. Мэдээллээ хадгалсан тул дахин оролдоно уу.</p>
+                    <Show when={failure.actions.includes('retry')}>
+                      <AlertAction>
+                        <Button
+                          class="min-h-11"
+                          type="button"
+                          variant="outline"
+                          onClick={() => correct('retry')}
+                        >
+                          Дахин оролдох
+                        </Button>
+                      </AlertAction>
+                    </Show>
+                  </ErrorNotice>
+                )}
+              />
               <section class="dossier-sheet [&_input]:border-ink mb-7 animate-[dossier-reveal_420ms_var(--ease-slam)_both] p-[clamp(1rem,3vw,2rem)] [&_[data-slot=field]]:mb-5 [&_input]:rounded-none [&_input]:border-0 [&_input]:border-b-3 [&_input]:bg-transparent [&_input]:shadow-none">
                 <div class="border-ink mb-6 flex items-start justify-between gap-4 border-b-3 pb-3">
                   <h2 class="font-body m-0 text-[clamp(1.65rem,5vw,2.4rem)] leading-none font-black">

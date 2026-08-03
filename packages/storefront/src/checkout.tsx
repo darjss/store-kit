@@ -9,7 +9,7 @@ import { checkoutDetailsSchema } from '@store-kit/contracts/checkout'
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import { Result } from 'better-result'
 import { match } from 'dismatch'
-import { createContext, createMemo, createSignal, splitProps, useContext } from 'solid-js'
+import { Show, createContext, createMemo, createSignal, splitProps, useContext } from 'solid-js'
 import type { Accessor, ComponentProps, JSX } from 'solid-js'
 
 import { cartItems, cartLineInputs, clearCart, openCart } from './cart/store'
@@ -204,6 +204,41 @@ function CheckoutRoot(props: CheckoutRootProps) {
   return <CheckoutContext.Provider value={checkout}>{props.children}</CheckoutContext.Provider>
 }
 
+type CheckoutFailureState = ReturnType<CheckoutContextValue['errors']['state']>
+type CheckoutDomainFailure = Extract<CheckoutFailureState, { type: 'domain' }>
+type CheckoutTransportFailure = Extract<CheckoutFailureState, { type: 'transport' }>
+type PerformCheckoutCorrection = (
+  action: CheckoutCorrectionAction,
+) => void | Promise<void> | undefined
+
+type CheckoutErrorsProps = {
+  domain: (failure: CheckoutDomainFailure, correct: PerformCheckoutCorrection) => JSX.Element
+  transport: (failure: CheckoutTransportFailure, correct: PerformCheckoutCorrection) => JSX.Element
+}
+
+function CheckoutErrors(props: CheckoutErrorsProps) {
+  const checkout = useCheckout()
+  const domainFailure = createMemo(() => {
+    const failure = checkout.errors.state()
+    return failure.type === 'domain' ? failure : undefined
+  })
+  const transportFailure = createMemo(() => {
+    const failure = checkout.errors.state()
+    return failure.type === 'transport' ? failure : undefined
+  })
+
+  return (
+    <>
+      <Show when={domainFailure()} keyed>
+        {failure => props.domain(failure, checkout.errors.performAction)}
+      </Show>
+      <Show when={transportFailure()} keyed>
+        {failure => props.transport(failure, checkout.errors.performAction)}
+      </Show>
+    </>
+  )
+}
+
 type CheckoutFormProps = Omit<ComponentProps<'form'>, 'onSubmit' | 'ref'>
 
 function CheckoutForm(props: CheckoutFormProps) {
@@ -261,6 +296,7 @@ function CheckoutSubmit(props: CheckoutSubmitProps) {
 
 export const Checkout = {
   Root: CheckoutRoot,
+  Errors: CheckoutErrors,
   Form: CheckoutForm,
   Field: CheckoutField,
   Submit: CheckoutSubmit,
