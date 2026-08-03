@@ -1,0 +1,34 @@
+---
+import type { PublicImage } from '@store-kit/contracts'
+import { Image } from '@unpic/astro/base'
+import { generate as cloudflare } from 'unpic/providers/cloudflare'
+
+import { productImageLayouts } from './product-image'
+import type { ProductImageLayout } from './product-image'
+
+interface Props {
+  image: PublicImage
+  layout: ProductImageLayout
+  class?: string
+  priority?: boolean
+}
+
+const { image, layout, class: className, priority = false } = Astro.props
+const config = productImageLayouts[layout]
+---
+
+<Image
+  src={image.url}
+  alt={image.alt}
+  width={image.width}
+  height={image.height}
+  breakpoints={[...config.breakpoints]}
+  sizes={config.sizes}
+  layout="fixed"
+  transformer={cloudflare}
+  operations={{ quality: 80, format: 'auto', fit: 'scale-down' }}
+  options={{ domain: new URL(image.url).hostname }}
+  priority={priority}
+  unstyled
+  class={className}
+/>

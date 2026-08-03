@@ -1,0 +1,85 @@
+---
+import { commerce } from '@store-kit/commerce'
+
+import { PurchasePanel } from '~/components/PurchasePanel'
+import Layout from '~/layouts/Layout.astro'
+import { toPublicImage } from '~/public-image'
+
+const result = await commerce.catalog.getProduct(Astro.params.slug ?? '')
+if (result.status === 'error') return new Response(null, { status: 404 })
+
+const product = result.value
+const purchaseProduct = { ...product, images: product.images.map(toPublicImage) }
+const lowestPrice = Math.min(...product.variants.map(variant => variant.priceMnt))
+const detailLabels: Record<string, string> = {
+  material: 'Материал',
+  fabric: 'Даавуу',
+  fit: 'Загвар',
+  care: 'Арчлал',
+  madeIn: 'Үйлдвэрлэсэн',
+  weightGrams: 'Жин',
+}
+const detailEntries = Object.entries(product.details ?? {}).filter(
+  ([, value]) => value !== null && value !== undefined && value !== '',
+)
+const formatDetail = (value: unknown) => {
+  if (Array.isArray(value)) return value.join(' · ')
+  if (typeof value === 'boolean') return value ? 'Тийм' : 'Үгүй'
+  return String(value)
+}
+---
+
+<Layout
+  title={product.name}
+  description={product.shortDescription ?? product.name}
+  imagePath={product.images[0] ? toPublicImage(product.images[0]).url : undefined}
+>
+  <div class="mx-auto max-w-6xl px-gutter pt-6">
+    <nav class="mb-6 text-sm" aria-label="Зам">
+      <a
+        class="text-muted hover:text-ink font-bold no-underline"
+        href={product.category ? `/products?category=${product.category.slug}` : '/products'}
+      >
+        ← {product.category?.name ?? 'Бүх бараа'}
+      </a>
+    </nav>
+
+    <PurchasePanel product={purchaseProduct} client:only="solid-js" />
+
+    <section class="mt-16 grid gap-10 md:grid-cols-[minmax(0,1fr)_360px]" aria-label="Дэлгэрэнгүй">
+      <div>
+        <h2 class="m-0 text-xl font-extrabold tracking-tight">Барааны тухай</h2>
+        {product.shortDescription && (
+          <p class="mt-4 max-w-[58ch] text-lg leading-relaxed font-medium text-pretty">
+            {product.shortDescription}
+          </p>
+        )}
+        {product.description && (
+          <p class="text-muted mt-4 max-w-[68ch] leading-relaxed text-pretty">
+            {product.description}
+          </p>
+        )}
+        {
+          detailEntries.length > 0 && (
+            <dl class="border-line mt-8 divide-y divide-solid rounded-action border bg-panel px-5 py-2">
+              {detailEntries.map(([key, value]) => (
+                <div class="grid grid-cols-[130px_minmax(0,1fr)] gap-4 py-3 text-sm">
+                  <dt class="text-muted font-bold">{detailLabels[key] ?? key}</dt>
+                  <dd class="m-0 font-medium">{formatDetail(value)}</dd>
+                </div>
+              ))}
+            </dl>
+          )
+        }
+      </div>
+      <aside class="border-line h-fit rounded-action border bg-panel p-5 md:sticky md:top-32">
+        <h2 class="m-0 text-base font-extrabold">Хүргэлт ба төлбөр</h2>
+        <ul class="text-muted m-0 mt-3 space-y-2 pl-0 text-sm leading-relaxed [list-style:none]">
+          <li>Хот дотор ажлын 24 цагт хүргэнэ.</li>
+          <li>QPay эсвэл банкны шилжүүлгээр төлнө.</li>
+          <li>Үлдэгдэл тус бүрийг захиалгын үед шалгана.</li>
+        </ul>
+      </aside>
+    </section>
+  </div>
+</Layout>

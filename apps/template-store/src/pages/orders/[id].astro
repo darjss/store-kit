@@ -1,0 +1,12 @@
+---
+import { OrderStatusView } from '~/components/OrderStatusView'
+import Layout from '~/layouts/Layout.astro'
+
+const orderId = Astro.params.id ?? ''
+---
+
+<Layout title="Захиалгын төлөв" description="Захиалгын төлөв ба төлбөр." cacheHeader="private" noIndex>
+  <div class="mx-auto max-w-4xl px-gutter pt-8 pb-24">
+    <OrderStatusView orderId={orderId} client:only="solid-js" />
+  </div>
+</Layout>

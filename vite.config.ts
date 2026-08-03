@@ -37,7 +37,19 @@ export default defineConfig({
         cache: false,
       },
       'catalog:seed:plugged:local': {
-        command: 'node --experimental-strip-types catalog-seed.ts --environment local --only data',
+        command:
+          'node --experimental-strip-types catalog-seed.ts --environment local --only data --app plugged',
+        cwd: 'packages/tooling',
+        cache: false,
+      },
+      'db:migrate:template-store:local': {
+        command: 'vp exec wrangler d1 migrations apply DB --local',
+        cwd: 'apps/template-store',
+        cache: false,
+      },
+      'catalog:seed:template-store:local': {
+        command:
+          'node --experimental-strip-types catalog-seed.ts --environment local --only data --app template-store',
         cwd: 'packages/tooling',
         cache: false,
       },

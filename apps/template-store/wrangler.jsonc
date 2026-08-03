@@ -1,0 +1,43 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "compatibility_date": "2026-07-21",
+  "compatibility_flags": ["global_fetch_strictly_public", "nodejs_compat"],
+  "name": "template-store-demo",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "cache": {
+    "enabled": true,
+  },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "template-store-development",
+      "database_id": "af1b4193-ffd1-4d32-a86e-9133a325d8bc",
+      "migrations_dir": "../../packages/db/migrations",
+      "migrations_pattern": "../../packages/db/migrations/*/migration.sql",
+    },
+  ],
+  "kv_namespaces": [
+    { "binding": "CACHE", "id": "11c8d0d9062c449e98b907e81ff4516a" },
+    { "binding": "AUTH_KV", "id": "6df2a4dabef3497583f4d467e9085f24" },
+    { "binding": "SESSION", "id": "34bb0c9a9ec640d9ad5c5e3674584ade" },
+  ],
+  "vars": {
+    "DEPLOYMENT_ENV": "development",
+    "PUBLIC_APP_URL": "https://template-store-demo.storekit.darjs.dev",
+    "PUBLIC_MEDIA_BASE_URL": "https://template-store.storekitcdn.darjs.dev/",
+    "QPAY_BASE_URL": "https://merchant.qpay.mn",
+  },
+  "routes": [
+    {
+      "pattern": "template-store-demo.storekit.darjs.dev",
+      "custom_domain": true,
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}

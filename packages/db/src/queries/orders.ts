@@ -28,6 +28,9 @@ export const findByNumber = (number: string): Promise<typeof order.$inferSelect 
 export const findWithPayment = (id: string): Promise<OrderWithPayment | undefined> =>
   db.query.order.findFirst({ where: { id }, with: { lines: true, payment: true } })
 
+export const findWithPaymentByNumber = (number: string): Promise<OrderWithPayment | undefined> =>
+  db.query.order.findFirst({ where: { number }, with: { lines: true, payment: true } })
+
 export const listAdminOrders = async (filters: AdminOrderListFilters = {}) => {
   const limit = Math.min(filters.limit ?? 24, 100)
   const offset = filters.offset ?? 0
@@ -134,6 +137,7 @@ export const orderQuery = {
   findPrivate,
   findByNumber,
   findWithPayment,
+  findWithPaymentByNumber,
   listAdminOrders,
   updateAdminOrderStatus,
 }

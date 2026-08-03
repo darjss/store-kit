@@ -1,0 +1,21 @@
+{
+  "id": "template-store",
+  "name": "Өнгө",
+  "publicBaseUrl": "https://template-store-demo.storekit.darjs.dev",
+  "brand": {
+    "wordmark": "Өнгө"
+  },
+  "theme": {
+    "accent": "#2c4bff",
+    "ink": "#17150f",
+    "surface": "#f4f3ee",
+    "radius": "md"
+  },
+  "contact": {
+    "phone": "+976 9900 0000",
+    "instagram": "https://instagram.com/ongo.demo"
+  },
+  "footer": {
+    "tagline": "Өдөр тутмын хувцас · Улаанбаатарт хүргэлтэй"
+  }
+}

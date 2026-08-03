@@ -1,0 +1,174 @@
+---
+import { commerce } from '@store-kit/commerce'
+import { formatMnt } from '@store-kit/storefront/format'
+
+import ProductCard from '~/components/ProductCard.astro'
+import ProductImage from '~/components/ProductImage.astro'
+import Layout from '~/layouts/Layout.astro'
+import { store } from '~/lib/store'
+import { toPublicImage } from '~/public-image'
+
+const [featuredResult, latestResult, categoriesResult] = await Promise.all([
+  commerce.catalog.listProducts({ featured: true, limit: 4, sort: 'featured' }),
+  commerce.catalog.listProducts({ limit: 8, sort: 'recent' }),
+  commerce.catalog.listCategories(),
+])
+if (featuredResult.status === 'error' || latestResult.status === 'error') {
+  throw new Error('Catalog could not be loaded.')
+}
+const featured = featuredResult.value.items.map(product => ({
+  ...product,
+  images: product.images.map(toPublicImage),
+}))
+const latest = latestResult.value.items.map(product => ({
+  ...product,
+  images: product.images.map(toPublicImage),
+}))
+const categories = categoriesResult
+const hero = featured[0]
+const highlights = featured.slice(1)
+const priceOf = (product: (typeof featured)[number]) => product.variants[0]?.priceMnt ?? 0
+---
+
+<Layout title={store.name} description={store.footer?.tagline ?? store.name}>
+  {hero ? (
+    <section class="bg-panel border-line border-b">
+      <div class="mx-auto grid max-w-6xl gap-8 px-gutter py-10 md:grid-cols-2 md:items-center md:py-16">
+        <div>
+          <p class="text-accent m-0 text-sm font-extrabold tracking-widest uppercase">
+            {store.brand?.wordmark ?? store.name}
+          </p>
+          <h1
+            class="m-0 mt-3 max-w-[14ch] text-4xl leading-[1.05] font-extrabold tracking-tight text-balance md:text-6xl"
+          >
+            {store.footer?.tagline ?? store.name}
+          </h1>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a
+              href="/products"
+              class="bg-accent text-on-accent hover:bg-accent-strong rounded-action min-h-12 px-6 py-3 text-base font-bold no-underline"
+            >
+              Бараа үзэх
+            </a>
+            {
+              categories[0] && (
+                <a
+                  href={`/products?category=${categories[0].slug}`}
+                  class="border-line bg-surface hover:border-ink/40 rounded-action min-h-12 border px-6 py-3 text-base font-bold no-underline"
+                >
+                  {categories[0].name}
+                </a>
+              )
+            }
+          </div>
+        </div>
+        <a href={`/products/${hero.slug}`} class="group relative block no-underline">
+          <div class="border-line bg-surface overflow-hidden rounded-action border">
+            {hero.images[0] && (
+              <ProductImage
+                image={hero.images[0]}
+                layout="hero"
+                class="aspect-[4/5] w-full object-cover transition-transform duration-300 group-hover:scale-[1.01] motion-reduce:transition-none"
+                priority
+              />
+            )}
+          </div>
+          <div class="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 rounded-action bg-panel/95 border-line border px-4 py-3 backdrop-blur">
+            <span class="min-w-0 truncate font-bold">{hero.name}</span>
+            <span class="font-number shrink-0 font-extrabold">{formatMnt(priceOf(hero))}</span>
+          </div>
+        </a>
+      </div>
+    </section>
+  ) : (
+    <section class="bg-panel border-line border-b">
+      <div class="mx-auto max-w-6xl px-gutter py-16 text-center">
+        <h1 class="m-0 text-4xl font-extrabold tracking-tight">
+          {store.brand?.wordmark ?? store.name}
+        </h1>
+        <p class="text-muted m-0 mt-3">Каталог нэмэгдэх үед бараанууд энд харагдана.</p>
+      </div>
+    </section>
+  )}
+
+  {
+    categories.length > 0 && (
+      <nav
+        class="border-line flex gap-2 overflow-x-auto border-b px-gutter py-3 [scrollbar-width:none]"
+        aria-label="Ангилал"
+      >
+        <a
+          href="/products"
+          class="border-line bg-panel hover:border-ink/40 shrink-0 rounded-action border px-4 py-2 text-sm font-bold no-underline"
+        >
+          Бүгд
+        </a>
+        {categories.map(category => (
+          <a
+            href={`/products?category=${category.slug}`}
+            class="border-line bg-panel hover:border-ink/40 shrink-0 rounded-action border px-4 py-2 text-sm font-bold no-underline"
+          >
+            {category.name}
+          </a>
+        ))}
+      </nav>
+    )
+  }
+
+  {
+    highlights.length > 0 && (
+      <section class="mx-auto max-w-6xl px-gutter pt-12" aria-labelledby="highlights-title">
+        <div class="flex items-end justify-between gap-4">
+          <h2 id="highlights-title" class="m-0 text-2xl font-extrabold tracking-tight md:text-3xl">
+            Онцолбол эдгээр
+          </h2>
+          <a href="/products" class="text-accent shrink-0 text-sm font-bold no-underline">
+            Бүх бараа →
+          </a>
+        </div>
+        <div class="border-line mt-6 divide-y divide-solid border-y">
+          {highlights.map((product, index) => (
+            <a
+              href={`/products/${product.slug}`}
+              class="group rise-in grid grid-cols-[2.5rem_88px_minmax(0,1fr)_auto] items-center gap-4 py-4 no-underline"
+              style={`--reveal-index:${index}`}
+            >
+              <span class="text-muted font-number text-xl">{String(index + 1).padStart(2, '0')}</span>
+              {product.images[0] && (
+                <ProductImage
+                  image={product.images[0]}
+                  layout="row"
+                  class="bg-panel border-line aspect-[4/5] w-22 rounded-action border object-cover"
+                />
+              )}
+              <span class="min-w-0">
+                <strong class="group-hover:text-accent block truncate text-base wrap-break-word md:text-lg">
+                  {product.name}
+                </strong>
+                {product.shortDescription && (
+                  <span class="text-muted block truncate text-sm">{product.shortDescription}</span>
+                )}
+              </span>
+              <span class="font-number shrink-0 font-bold">{formatMnt(priceOf(product))}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    latest.length > 0 && (
+      <section class="mx-auto max-w-6xl px-gutter pt-14" aria-labelledby="latest-title">
+        <h2 id="latest-title" class="m-0 text-2xl font-extrabold tracking-tight md:text-3xl">
+          Шинэ бараа
+        </h2>
+        <div class="mt-6 grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4">
+          {latest.map((product, index) => (
+            <ProductCard product={product} index={index} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+</Layout>

@@ -28,20 +28,43 @@ const responseToResult = <Value>(response: ParsedTelegramResponse<Value>) =>
     invalid: () => Result.err<Value, TelegramError>(telegramResponseError()),
   })
 
-export const sendBankClaimMessage = async (input: {
-  orderId: string
+export type OrderNotification = {
   orderNumber: string
   customerName: string
   customerPhone: string
   amountMnt: number
-}) => {
+  lines: { productName: string; variantName: string; quantity: number }[]
+  district: string
+  khoroo: string
+  address: string
+  deliveryNotes: string | null
+}
+
+const escapeHtml = (value: string) =>
+  value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+
+const orderDetails = (input: OrderNotification) => {
+  const lines = input.lines
+    .map(
+      line =>
+        `• ${escapeHtml(line.productName)} · ${escapeHtml(line.variantName)} × ${line.quantity}`,
+    )
+    .join('\n')
+  const delivery = [input.district, input.khoroo, input.address].map(escapeHtml).join(', ')
+  const notes = input.deliveryNotes ? `\n<b>Тэмдэглэл:</b> ${escapeHtml(input.deliveryNotes)}` : ''
+
+  return `<b>Захиалга:</b> ${escapeHtml(input.orderNumber)}\n<b>Дүн:</b> ${input.amountMnt.toLocaleString('mn-MN')}₮\n<b>Харилцагч:</b> ${escapeHtml(input.customerName)} · ${escapeHtml(input.customerPhone)}\n<b>Бараа:</b>\n${lines}\n<b>Хүргэлт:</b> ${delivery}${notes}`
+}
+
+export const sendBankClaimMessage = async (input: OrderNotification & { orderId: string }) => {
   const response = await Result.tryPromise({
     try: () =>
       telegramClient
         .post('sendMessage', {
           json: {
             chat_id: env.TELEGRAM_CHAT_ID,
-            text: `🏦 Шилжүүлэг шалгана уу\n${input.orderNumber} · ${input.amountMnt.toLocaleString('mn-MN')}₮\n${input.customerName} · ${input.customerPhone}`,
+            parse_mode: 'HTML',
+            text: `<b>🏦 Шилжүүлэг шалгана уу</b>\n${orderDetails(input)}`,
             reply_markup: {
               inline_keyboard: [
                 [
@@ -59,14 +82,15 @@ export const sendBankClaimMessage = async (input: {
   return response.map(parseTelegramMessageResponse).andThen(responseToResult)
 }
 
-export const sendPaidOrderMessage = async (orderNumber: string, amountMnt: number) => {
+export const sendPaidOrderMessage = async (input: OrderNotification) => {
   const response = await Result.tryPromise({
     try: () =>
       telegramClient
         .post('sendMessage', {
           json: {
             chat_id: env.TELEGRAM_CHAT_ID,
-            text: `✅ Төлбөр төлөгдлөө\n${orderNumber} · ${amountMnt.toLocaleString('mn-MN')}₮`,
+            parse_mode: 'HTML',
+            text: `<b>✅ Төлбөр төлөгдлөө</b>\n${orderDetails(input)}`,
           },
         })
         .json<unknown>(),
