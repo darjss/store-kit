@@ -455,6 +455,105 @@ describe('catalog product and variant operations', () => {
       await env.DB.prepare('select id from product where id = ?').bind(created.id).first(),
     ).toBeNull()
   })
+
+  it('lists admin-only states with inventory, SKU, and pagination filters without widening the public catalog', async () => {
+    const marker = `list-${crypto.randomUUID().slice(0, 8)}`
+    const createListedProduct = (
+      label: string,
+      stockQuantity: number,
+      status: 'draft' | 'active',
+    ) =>
+      commerce.catalog.createAdminProduct({
+        ...productInput(unique(`${marker}-${label}`), unique(`${marker}-${label}-sku`), {
+          name: `${marker} ${label}`,
+          status,
+        }),
+        initialVariant: {
+          ...productInput('unused', 'unused').initialVariant,
+          sku: unique(`${marker}-${label}-sku`),
+          stockQuantity,
+        },
+      })
+    const draftBefore = expectOk(await createListedProduct('draft', 0, 'draft'))
+    const draft = expectOk(
+      await commerce.catalog.updateAdminVariantActivation(
+        draftBefore.id,
+        draftBefore.variants[0]!.id,
+        { expectedUpdatedAt: draftBefore.variants[0]!.updatedAt, active: false },
+      ),
+    )
+    const low = expectOk(await createListedProduct('low', 3, 'active'))
+    const available = expectOk(await createListedProduct('available', 4, 'active'))
+    const archivedBefore = expectOk(await createListedProduct('archived', 2, 'active'))
+    const archived = expectOk(
+      await commerce.catalog.archiveAdminProduct(archivedBefore.id, {
+        expectedUpdatedAt: archivedBefore.updatedAt,
+      }),
+    )
+    const hiddenSku = `hidden-${crypto.randomUUID().slice(0, 8)}`
+    const hiddenVariant = expectOk(
+      await commerce.catalog.createAdminVariant(low.id, {
+        expectedProductUpdatedAt: low.updatedAt,
+        sku: hiddenSku,
+        name: 'Hidden stock',
+        options: {},
+        priceMnt: 990_000,
+        compareAtPriceMnt: null,
+        stockQuantity: 90,
+        active: false,
+        sortOrder: 10,
+      }),
+    )
+    const times = [draft.id, archived.id, low.id, available.id]
+    await env.DB.batch(
+      times.map((id, index) =>
+        env.DB.prepare('update product set updated_at = ? where id = ?').bind(10_000 + index, id),
+      ),
+    )
+
+    const page = expectOk(
+      await commerce.catalog.listAdminProducts({ query: marker, limit: 2, offset: 1 }),
+    )
+    expect(page).toMatchObject({ total: 4, limit: 2, offset: 1 })
+    expect(page.items.map(item => item.id)).toEqual([low.id, archived.id])
+
+    const drafts = expectOk(
+      await commerce.catalog.listAdminProducts({ query: marker, status: 'draft' }),
+    )
+    expect(drafts.items).toEqual([
+      expect.objectContaining({ id: draft.id, status: 'draft', activeVariantCount: 0 }),
+    ])
+    const lowStock = expectOk(
+      await commerce.catalog.listAdminProducts({ query: marker, inventory: 'low' }),
+    )
+    expect(lowStock.items.map(item => item.id)).toEqual([low.id, archived.id])
+    const outOfStock = expectOk(
+      await commerce.catalog.listAdminProducts({ query: marker, inventory: 'out' }),
+    )
+    expect(outOfStock.items).toEqual([])
+
+    const skuMatch = expectOk(await commerce.catalog.listAdminProducts({ query: hiddenSku }))
+    expect(skuMatch.items).toEqual([
+      expect.objectContaining({
+        id: low.id,
+        activeVariantCount: 1,
+        totalStockQuantity: 3,
+        minimumPriceMnt: 120_000,
+        maximumPriceMnt: 120_000,
+      }),
+    ])
+
+    const published = expectOk(await commerce.catalog.listProducts({ query: marker, limit: 100 }))
+    expect(published.items.map(item => item.id)).toEqual(
+      expect.arrayContaining([available.id, low.id]),
+    )
+    expect(published.items.map(item => item.id)).not.toEqual(
+      expect.arrayContaining([draft.id, archived.id]),
+    )
+    expect(
+      published.items.find(item => item.id === low.id)?.variants.map(variant => variant.id),
+    ).not.toContain(hiddenVariant.variants[1]!.id)
+  })
 })
 
 describe('catalog media and order references', () => {
