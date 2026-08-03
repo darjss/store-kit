@@ -1,13 +1,7 @@
 ---
 import { AdminShell } from '@store-kit/admin'
-import type { AdminRoute } from '@store-kit/admin'
 import '@store-kit/admin/styles.css'
 
-interface Props {
-  route: AdminRoute
-}
-
-const { route } = Astro.props
 Astro.response.headers.set('Cache-Control', 'private, no-store')
 ---
 
@@ -21,6 +15,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store')
     <title>Store Kit админ</title>
   </head>
   <body class="store-kit-admin m-0 min-w-0 bg-background text-foreground antialiased">
-    <AdminShell client:only="solid-js" route={route} storeName="Plugged" />
+    <AdminShell client:only="solid-js" storeName="Plugged" />
   </body>
 </html>

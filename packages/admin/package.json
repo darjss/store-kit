@@ -15,6 +15,7 @@
     "@store-kit/ui": "workspace:*",
     "@tanstack/solid-form": "^1.33.2",
     "@tanstack/solid-query": "catalog:",
+    "@tanstack/solid-router": "^1.170.18",
     "@tanstack/solid-table": "^8.21.3",
     "@unpic/solid": "^1.0.0",
     "better-auth": "^1.6.25",

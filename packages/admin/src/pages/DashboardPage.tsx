@@ -6,6 +6,7 @@ import type {
 } from '@store-kit/contracts/admin-dashboard'
 import type { AdminOrderListItem } from '@store-kit/contracts/admin-orders'
 import { Skeleton } from '@store-kit/ui'
+import { Link } from '@tanstack/solid-router'
 import { For, Match, Show, Switch } from 'solid-js'
 
 import { InlineAlert, PageHeader, RetryState, StatusBadge } from '../components/foundation'
@@ -68,32 +69,13 @@ function DashboardSkeleton() {
 }
 
 type ReadinessSequenceProps = {
-  productAction: {
-    title: string
-    description: string
-    href: string
-    external?: boolean
-  }
-  settingsHref: string
-  storefrontHref: string
+  draftProductId: string | undefined
 }
 
-function ReadinessSequence(props: ReadinessSequenceProps) {
-  const steps = [
-    props.productAction,
-    {
-      title: 'Төлбөр, хүргэлтийн мэдээллээ шалгах',
-      description: 'Хүргэлтийн үнэ болон шилжүүлгийн дансыг баталгаажуулна.',
-      href: props.settingsHref,
-    },
-    {
-      title: 'Дэлгүүрээ нээж шалгах',
-      description: 'Хэрэглэгчийн харах хуудсыг нээгээд захиалгын замыг шалгана.',
-      href: props.storefrontHref,
-      external: true,
-    },
-  ]
+const readinessLinkClass =
+  'group flex min-h-20 items-center gap-3 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
 
+function ReadinessSequence(props: ReadinessSequenceProps) {
   return (
     <section aria-labelledby="store-readiness-title">
       <div class="mb-3">
@@ -105,31 +87,80 @@ function ReadinessSequence(props: ReadinessSequenceProps) {
         </p>
       </div>
       <ol class="-mx-4 divide-y border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x">
-        <For each={steps}>
-          {(step, index) => (
-            <li>
-              <a
-                class="group flex min-h-20 items-center gap-3 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                href={step.href}
-                rel={step.external ? 'noreferrer' : undefined}
-                target={step.external ? '_blank' : undefined}
-              >
+        <li>
+          <Show
+            when={props.draftProductId}
+            fallback={
+              <Link class={readinessLinkClass} to="/catalog/new">
                 <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground tabular-nums">
-                  {index() + 1}
+                  1
                 </span>
                 <span class="min-w-0 flex-1">
-                  <span class="block text-base font-medium">{step.title}</span>
+                  <span class="block text-base font-medium">Анхны бараагаа нэмэх</span>
                   <span class="mt-0.5 block text-sm leading-5 text-muted-foreground">
-                    {step.description}
+                    Үнэ, үлдэгдэлтэй бараа үүсгээд худалдаанд бэлдэнэ.
                   </span>
                 </span>
                 <span aria-hidden="true" class="text-xl text-muted-foreground">
                   ›
                 </span>
-              </a>
-            </li>
-          )}
-        </For>
+              </Link>
+            }
+          >
+            {productId => (
+              <Link
+                class={readinessLinkClass}
+                params={{ productId: productId() }}
+                to="/catalog/$productId"
+              >
+                <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground tabular-nums">
+                  1
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-base font-medium">Ноорог бараагаа дуусгах</span>
+                  <span class="mt-0.5 block text-sm leading-5 text-muted-foreground">
+                    Үнэ, үлдэгдэл, төлөвийг шалгаад худалдаанд гаргана уу.
+                  </span>
+                </span>
+                <span aria-hidden="true" class="text-xl text-muted-foreground">
+                  ›
+                </span>
+              </Link>
+            )}
+          </Show>
+        </li>
+        <li>
+          <Link class={readinessLinkClass} to="/settings">
+            <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground tabular-nums">
+              2
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-base font-medium">Төлбөр, хүргэлтийн мэдээллээ шалгах</span>
+              <span class="mt-0.5 block text-sm leading-5 text-muted-foreground">
+                Хүргэлтийн үнэ болон шилжүүлгийн дансыг баталгаажуулна.
+              </span>
+            </span>
+            <span aria-hidden="true" class="text-xl text-muted-foreground">
+              ›
+            </span>
+          </Link>
+        </li>
+        <li>
+          <a class={readinessLinkClass} href="/" rel="noreferrer" target="_blank">
+            <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground tabular-nums">
+              3
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-base font-medium">Дэлгүүрээ нээж шалгах</span>
+              <span class="mt-0.5 block text-sm leading-5 text-muted-foreground">
+                Хэрэглэгчийн харах хуудсыг нээгээд захиалгын замыг шалгана.
+              </span>
+            </span>
+            <span aria-hidden="true" class="text-xl text-muted-foreground">
+              ›
+            </span>
+          </a>
+        </li>
       </ol>
     </section>
   )
@@ -137,8 +168,6 @@ function ReadinessSequence(props: ReadinessSequenceProps) {
 
 type WorkQueueProps = {
   summary: AdminDashboardSummary
-  ordersHref: (status: 'new' | 'confirmed' | 'preparing' | 'delivering') => string
-  inventoryHref: string
 }
 
 function WorkQueue(props: WorkQueueProps) {
@@ -148,31 +177,31 @@ function WorkQueue(props: WorkQueueProps) {
         count: props.summary.newOrderCount,
         title: 'Шинэ захиалга',
         description: 'Төлбөр болон захиалгын мэдээллийг шалгана.',
-        href: props.ordersHref('new'),
+        status: 'new' as const,
       },
       {
         count: props.summary.confirmedOrderCount,
         title: 'Бэлтгэх захиалга',
         description: 'Төлбөр баталгаажсан захиалгыг бэлтгэж эхэлнэ.',
-        href: props.ordersHref('confirmed'),
+        status: 'confirmed' as const,
       },
       {
         count: props.summary.preparingOrderCount,
         title: 'Бэлтгэж буй захиалга',
         description: 'Бэлэн болсон захиалгыг хүргэлтэд шилжүүлнэ.',
-        href: props.ordersHref('preparing'),
+        status: 'preparing' as const,
       },
       {
         count: props.summary.deliveringOrderCount,
         title: 'Хүргэлтэд гарсан захиалга',
         description: 'Хүргэгдсэн захиалгыг дуусгана.',
-        href: props.ordersHref('delivering'),
+        status: 'delivering' as const,
       },
       {
         count: props.summary.lowStockVariantCount,
         title: 'Үлдэгдэл багассан бараа',
         description: '3 буюу түүнээс цөөн үлдэгдэлтэй хувилбаруудыг шалгана.',
-        href: props.inventoryHref,
+        status: undefined,
       },
     ].filter(item => item.count > 0)
 
@@ -204,9 +233,14 @@ function WorkQueue(props: WorkQueueProps) {
           <For each={items()}>
             {item => (
               <li>
-                <a
+                <Link
                   class="flex min-h-20 items-center gap-4 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                  href={item.href}
+                  search={
+                    item.status
+                      ? { status: item.status, limit: 25, offset: 0 }
+                      : { inventory: 'low', limit: 24, offset: 0 }
+                  }
+                  to={item.status ? '/orders' : '/catalog'}
                 >
                   <span class="min-w-0 flex-1">
                     <span class="block text-base font-medium">{item.title}</span>
@@ -218,7 +252,7 @@ function WorkQueue(props: WorkQueueProps) {
                   <span aria-hidden="true" class="text-xl text-muted-foreground">
                     ›
                   </span>
-                </a>
+                </Link>
               </li>
             )}
           </For>
@@ -228,11 +262,7 @@ function WorkQueue(props: WorkQueueProps) {
   )
 }
 
-function RecentOrders(props: {
-  orders: AdminOrderListItem[]
-  orderHref: (orderId: AdminOrderListItem['id']) => string
-  allOrdersHref: string
-}) {
+function RecentOrders(props: { orders: AdminOrderListItem[] }) {
   return (
     <section aria-labelledby="recent-orders-title">
       <div class="mb-3 flex items-end justify-between gap-4">
@@ -242,12 +272,13 @@ function RecentOrders(props: {
           </h2>
           <p class="mt-1 text-sm text-muted-foreground">Хамгийн сүүлд орсон захиалгууд.</p>
         </div>
-        <a
+        <Link
           class="flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
-          href={props.allOrdersHref}
+          search={{ limit: 25, offset: 0 }}
+          to="/orders"
         >
           Бүгдийг харах
-        </a>
+        </Link>
       </div>
       <Show
         when={props.orders.length > 0}
@@ -267,10 +298,11 @@ function RecentOrders(props: {
               const paymentStatus = () => paymentStatusDisplay(order.paymentStatus)
               return (
                 <li>
-                  <a
+                  <Link
                     aria-label={`${order.number}, ${order.customerName}, ${formatMoney(order.totalMnt)}, ${paymentStatus().label}, ${orderStatus().label}, ${formatDate(order.createdAt)}`}
                     class="block min-h-24 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                    href={props.orderHref(order.id)}
+                    params={{ orderId: order.id }}
+                    to="/orders/$orderId"
                   >
                     <span class="flex items-start justify-between gap-4">
                       <span class="min-w-0">
@@ -295,7 +327,7 @@ function RecentOrders(props: {
                         {formatDate(order.createdAt)}
                       </time>
                     </span>
-                  </a>
+                  </Link>
                 </li>
               )
             }}
@@ -314,13 +346,7 @@ function InventoryStatus(props: { stockQuantity: number }) {
   )
 }
 
-function LowStock(props: {
-  variants: AdminLowStockVariant[]
-  catalogHref: (
-    productId: AdminLowStockVariant['productId'],
-    variantId: AdminLowStockVariant['variantId'],
-  ) => string
-}) {
+function LowStock(props: { variants: AdminLowStockVariant[] }) {
   return (
     <Show when={props.variants.length > 0}>
       <section aria-labelledby="low-stock-title">
@@ -334,9 +360,11 @@ function LowStock(props: {
           <For each={props.variants}>
             {variant => (
               <li>
-                <a
+                <Link
                   class="flex min-h-20 items-center gap-4 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                  href={props.catalogHref(variant.productId, variant.variantId)}
+                  params={{ productId: variant.productId }}
+                  search={{ variant: variant.variantId }}
+                  to="/catalog/$productId"
                 >
                   <span class="min-w-0 flex-1">
                     <span class="block truncate text-base font-medium">{variant.productName}</span>
@@ -353,7 +381,7 @@ function LowStock(props: {
                   <span aria-hidden="true" class="text-xl text-muted-foreground">
                     ›
                   </span>
-                </a>
+                </Link>
               </li>
             )}
           </For>
@@ -366,39 +394,18 @@ function LowStock(props: {
 type DashboardContentProps = {
   dashboard: AdminDashboard
   isNewStore: boolean
-  orderHref: (orderId: AdminOrderListItem['id']) => string
-  ordersHref: (status?: 'new' | 'confirmed' | 'preparing' | 'delivering') => string
-  inventoryHref: string
-  catalogHref: (
-    productId: AdminLowStockVariant['productId'],
-    variantId: AdminLowStockVariant['variantId'],
-  ) => string
-  readinessProductAction: ReadinessSequenceProps['productAction']
-  settingsHref: string
-  storefrontHref: string
+  draftProductId: string | undefined
 }
 
 function DashboardContent(props: DashboardContentProps) {
   return (
     <div class="mt-6 space-y-8">
       <Show when={props.isNewStore}>
-        <ReadinessSequence
-          productAction={props.readinessProductAction}
-          settingsHref={props.settingsHref}
-          storefrontHref={props.storefrontHref}
-        />
+        <ReadinessSequence draftProductId={props.draftProductId} />
       </Show>
-      <WorkQueue
-        inventoryHref={props.inventoryHref}
-        ordersHref={status => props.ordersHref(status)}
-        summary={props.dashboard.summary}
-      />
-      <RecentOrders
-        allOrdersHref={props.ordersHref()}
-        orderHref={props.orderHref}
-        orders={props.dashboard.recentOrders}
-      />
-      <LowStock catalogHref={props.catalogHref} variants={props.dashboard.lowStockVariants} />
+      <WorkQueue summary={props.dashboard.summary} />
+      <RecentOrders orders={props.dashboard.recentOrders} />
+      <LowStock variants={props.dashboard.lowStockVariants} />
     </div>
   )
 }
@@ -407,16 +414,6 @@ export type DashboardPageProps = {
   request: AdminDashboardRequest
   activeCatalogRequest: AdminDashboardCatalogRequest
   draftCatalogRequest: AdminDashboardCatalogRequest
-  orderHref: (orderId: AdminOrderListItem['id']) => string
-  ordersHref: (status?: 'new' | 'confirmed' | 'preparing' | 'delivering') => string
-  inventoryHref: string
-  catalogHref: (
-    productId: AdminLowStockVariant['productId'],
-    variantId?: AdminLowStockVariant['variantId'],
-  ) => string
-  newProductHref: string
-  settingsHref: string
-  storefrontHref: string
 }
 
 export function DashboardPage(props: DashboardPageProps) {
@@ -438,20 +435,7 @@ export function DashboardPage(props: DashboardPageProps) {
       err: (_error: AdminCatalogError) => undefined,
     })
   const hasActiveSellableProduct = () => (activeCatalog()?.total ?? 0) > 0
-  const readinessProductAction = () => {
-    const draft = draftCatalog()?.items[0]
-    if (draft)
-      return {
-        title: 'Ноорог бараагаа дуусгах',
-        description: 'Үнэ, үлдэгдэл, төлөвийг шалгаад худалдаанд гаргана уу.',
-        href: props.catalogHref(draft.id),
-      }
-    return {
-      title: 'Анхны бараагаа нэмэх',
-      description: 'Үнэ, үлдэгдэлтэй бараа үүсгээд худалдаанд бэлдэнэ.',
-      href: props.newProductHref,
-    }
-  }
+  const draftProductId = () => draftCatalog()?.items[0]?.id
 
   return (
     <section class="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-7">
@@ -493,15 +477,9 @@ export function DashboardPage(props: DashboardPageProps) {
         <Match when={query.data?.status === 'ok' ? query.data.value : undefined}>
           {dashboard => (
             <DashboardContent
-              catalogHref={props.catalogHref}
               dashboard={dashboard()}
-              inventoryHref={props.inventoryHref}
+              draftProductId={draftProductId()}
               isNewStore={!hasActiveSellableProduct()}
-              orderHref={props.orderHref}
-              readinessProductAction={readinessProductAction()}
-              ordersHref={props.ordersHref}
-              settingsHref={props.settingsHref}
-              storefrontHref={props.storefrontHref}
             />
           )}
         </Match>

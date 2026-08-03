@@ -3,7 +3,6 @@ import {
   adminVariantUpdateSchema,
 } from '@store-kit/contracts/admin-catalog'
 import type {
-  AdminCatalogError,
   AdminCatalogProductDetail,
   AdminCatalogVariant,
   AdminVariantCreate,
@@ -24,23 +23,23 @@ import {
   FieldError,
   FieldLabel,
   Input,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
   Spinner,
-  Switch,
 } from '@store-kit/ui'
 import { createForm } from '@tanstack/solid-form'
 import { useMutation, useQueryClient } from '@tanstack/solid-query'
-import { Result } from 'better-result'
 import { Show, createSignal } from 'solid-js'
 import { toast } from 'solid-sonner'
 
-import { InlineAlert, StatusBadge } from '../components/foundation'
+import { AdminSwitch, StatusBadge } from '../components/foundation'
 import { UnsavedChangesGuard } from '../components/unsaved-changes'
-import { CatalogFailure, OptionRows, transportMessage, validationMessages } from './forms'
+import { updateCatalogProductCache } from './cache'
+import {
+  CatalogFailure,
+  mutationFailure,
+  mutationTransportError,
+  validationMessages,
+} from './errors'
+import { OptionRows } from './options'
 import type { CatalogRequests } from './query-options'
 import { catalogKeys, catalogMutation } from './query-options'
 
@@ -70,91 +69,15 @@ const updateValues = (variant: AdminCatalogVariant): AdminVariantUpdate => ({
   sortOrder: variant.sortOrder,
 })
 
-type VariantInspectorProps = {
-  product: AdminCatalogProductDetail
-  requests: CatalogRequests
-  selection: string | undefined
-  onClose: () => void
-  onProduct: (product: AdminCatalogProductDetail) => void
-  onReload: () => Promise<AdminCatalogProductDetail | undefined>
-}
-
-export function VariantInspector(props: VariantInspectorProps) {
-  const variant = () => props.product.variants.find(item => item.id === props.selection)
-  const creating = () => props.selection === 'new'
-
-  return (
-    <Sheet.Root
-      open={props.selection !== undefined}
-      onOpenChange={open => !open && props.onClose()}
-    >
-      <SheetContent class="w-full! max-w-full! gap-0 sm:max-w-xl!" side="right">
-        <Show
-          when={creating() || variant()}
-          fallback={
-            <div class="flex min-h-0 flex-1 flex-col p-4 pt-14">
-              <InlineAlert title="Хувилбар олдсонгүй" tone="destructive">
-                Энэ хувилбар барааны одоогийн мэдээлэлд байхгүй байна.
-              </InlineAlert>
-              <Button
-                class="mt-4 min-h-11! self-start"
-                onClick={() => props.onClose()}
-                variant="outline"
-              >
-                Хаах
-              </Button>
-            </div>
-          }
-        >
-          <SheetHeader class="border-b pr-14">
-            <SheetTitle>{creating() ? 'Хувилбар нэмэх' : 'Хувилбар засах'}</SheetTitle>
-            <SheetDescription>
-              {creating()
-                ? 'Өөр үнэ, үлдэгдэл эсвэл сонголттой хувилбар нэмнэ.'
-                : `${variant()?.name ?? ''} · ${variant()?.sku ?? ''}`}
-            </SheetDescription>
-          </SheetHeader>
-          <Show
-            when={creating()}
-            fallback={
-              <Show when={variant()}>
-                {value => (
-                  <VariantForm
-                    product={props.product}
-                    requests={props.requests}
-                    variant={value()}
-                    onClose={() => props.onClose()}
-                    onProduct={product => props.onProduct(product)}
-                    onReload={() => props.onReload()}
-                  />
-                )}
-              </Show>
-            }
-          >
-            <VariantForm
-              product={props.product}
-              requests={props.requests}
-              onClose={() => props.onClose()}
-              onProduct={product => props.onProduct(product)}
-              onReload={() => props.onReload()}
-            />
-          </Show>
-        </Show>
-      </SheetContent>
-    </Sheet.Root>
-  )
-}
-
 type VariantFormProps = {
   product: AdminCatalogProductDetail
   requests: CatalogRequests
   variant?: AdminCatalogVariant
   onClose: () => void
-  onProduct: (product: AdminCatalogProductDetail) => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
 }
 
-function VariantForm(props: VariantFormProps) {
+export function VariantForm(props: VariantFormProps) {
   const queryClient = useQueryClient()
   const createMutation = useMutation(() => catalogMutation.createVariant(props.requests))
   const updateMutation = useMutation(() => catalogMutation.updateVariant(props.requests))
@@ -162,17 +85,23 @@ function VariantForm(props: VariantFormProps) {
     catalogMutation.updateVariantActivation(props.requests),
   )
   const deleteMutation = useMutation(() => catalogMutation.deleteVariant(props.requests))
-  const [failure, setFailure] = createSignal<AdminCatalogError>()
-  const [requestError, setRequestError] = createSignal<string>()
   const [deleteOpen, setDeleteOpen] = createSignal(false)
-  const [saved, setSaved] = createSignal(false)
-  const installProduct = (product: AdminCatalogProductDetail) => {
-    queryClient.setQueryData(catalogKeys.detail(product.id), Result.ok(product))
-    props.onProduct(product)
-    void queryClient.invalidateQueries({ queryKey: catalogKeys.lists() })
-    void queryClient.invalidateQueries({ queryKey: catalogKeys.publicProducts })
-    void queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
+  const resetMutations = () => {
+    createMutation.reset()
+    updateMutation.reset()
+    activationMutation.reset()
+    deleteMutation.reset()
   }
+  const failure = () =>
+    mutationFailure(createMutation) ??
+    mutationFailure(updateMutation) ??
+    mutationFailure(activationMutation) ??
+    mutationFailure(deleteMutation)
+  const requestError = () =>
+    mutationTransportError(createMutation) ??
+    mutationTransportError(updateMutation) ??
+    mutationTransportError(activationMutation) ??
+    mutationTransportError(deleteMutation)
   const validator = toStandardSchema(
     props.variant ? adminVariantUpdateSchema : adminVariantCreateSchema,
   )
@@ -182,36 +111,29 @@ function VariantForm(props: VariantFormProps) {
       : createValues(props.product)) as VariantInput,
     validators: { onBlur: validator, onSubmit: validator },
     onSubmit: async ({ value }) => {
-      setFailure()
-      setRequestError()
-      try {
-        const result =
-          'expectedProductUpdatedAt' in value
-            ? await createMutation.mutateAsync({ productId: props.product.id, input: value })
-            : await updateMutation.mutateAsync({
-                productId: props.product.id,
-                variantId: props.variant!.id,
-                input: value,
-              })
-        if (result.isErr()) {
-          setFailure(result.error)
-          return
-        }
-        toast.success(props.variant ? 'Хувилбарыг хадгаллаа.' : 'Хувилбар үүслээ.')
-        setSaved(true)
-        props.onClose()
-        installProduct(result.value)
-      } catch (error) {
-        setRequestError(transportMessage(error))
-      }
+      resetMutations()
+      const result = await (
+        'expectedProductUpdatedAt' in value
+          ? createMutation.mutateAsync({ productId: props.product.id, input: value })
+          : updateMutation.mutateAsync({
+              productId: props.product.id,
+              variantId: props.variant!.id,
+              input: value,
+            })
+      ).catch(() => undefined)
+      if (!result?.isOk()) return
+
+      await updateCatalogProductCache(queryClient, result.value)
+      toast.success(props.variant ? 'Хувилбарыг хадгаллаа.' : 'Хувилбар үүслээ.')
+      props.onClose()
     },
   }))
+  const dirty = form.useSelector(state => state.isDirty)
 
   const reload = async () => {
     const product = await props.onReload()
     if (!product) return
-    setFailure()
-    setRequestError()
+    resetMutations()
     if (props.variant) {
       const current = product.variants.find(variant => variant.id === props.variant!.id)
       if (current) form.reset(updateValues(current))
@@ -222,10 +144,9 @@ function VariantForm(props: VariantFormProps) {
 
   const changeActivation = async () => {
     if (!props.variant) return
-    setFailure()
-    setRequestError()
-    try {
-      const result = await activationMutation.mutateAsync({
+    resetMutations()
+    const result = await activationMutation
+      .mutateAsync({
         productId: props.product.id,
         variantId: props.variant.id,
         input: {
@@ -233,25 +154,20 @@ function VariantForm(props: VariantFormProps) {
           active: !props.variant.active,
         },
       })
-      if (result.isErr()) {
-        setFailure(result.error)
-        return
-      }
-      const updated = result.value.variants.find(variant => variant.id === props.variant!.id)
-      if (updated) form.reset(updateValues(updated))
-      toast.success(updated?.active ? 'Хувилбарыг идэвхжүүллээ.' : 'Хувилбарыг идэвхгүй болголоо.')
-      installProduct(result.value)
-    } catch (error) {
-      setRequestError(transportMessage(error))
-    }
+      .catch(() => undefined)
+    if (!result?.isOk()) return
+
+    const updated = result.value.variants.find(variant => variant.id === props.variant!.id)
+    if (updated) form.reset(updateValues(updated))
+    await updateCatalogProductCache(queryClient, result.value)
+    toast.success(updated?.active ? 'Хувилбарыг идэвхжүүллээ.' : 'Хувилбарыг идэвхгүй болголоо.')
   }
 
   const deleteVariant = async () => {
     if (!props.variant) return
-    setFailure()
-    setRequestError()
-    try {
-      const result = await deleteMutation.mutateAsync({
+    resetMutations()
+    const result = await deleteMutation
+      .mutateAsync({
         productId: props.product.id,
         variantId: props.variant.id,
         input: {
@@ -259,25 +175,18 @@ function VariantForm(props: VariantFormProps) {
           expectedVariantUpdatedAt: props.variant.updatedAt,
         },
       })
-      if (result.isErr()) {
-        setDeleteOpen(false)
-        setFailure(result.error)
-        return
-      }
-      setDeleteOpen(false)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: catalogKeys.detail(props.product.id) }),
-        queryClient.invalidateQueries({ queryKey: catalogKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: catalogKeys.publicProducts }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
-      ])
-      toast.success('Хувилбарыг бүрмөсөн устгалаа.')
-      setSaved(true)
-      props.onClose()
-    } catch (error) {
-      setDeleteOpen(false)
-      setRequestError(transportMessage(error))
-    }
+      .catch(() => undefined)
+    setDeleteOpen(false)
+    if (!result?.isOk()) return
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: catalogKeys.detail(props.product.id) }),
+      queryClient.invalidateQueries({ queryKey: catalogKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: catalogKeys.publicProducts }),
+      queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
+    ])
+    toast.success('Хувилбарыг бүрмөсөн устгалаа.')
+    props.onClose()
   }
 
   return (
@@ -291,7 +200,10 @@ function VariantForm(props: VariantFormProps) {
         void form.handleSubmit()
       }}
     >
-      <UnsavedChangesGuard isDirty={() => form.state.isDirty && !saved()} />
+      <UnsavedChangesGuard
+        includeSearchChanges
+        isDirty={() => dirty() && !createMutation.data?.isOk() && !updateMutation.data?.isOk()}
+      />
       <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
         <Show
           when={props.variant}
@@ -305,7 +217,7 @@ function VariantForm(props: VariantFormProps) {
                       Бараа идэвхтэй үед энэ хувилбарыг борлуулж болно.
                     </div>
                   </div>
-                  <Switch
+                  <AdminSwitch
                     checked={field().state.value}
                     id="new-variant-active"
                     onChange={checked => field().handleChange(checked)}

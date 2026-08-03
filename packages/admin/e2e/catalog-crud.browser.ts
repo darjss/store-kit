@@ -7,17 +7,6 @@ const authSecret = 'admin-browser-auth-secret-at-least-thirty-two-characters'
 const authToken = 'admin-browser-session-token-for-real-better-auth'
 const imagePath = 'packages/api/src/test/fixtures/catalog-upload.jpg'
 
-const expectSwitchTarget = async (input: Locator) => {
-  const size = await input.evaluate(element => {
-    const target = element.closest<HTMLElement>('[data-slot="switch"]')
-    if (!target) return undefined
-    const bounds = target.getBoundingClientRect()
-    return { height: bounds.height, width: bounds.width }
-  })
-  expect(size?.height).toBeGreaterThanOrEqual(44)
-  expect(size?.width).toBeGreaterThanOrEqual(44)
-}
-
 const focusAppearance = (target: Locator) =>
   target.evaluate(element => {
     const style = getComputedStyle(element)
@@ -42,6 +31,25 @@ const focusWithKeyboard = async (page: Page, target: Locator) => {
   await target.scrollIntoViewIfNeeded()
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await pressTabUntilFocused(page, target, 80)
+}
+
+const expectSwitchBehavior = async (page: Page, input: Locator) => {
+  const target = input.locator('xpath=ancestor::label[1]')
+  const bounds = await target.boundingBox()
+  expect(bounds?.height).toBeGreaterThanOrEqual(44)
+  expect(bounds?.width).toBeGreaterThanOrEqual(44)
+
+  const wasChecked = await input.isChecked()
+  await focusWithKeyboard(page, input)
+  const appearance = await focusAppearance(target)
+  expect(appearance.outlineStyle).toBe('solid')
+  expect(appearance.outlineWidth).toBeGreaterThanOrEqual(2)
+  expect(appearance.boxShadow).not.toBe('none')
+
+  await page.keyboard.press('Space')
+  expect(await input.isChecked()).toBe(!wasChecked)
+  await page.keyboard.press('Space')
+  expect(await input.isChecked()).toBe(wasChecked)
 }
 
 const expectAdminFocusVisible = async (page: Page, target: Locator) => {
@@ -99,6 +107,35 @@ test.afterEach(async ({ page }) => {
   })
 })
 
+test('runs deep links, SPA links, search params, history, and not-found in one router', async ({
+  page,
+}) => {
+  await page.goto('/admin/catalog?inventory=low')
+  await expect(page.getByRole('heading', { level: 1, name: 'Бараа' })).toBeVisible()
+  await expect(page).toHaveURL(/\/admin\/catalog\?[^#]*inventory=low/u)
+
+  const spaRoot = page.locator('[data-admin-spa-root]')
+  await spaRoot.evaluate(element => element.setAttribute('data-browser-spa-marker', 'kept'))
+  await page.getByLabel('Бараа хайх').fill('browser')
+  await expect(page).toHaveURL(/query=browser/u)
+
+  await page.getByRole('link', { name: 'Тохиргоо', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Дэлгүүрийн тохиргоо' })).toBeVisible()
+  await expect(spaRoot).toHaveAttribute('data-browser-spa-marker', 'kept')
+
+  await page.goBack()
+  await expect(page).toHaveURL(/\/admin\/catalog\?[^#]*inventory=low/u)
+  await expect(page.getByLabel('Бараа хайх')).toHaveValue('browser')
+  await expect(spaRoot).toHaveAttribute('data-browser-spa-marker', 'kept')
+  await page.goForward()
+  await expect(page).toHaveURL(/\/admin\/settings$/u)
+
+  await page.goto('/admin/not-a-real-route')
+  await expect(page.getByText('Админ хуудас олдсонгүй', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Админы нүүр рүү очих' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Өнөөдрийн ажил' })).toBeVisible()
+})
+
 test('keeps readiness after a real draft and uses the tablet catalog ledger', async ({ page }) => {
   const suffix = Date.now().toString(36)
   const productName = `Монгол ур хийцийн маш урт нэртэй өдөр тутмын арьсан цүнх ${suffix}`
@@ -116,7 +153,7 @@ test('keeps readiness after a real draft and uses the tablet catalog ledger', as
   await page.getByLabel('Үнэ (₮)', { exact: true }).fill('12500')
   await page.getByLabel('Эхний үлдэгдэл', { exact: true }).fill('8')
   await page.locator('summary').filter({ hasText: 'Дэлгэрэнгүй мэдээлэл' }).click()
-  await expectSwitchTarget(page.getByLabel('Онцлох бараа'))
+  await expectSwitchBehavior(page, page.getByLabel('Онцлох бараа'))
   await page.locator('summary').filter({ hasText: 'Үнэ ба хувилбарын нэмэлт тохиргоо' }).click()
   await page
     .locator('summary')
@@ -186,7 +223,7 @@ test('runs catalog, image, variant, and lifecycle CRUD through the real admin Wo
   await expect(page.getByRole('heading', { level: 1, name: productName })).toBeVisible()
   const productId = new URL(page.url()).pathname.split('/').at(-1)!
   await page.locator('summary').filter({ hasText: 'Нэмэлт тохиргоо' }).first().click()
-  await expectSwitchTarget(page.getByLabel('Онцлох бараа'))
+  await expectSwitchBehavior(page, page.getByLabel('Онцлох бараа'))
 
   await expect(page.getByText('1 зураг', { exact: true })).toBeVisible()
 
@@ -238,7 +275,7 @@ test('runs catalog, image, variant, and lifecycle CRUD through the real admin Wo
   await expect(page.getByText('1 зураг', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Хувилбар нэмэх' }).click()
-  await expectSwitchTarget(page.getByLabel('Шууд борлуулах'))
+  await expectSwitchBehavior(page, page.getByLabel('Шууд борлуулах'))
   await page.getByLabel('Барааны код', { exact: true }).fill(`BROWSER-BLUE-${suffix}`)
   await page.getByLabel('Хувилбарын нэр', { exact: true }).fill(secondVariantName)
   await page.getByLabel('Үнэ (₮)', { exact: true }).fill('150000')
@@ -361,12 +398,10 @@ test('uses the mobile dashboard, order summaries, and checkout settings against 
   await page.getByRole('button', { name: 'Тохиргоо хадгалах' }).click()
   await expect(page.getByText('Тохиргоо өөрчлөгдсөн байна')).toBeVisible()
   await expect(deliveryFee).toHaveValue('6750')
-  const settingsGuardPromise = page.waitForEvent('dialog')
-  const navigation = page.getByRole('link', { name: 'Бараа', exact: true }).click()
-  const settingsGuard = await settingsGuardPromise
-  expect(settingsGuard.type()).toBe('beforeunload')
-  await settingsGuard.dismiss()
-  await navigation
+  await page.getByRole('link', { name: 'Бараа', exact: true }).click()
+  const settingsGuard = page.getByRole('dialog')
+  await expect(settingsGuard.getByText('Хадгалаагүй өөрчлөлтийг орхих уу?')).toBeVisible()
+  await settingsGuard.getByRole('button', { name: 'Үргэлжлүүлэн засах' }).click()
   await expect(page).toHaveURL(/\/admin\/settings$/u)
   await expect(deliveryFee).toHaveValue('6750')
 })
@@ -420,19 +455,13 @@ test('guards drafts and runs the displayed command shortcuts', async ({ page }) 
   await expect(page).toHaveURL(/\/admin\/catalog\/new$/u)
 
   await page.getByLabel('Барааны нэр', { exact: true }).fill('Хадгалаагүй ноорог бараа')
-  const backButton = page.getByRole('button', { name: 'Барааны жагсаалт руу буцах' })
-  const stayDialogPromise = page.waitForEvent('dialog')
-  const stayNavigation = backButton.click()
-  const stayDialog = await stayDialogPromise
-  expect(stayDialog.type()).toBe('beforeunload')
-  await stayDialog.dismiss()
-  await stayNavigation
+  await page.evaluate(() => window.history.back())
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText('Хадгалаагүй өөрчлөлтийг орхих уу?')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Үргэлжлүүлэн засах' }).click()
   await expect(page).toHaveURL(/\/admin\/catalog\/new$/u)
 
-  const leaveDialogPromise = page.waitForEvent('dialog')
-  const leaveNavigation = backButton.click()
-  const leaveDialog = await leaveDialogPromise
-  await leaveDialog.accept()
-  await leaveNavigation
+  await page.evaluate(() => window.history.back())
+  await page.getByRole('dialog').getByRole('button', { name: 'Өөрчлөлтийг орхих' }).click()
   await expect(page).toHaveURL(/\/admin\/catalog(?:\?.*)?$/u)
 })

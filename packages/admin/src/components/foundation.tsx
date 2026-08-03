@@ -19,6 +19,7 @@ import {
   EmptyTitle,
   Skeleton,
   Spinner,
+  Switch as ZaidanSwitch,
   Table,
   TableBody,
   TableCell,
@@ -28,6 +29,20 @@ import {
 } from '@store-kit/ui'
 import { For, Match, Show, Switch, createUniqueId, mergeProps } from 'solid-js'
 import type { JSX } from 'solid-js'
+
+const adminSwitchClass = 'admin-switch'
+
+export function AdminSwitch(props: {
+  checked: boolean
+  id: string
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <label class={adminSwitchClass}>
+      <ZaidanSwitch {...props} />
+    </label>
+  )
+}
 
 type PageHeaderProps = {
   title: string

@@ -2,6 +2,24 @@
 
 @source './src/**/*.{ts,tsx}';
 
+@utility admin-switch {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+
+  &:has([data-slot='switch-input']:focus-visible) {
+    border-color: var(--ring);
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 22%, transparent);
+  }
+}
+
 @utility store-kit-admin {
   color-scheme: light;
   --radius: 0.625rem;

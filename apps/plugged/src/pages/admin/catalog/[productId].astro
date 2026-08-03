@@ -1,8 +1,0 @@
----
-import AdminLayout from '~/layouts/AdminLayout.astro'
-
-const productId = Astro.params.productId ?? ''
-const search = Object.fromEntries(Astro.url.searchParams)
----
-
-<AdminLayout route={{ name: 'catalog-detail', productId, search }} />

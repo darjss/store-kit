@@ -1,6 +1,5 @@
 import { adminProductUpdateSchema } from '@store-kit/contracts/admin-catalog'
 import type {
-  AdminCatalogError,
   AdminCatalogProductDetail,
   AdminCatalogSelectors,
   AdminProductUpdate,
@@ -16,72 +15,24 @@ import {
   NativeSelect,
   NativeSelectOption,
   Spinner,
-  Switch,
   Textarea,
 } from '@store-kit/ui'
 import { createForm } from '@tanstack/solid-form'
-import type { Result } from 'better-result'
-import { For, Show, createEffect, createSignal, on, onCleanup } from 'solid-js'
+import { useMutation, useQueryClient } from '@tanstack/solid-query'
+import { For, Show, createEffect, on, onCleanup } from 'solid-js'
 import type { JSX } from 'solid-js'
+import { toast } from 'solid-sonner'
 
-import { InlineAlert } from '../components/foundation'
-
-export const validationMessages = (errors: readonly unknown[]) =>
-  errors.map(error => ({
-    message:
-      typeof error === 'string'
-        ? error
-        : typeof error === 'object' && error !== null && 'message' in error
-          ? String(error.message)
-          : 'Зөв утга оруулна уу.',
-  }))
-
-export const transportMessage = (_error: unknown) =>
-  'Хүсэлтийг илгээж чадсангүй. Холболтоо шалгаад дахин оролдоно уу.'
-
-type CatalogFailureProps = {
-  failure: AdminCatalogError | undefined
-  transportError: string | undefined
-  onReload?: () => void
-  title?: string
-}
-
-export function CatalogFailure(props: CatalogFailureProps) {
-  const message = () => props.failure?.message ?? props.transportError
-  const conflict = () => props.failure?._tag === 'AdminCatalogConflict'
-
-  return (
-    <Show when={message()}>
-      {text => (
-        <InlineAlert
-          action={
-            <Show when={conflict() && props.onReload}>
-              <Button
-                class="min-h-11 md:min-h-8"
-                onClick={() => props.onReload?.()}
-                type="button"
-                variant="outline"
-              >
-                Одоогийн мэдээллийг дахин ачаалах
-              </Button>
-            </Show>
-          }
-          title={
-            conflict()
-              ? 'Барааны мэдээлэл өөрчлөгдсөн байна'
-              : (props.title ?? 'Өөрчлөлтийг хадгалж чадсангүй')
-          }
-          tone="destructive"
-        >
-          {text()}
-          <Show when={conflict()}>
-            <span class="mt-1 block">Дахин ачаалбал таны хадгалаагүй өөрчлөлт арилна.</span>
-          </Show>
-        </InlineAlert>
-      )}
-    </Show>
-  )
-}
+import { AdminSwitch } from '../components/foundation'
+import { updateCatalogProductCache } from './cache'
+import {
+  CatalogFailure,
+  mutationFailure,
+  mutationTransportError,
+  validationMessages,
+} from './errors'
+import type { CatalogRequests } from './query-options'
+import { catalogMutation } from './query-options'
 
 const productValues = (product: AdminCatalogProductDetail): AdminProductUpdate => ({
   expectedUpdatedAt: product.updatedAt,
@@ -111,17 +62,14 @@ type ProductEditorProps = {
   mainAfter: JSX.Element
   lifecycleBlocked: boolean
   railAfter: (dirty: boolean) => JSX.Element
-  onSave: (
-    input: AdminProductUpdate,
-  ) => Promise<Result<AdminCatalogProductDetail, AdminCatalogError>>
+  requests: CatalogRequests
   onDirtyChange: (dirty: boolean) => void
-  onProduct: (product: AdminCatalogProductDetail) => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
 }
 
 export function ProductEditor(props: ProductEditorProps) {
-  const [failure, setFailure] = createSignal<AdminCatalogError>()
-  const [requestError, setRequestError] = createSignal<string>()
+  const queryClient = useQueryClient()
+  const updateMutation = useMutation(() => catalogMutation.updateProduct(props.requests))
   let baseline = productValues(props.product)
   const form = createForm(() => ({
     defaultValues: baseline,
@@ -130,25 +78,21 @@ export function ProductEditor(props: ProductEditorProps) {
       onSubmit: toStandardSchema(adminProductUpdateSchema),
     },
     onSubmit: async ({ value }) => {
-      setFailure()
-      setRequestError()
-      try {
-        const result = await props.onSave(value)
-        result.match({
-          ok: product => {
-            baseline = productValues(product)
-            form.reset(baseline)
-            props.onProduct(product)
-          },
-          err: error => setFailure(error),
-        })
-      } catch (error) {
-        setRequestError(transportMessage(error))
-      }
+      updateMutation.reset()
+      const result = await updateMutation
+        .mutateAsync({ productId: props.product.id, input: value })
+        .catch(() => undefined)
+      if (!result?.isOk()) return
+
+      baseline = productValues(result.value)
+      form.reset(baseline)
+      await updateCatalogProductCache(queryClient, result.value)
+      toast.success('Барааны өөрчлөлтийг хадгаллаа.')
     },
   }))
+  const dirty = form.useSelector(state => state.isDirty)
 
-  createEffect(() => props.onDirtyChange(form.state.isDirty))
+  createEffect(() => props.onDirtyChange(dirty()))
   onCleanup(() => props.onDirtyChange(false))
 
   createEffect(
@@ -156,6 +100,11 @@ export function ProductEditor(props: ProductEditorProps) {
       () => props.product,
       product => {
         const current = productValues(product)
+        if (!dirty()) {
+          baseline = current
+          form.reset(current)
+          return
+        }
         if (!sameEditableProduct(current, baseline)) return
         baseline = current
         form.setFieldValue('expectedUpdatedAt', current.expectedUpdatedAt, {
@@ -170,8 +119,7 @@ export function ProductEditor(props: ProductEditorProps) {
   const reload = async () => {
     const product = await props.onReload()
     if (!product) return
-    setFailure()
-    setRequestError()
+    updateMutation.reset()
     baseline = productValues(product)
     form.reset(baseline)
   }
@@ -389,7 +337,7 @@ export function ProductEditor(props: ProductEditorProps) {
                           <FieldLabel for={`${props.product.id}-featured`}>Онцлох бараа</FieldLabel>
                           <FieldDescription>Онцлох хэсэгт харуулна.</FieldDescription>
                         </div>
-                        <Switch
+                        <AdminSwitch
                           checked={field().state.value}
                           id={`${props.product.id}-featured`}
                           onChange={checked => field().handleChange(checked)}
@@ -402,9 +350,9 @@ export function ProductEditor(props: ProductEditorProps) {
             </details>
 
             <CatalogFailure
-              failure={failure()}
+              failure={mutationFailure(updateMutation)}
               onReload={() => void reload()}
-              transportError={requestError()}
+              transportError={mutationTransportError(updateMutation)}
             />
 
             <form.Subscribe
@@ -455,115 +403,5 @@ export function ProductEditor(props: ProductEditorProps) {
         <div class="min-w-0 lg:col-start-1">{props.mainAfter}</div>
       </div>
     </form>
-  )
-}
-
-type OptionRowsProps = {
-  value: Record<string, string>
-  onChange: (value: Record<string, string>) => void
-  disabled?: boolean
-}
-
-export function OptionRows(props: OptionRowsProps) {
-  const entries = () => Object.entries(props.value)
-  const [keyErrors, setKeyErrors] = createSignal<Record<string, string>>({})
-  const addOption = () => {
-    let index = 1
-    let key = 'Сонголт'
-    while (key in props.value) {
-      index += 1
-      key = `Сонголт ${index}`
-    }
-    props.onChange({ ...props.value, [key]: '' })
-  }
-  const updateKey = (oldKey: string, key: string) => {
-    if (!key) {
-      setKeyErrors(errors => ({ ...errors, [oldKey]: 'Сонголтын нэрийг оруулна уу.' }))
-      return false
-    }
-    if (key !== oldKey && key in props.value) {
-      setKeyErrors(errors => ({ ...errors, [oldKey]: 'Сонголтын нэр давхардаж болохгүй.' }))
-      return false
-    }
-    setKeyErrors(errors =>
-      Object.fromEntries(Object.entries(errors).filter(([name]) => name !== oldKey)),
-    )
-    if (key === oldKey) return true
-    props.onChange(
-      Object.fromEntries(entries().map(([name, value]) => [name === oldKey ? key : name, value])),
-    )
-    return true
-  }
-
-  return (
-    <div class="space-y-3">
-      <Show
-        when={entries().length > 0}
-        fallback={
-          <p class="text-sm text-muted-foreground">Сонголтгүй бол үндсэн хувилбарыг ашиглана.</p>
-        }
-      >
-        <For each={entries()}>
-          {([name, value]) => (
-            <div class="grid gap-2 border-b pb-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start">
-              <div>
-                <Input
-                  aria-invalid={Boolean(keyErrors()[name])}
-                  aria-label="Сонголтын нэр"
-                  class="min-h-12! text-base! md:h-8! md:text-sm!"
-                  disabled={props.disabled}
-                  value={name}
-                  onChange={event => {
-                    if (!updateKey(name, event.currentTarget.value.trim()))
-                      event.currentTarget.value = name
-                  }}
-                />
-                <Show when={keyErrors()[name]}>
-                  {message => (
-                    <p class="mt-1 text-sm text-destructive" role="alert">
-                      {message()}
-                    </p>
-                  )}
-                </Show>
-              </div>
-              <Input
-                aria-label={`${name} утга`}
-                class="min-h-12! text-base! md:h-8! md:text-sm!"
-                disabled={props.disabled}
-                placeholder="Утга"
-                value={value}
-                onInput={event =>
-                  props.onChange({ ...props.value, [name]: event.currentTarget.value })
-                }
-              />
-              <Button
-                aria-label={`${name} сонголтыг хасах`}
-                class="min-h-11! md:h-8!"
-                disabled={props.disabled}
-                onClick={() => {
-                  setKeyErrors(errors =>
-                    Object.fromEntries(Object.entries(errors).filter(([key]) => key !== name)),
-                  )
-                  props.onChange(Object.fromEntries(entries().filter(([key]) => key !== name)))
-                }}
-                type="button"
-                variant="ghost"
-              >
-                Хасах
-              </Button>
-            </div>
-          )}
-        </For>
-      </Show>
-      <Button
-        class="min-h-11! md:h-8!"
-        disabled={props.disabled || entries().length >= 20}
-        onClick={addOption}
-        type="button"
-        variant="outline"
-      >
-        Сонголт нэмэх
-      </Button>
-    </div>
   )
 }
