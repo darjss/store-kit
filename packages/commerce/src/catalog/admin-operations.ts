@@ -28,6 +28,7 @@ import { database } from '@store-kit/db'
 import { createId } from '@store-kit/db/ids'
 import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
+import { match } from 'dismatch'
 
 type AdminProductRecord = NonNullable<
   Awaited<ReturnType<typeof database.query.catalog.findAdminProduct>>
@@ -437,6 +438,18 @@ const cleanupMedia = async (
   return media.some(item => item.referenced) ? 'retained-for-orders' : 'complete'
 }
 
+const productDeleteOutcome = (
+  write: Awaited<ReturnType<typeof database.query.catalog.deleteAdminProduct>>,
+  expectedUpdatedAt: number,
+) => {
+  if (write.deleted) return { type: 'deleted' as const, media: write.media }
+  if (write.blocked) return { type: 'blocked' as const }
+  if (!write.persisted) return { type: 'not-found' as const }
+  if (write.persisted.updatedAt !== expectedUpdatedAt) return { type: 'conflict' as const }
+  if (write.persisted.status !== 'archived') return { type: 'must-be-archived' as const }
+  return { type: 'conflict' as const }
+}
+
 export const deleteAdminCatalogProduct = async (
   productId: string,
   input: AdminExpectedProductVersion,
@@ -445,28 +458,25 @@ export const deleteAdminCatalogProduct = async (
     productId,
     expectedUpdatedAt: input.expectedUpdatedAt,
   })
-  if (write.deleted) {
-    const outcome: AdminProductDeleteOutcome = {
-      productId,
-      mediaCleanup: await cleanupMedia(write.media),
-    }
-    return Result.ok<AdminProductDeleteOutcome, AdminCatalogError>(outcome)
-  }
-  if (write.blocked)
-    return Result.err<AdminProductDeleteOutcome, AdminCatalogError>(
-      catalogDeletionBlocked(productId),
-    )
-  if (!write.persisted)
-    return Result.err<AdminProductDeleteOutcome, AdminCatalogError>(productNotFound(productId))
-  if (write.persisted.updatedAt !== input.expectedUpdatedAt)
-    return Result.err<AdminProductDeleteOutcome, AdminCatalogError>(catalogConflict(productId))
-  if (write.persisted.status !== 'archived')
-    return Result.err<AdminProductDeleteOutcome, AdminCatalogError>({
-      _tag: 'ProductMustBeArchived',
-      productId,
-      message: 'Archive the product before deleting it permanently.',
-    })
-  return Result.err<AdminProductDeleteOutcome, AdminCatalogError>(catalogConflict(productId))
+  return match(productDeleteOutcome(write, input.expectedUpdatedAt))({
+    deleted: async ({ media }) =>
+      Result.ok<AdminProductDeleteOutcome, AdminCatalogError>({
+        productId,
+        mediaCleanup: await cleanupMedia(media),
+      }),
+    blocked: () =>
+      Result.err<AdminProductDeleteOutcome, AdminCatalogError>(catalogDeletionBlocked(productId)),
+    'not-found': () =>
+      Result.err<AdminProductDeleteOutcome, AdminCatalogError>(productNotFound(productId)),
+    conflict: () =>
+      Result.err<AdminProductDeleteOutcome, AdminCatalogError>(catalogConflict(productId)),
+    'must-be-archived': () =>
+      Result.err<AdminProductDeleteOutcome, AdminCatalogError>({
+        _tag: 'ProductMustBeArchived',
+        productId,
+        message: 'Archive the product before deleting it permanently.',
+      }),
+  })
 }
 
 export const createAdminCatalogVariant = async (productId: string, input: AdminVariantCreate) => {
@@ -497,44 +507,56 @@ export const createAdminCatalogVariant = async (productId: string, input: AdminV
   )
 }
 
-const classifyVariantWrite = (
-  productId: string,
+const variantWriteOutcome = (
   variantId: string,
   expectedUpdatedAt: number,
   write: Awaited<ReturnType<typeof database.query.catalog.updateAdminVariant>>,
   nextActive?: boolean,
 ) => {
-  if (!write.persisted)
-    return Result.err<AdminCatalogProductDetail, AdminCatalogError>(productNotFound(productId))
+  if (!write.persisted) return { type: 'product-not-found' as const }
   const variant = write.persisted.variants.find(candidate => candidate.id === variantId)
-  if (!variant)
-    return Result.err<AdminCatalogProductDetail, AdminCatalogError>(
-      variantNotFound(productId, variantId),
-    )
+  if (!variant) return { type: 'variant-not-found' as const }
   if (variant.updatedAt !== expectedUpdatedAt && !write.updated)
-    return Result.err<AdminCatalogProductDetail, AdminCatalogError>(
-      catalogConflict(productId, variantId),
-    )
+    return { type: 'conflict' as const }
   if (
     nextActive === false &&
     variant.active &&
     write.persisted.status === 'active' &&
     write.persisted.variants.filter(candidate => candidate.active).length === 1
   )
-    return Result.err<AdminCatalogProductDetail, AdminCatalogError>({
-      _tag: 'LastActiveVariantBlocked',
-      productId,
-      variantId,
-      message: 'An active product must retain at least one active variant.',
-    })
-  if (!write.updated)
-    return Result.err<AdminCatalogProductDetail, AdminCatalogError>(
-      catalogConflict(productId, variantId),
-    )
-  return Result.ok<AdminCatalogProductDetail, AdminCatalogError>(
-    toAdminProductDetail(write.persisted),
-  )
+    return { type: 'last-active-variant' as const }
+  if (!write.updated) return { type: 'conflict' as const }
+  return { type: 'updated' as const, product: write.persisted }
 }
+
+const classifyVariantWrite = (
+  productId: string,
+  variantId: string,
+  expectedUpdatedAt: number,
+  write: Awaited<ReturnType<typeof database.query.catalog.updateAdminVariant>>,
+  nextActive?: boolean,
+) =>
+  match(variantWriteOutcome(variantId, expectedUpdatedAt, write, nextActive))({
+    'product-not-found': () =>
+      Result.err<AdminCatalogProductDetail, AdminCatalogError>(productNotFound(productId)),
+    'variant-not-found': () =>
+      Result.err<AdminCatalogProductDetail, AdminCatalogError>(
+        variantNotFound(productId, variantId),
+      ),
+    conflict: () =>
+      Result.err<AdminCatalogProductDetail, AdminCatalogError>(
+        catalogConflict(productId, variantId),
+      ),
+    'last-active-variant': () =>
+      Result.err<AdminCatalogProductDetail, AdminCatalogError>({
+        _tag: 'LastActiveVariantBlocked',
+        productId,
+        variantId,
+        message: 'An active product must retain at least one active variant.',
+      }),
+    updated: ({ product }) =>
+      Result.ok<AdminCatalogProductDetail, AdminCatalogError>(toAdminProductDetail(product)),
+  })
 
 export const updateAdminCatalogVariant = async (
   productId: string,
