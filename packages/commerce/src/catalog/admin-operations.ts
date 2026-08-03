@@ -29,6 +29,7 @@ import { createId } from '@store-kit/db/ids'
 import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
 import { match } from 'dismatch'
+import { matchAsync } from 'dismatch/async'
 
 type AdminProductRecord = NonNullable<
   Awaited<ReturnType<typeof database.query.catalog.findAdminProduct>>
@@ -458,17 +459,19 @@ export const deleteAdminCatalogProduct = async (
     productId,
     expectedUpdatedAt: input.expectedUpdatedAt,
   })
-  return match(productDeleteOutcome(write, input.expectedUpdatedAt))({
-    deleted: async ({ media }) =>
+  return matchAsync(productDeleteOutcome(write, input.expectedUpdatedAt))<
+    Result<AdminProductDeleteOutcome, AdminCatalogError>
+  >({
+    'deleted': async ({ media }) =>
       Result.ok<AdminProductDeleteOutcome, AdminCatalogError>({
         productId,
         mediaCleanup: await cleanupMedia(media),
       }),
-    blocked: () =>
+    'blocked': () =>
       Result.err<AdminProductDeleteOutcome, AdminCatalogError>(catalogDeletionBlocked(productId)),
     'not-found': () =>
       Result.err<AdminProductDeleteOutcome, AdminCatalogError>(productNotFound(productId)),
-    conflict: () =>
+    'conflict': () =>
       Result.err<AdminProductDeleteOutcome, AdminCatalogError>(catalogConflict(productId)),
     'must-be-archived': () =>
       Result.err<AdminProductDeleteOutcome, AdminCatalogError>({
@@ -536,14 +539,16 @@ const classifyVariantWrite = (
   write: Awaited<ReturnType<typeof database.query.catalog.updateAdminVariant>>,
   nextActive?: boolean,
 ) =>
-  match(variantWriteOutcome(variantId, expectedUpdatedAt, write, nextActive))({
+  match(variantWriteOutcome(variantId, expectedUpdatedAt, write, nextActive))<
+    Result<AdminCatalogProductDetail, AdminCatalogError>
+  >({
     'product-not-found': () =>
       Result.err<AdminCatalogProductDetail, AdminCatalogError>(productNotFound(productId)),
     'variant-not-found': () =>
       Result.err<AdminCatalogProductDetail, AdminCatalogError>(
         variantNotFound(productId, variantId),
       ),
-    conflict: () =>
+    'conflict': () =>
       Result.err<AdminCatalogProductDetail, AdminCatalogError>(
         catalogConflict(productId, variantId),
       ),
@@ -554,7 +559,7 @@ const classifyVariantWrite = (
         variantId,
         message: 'An active product must retain at least one active variant.',
       }),
-    updated: ({ product }) =>
+    'updated': ({ product }) =>
       Result.ok<AdminCatalogProductDetail, AdminCatalogError>(toAdminProductDetail(product)),
   })
 
