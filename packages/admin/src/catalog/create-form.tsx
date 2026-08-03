@@ -29,7 +29,6 @@ import {
   mutationTransportError,
   validationMessages,
 } from './errors'
-import type { CatalogRequests } from './query-options'
 import { catalogMutation } from './query-options'
 
 const nameHash = (name: string) => {
@@ -90,15 +89,14 @@ export const createProductFormState = (onSubmit: (value: AdminProductCreate) => 
 export type ProductCreateForm = ReturnType<typeof createProductFormState>
 
 type CreateProductFormProps = {
-  requests: CatalogRequests
   selectors: AdminCatalogSelectors
   onCreated: (productId: string) => void
 }
 
 export function CreateProductForm(props: CreateProductFormProps) {
   const queryClient = useQueryClient()
-  const createMutation = useMutation(() => catalogMutation.createProduct(props.requests))
-  const uploadMutation = useMutation(() => catalogMutation.uploadImage(props.requests))
+  const createMutation = useMutation(() => catalogMutation.createProduct())
+  const uploadMutation = useMutation(() => catalogMutation.uploadImage())
   const imageForm = createProductImageForm()
   const form = createProductFormState(async value => {
     createMutation.reset()

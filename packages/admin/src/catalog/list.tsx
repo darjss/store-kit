@@ -22,7 +22,6 @@ import { InlineAlert, PageHeader, RetryState, TableSkeleton } from '../component
 import { useQueryResult } from '../query-options/result'
 import { CatalogMobileList } from './list-mobile'
 import { CatalogTable } from './list-table'
-import type { CatalogRequests } from './query-options'
 import { catalogQuery } from './query-options'
 
 const productStatusLabel = (status: 'draft' | 'active' | 'archived') => {
@@ -38,14 +37,13 @@ export type CatalogListSearch = AdminCatalogProductListFilters & {
 }
 
 type CatalogListPageProps = {
-  requests: CatalogRequests
   search: CatalogListSearch
   onSearchChange: (search: CatalogListSearch) => void
 }
 
 export function CatalogListPage(props: CatalogListPageProps) {
   const navigate = useNavigate()
-  const query = useQueryResult(() => catalogQuery.list(props.requests, props.search))
+  const query = useQueryResult(() => catalogQuery.list(props.search))
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminCatalogError | undefined>({ ok: () => undefined, err: error => error })

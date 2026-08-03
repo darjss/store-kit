@@ -8,12 +8,10 @@ import { updateCatalogProductCache } from './cache'
 import { CatalogFailure, mutationFailure, mutationTransportError } from './errors'
 import { GalleryImageEditor } from './gallery-image-editor'
 import { GalleryUpload } from './gallery-upload'
-import type { CatalogRequests } from './query-options'
 import { catalogMutation } from './query-options'
 
 type ProductGalleryProps = {
   product: AdminCatalogProductDetail
-  requests: CatalogRequests
   onCleanupWarning: (message: string) => void
   onDirtyChange: (dirty: boolean) => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
@@ -21,7 +19,7 @@ type ProductGalleryProps = {
 
 export function ProductGallery(props: ProductGalleryProps) {
   const queryClient = useQueryClient()
-  const reorderMutation = useMutation(() => catalogMutation.reorderImages(props.requests))
+  const reorderMutation = useMutation(() => catalogMutation.reorderImages())
   const [uploadDirty, setUploadDirty] = createSignal(false)
   const [dirtyImageIds, setDirtyImageIds] = createSignal<string[]>([])
 
@@ -79,12 +77,7 @@ export function ProductGallery(props: ProductGalleryProps) {
         </span>
       </div>
 
-      <GalleryUpload
-        product={props.product}
-        requests={props.requests}
-        onDirtyChange={setUploadDirty}
-        onReload={reload}
-      />
+      <GalleryUpload product={props.product} onDirtyChange={setUploadDirty} onReload={reload} />
 
       <Show when={reorderMutation.isError || reorderMutation.data?.isErr()}>
         <div class="mt-3">
@@ -118,7 +111,6 @@ export function ProductGallery(props: ProductGalleryProps) {
                     pendingMove={reorderMutation.isPending}
                     productId={props.product.id}
                     productUpdatedAt={props.product.updatedAt}
-                    requests={props.requests}
                     variants={props.product.variants}
                     onCleanupWarning={props.onCleanupWarning}
                     onDirtyChange={dirty => setImageDirty(imageId, dirty)}

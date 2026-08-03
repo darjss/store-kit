@@ -4,7 +4,6 @@ import type { AnyRootRoute } from '@tanstack/solid-router'
 import { OrderDetailPage } from './detail'
 import type { OrderListSearch } from './list'
 import { OrderListPage } from './list'
-import type { OrderRequests } from './query-options'
 
 const integerSearchValue = (value: unknown, fallback: number, minimum: number, maximum: number) => {
   const candidate =
@@ -41,7 +40,7 @@ export const normalizeOrderSearch = (search: Record<string, unknown>): OrderList
   }
 }
 
-export const createOrderRoutes = (parentRoute: AnyRootRoute, requests: OrderRequests) => {
+export const createOrderRoutes = (parentRoute: AnyRootRoute) => {
   const orderListRoute = createRoute({
     getParentRoute: () => parentRoute,
     path: '/orders',
@@ -61,7 +60,6 @@ export const createOrderRoutes = (parentRoute: AnyRootRoute, requests: OrderRequ
 
     return (
       <OrderListPage
-        requests={requests}
         search={search()}
         onSearchChange={nextSearch =>
           void navigate({ to: '/orders', search: nextSearch, replace: true })
@@ -75,11 +73,7 @@ export const createOrderRoutes = (parentRoute: AnyRootRoute, requests: OrderRequ
     const navigate = useNavigate()
 
     return (
-      <OrderDetailPage
-        orderId={params().orderId}
-        requests={requests}
-        onBack={() => void navigate({ to: '/orders' })}
-      />
+      <OrderDetailPage orderId={params().orderId} onBack={() => void navigate({ to: '/orders' })} />
     )
   }
 

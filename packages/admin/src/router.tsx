@@ -5,19 +5,16 @@ import {
   Outlet,
   RouterContextProvider,
   createRootRoute,
+  createRoute,
   createRouter,
 } from '@tanstack/solid-router'
 import type { ParentProps } from 'solid-js'
 
-import type { CatalogRequests } from './catalog/query-options'
 import { createCatalogRoutes } from './catalog/routes'
-import { api } from './client'
 import { AdminEmptyState } from './components/foundation'
-import type { OrderRequests } from './orders/query-options'
 import { createOrderRoutes } from './orders/routes'
-import { createDashboardRoute } from './routes/dashboard'
-import type { SettingsRequests } from './settings/query-options'
-import { createSettingsRoute } from './settings/routes'
+import { DashboardPage } from './pages/DashboardPage'
+import { SettingsPage } from './settings/page'
 
 const rootRoute = createRootRoute({
   component: Outlet,
@@ -36,57 +33,17 @@ const rootRoute = createRootRoute({
   ),
 })
 
-const catalogApi = api.api.admin.catalog
-
-const catalogRequests: CatalogRequests = {
-  listProducts: filters => catalogApi.products.get({ query: filters }),
-  listSelectors: () => catalogApi.selectors.get(),
-  getProduct: productId => catalogApi.products({ productId }).get(),
-  createProduct: input => catalogApi.products.post(input),
-  updateProduct: (productId, input) => catalogApi.products({ productId }).put(input),
-  archiveProduct: (productId, input) => catalogApi.products({ productId }).archive.post(input),
-  restoreProduct: (productId, input) => catalogApi.products({ productId }).restore.post(input),
-  deleteProduct: (productId, input) => catalogApi.products({ productId }).delete(input),
-  createVariant: (productId, input) => catalogApi.products({ productId }).variants.post(input),
-  updateVariant: (productId, variantId, input) =>
-    catalogApi.products({ productId }).variants({ variantId }).put(input),
-  updateVariantActivation: (productId, variantId, input) =>
-    catalogApi.products({ productId }).variants({ variantId }).activation.patch(input),
-  updateStock: (productId, variantId, input) =>
-    catalogApi.products({ productId }).variants({ variantId }).stock.patch(input),
-  deleteVariant: (productId, variantId, input) =>
-    catalogApi.products({ productId }).variants({ variantId }).delete(input),
-  uploadImage: (productId, input) => catalogApi.products({ productId }).images.post(input),
-  updateImage: (productId, imageId, input) =>
-    catalogApi.products({ productId }).images({ imageId }).put(input),
-  reorderImages: (productId, input) => catalogApi.products({ productId }).images.order.put(input),
-  deleteImage: (productId, imageId, input) =>
-    catalogApi.products({ productId }).images({ imageId }).delete(input),
-}
-
-const orderRequests: OrderRequests = {
-  listOrders: filters => api.api.admin.orders.get({ query: filters }),
-  getOrder: orderId => api.api.admin.orders({ orderId }).get(),
-  updateStatus: (orderId, input) => api.api.admin.orders({ orderId }).status.patch(input),
-}
-
-const settingsRequests: SettingsRequests = {
-  getStore: () => api.api.admin.settings.store.get(),
-  updateStore: input => api.api.admin.settings.store.put(input),
-}
-
-const dashboardRoute = createDashboardRoute(() => rootRoute, {
-  request: () => api.api.admin.dashboard.get(),
-  activeCatalogRequest: () =>
-    catalogApi.products.get({ query: { limit: 1, offset: 0, status: 'active' } }),
-  draftCatalogRequest: () =>
-    catalogApi.products.get({ query: { limit: 1, offset: 0, status: 'draft' } }),
-})
-const catalogRoutes = createCatalogRoutes(rootRoute, catalogRequests)
-const orderRoutes = createOrderRoutes(rootRoute, orderRequests)
-const settingsRoute = createSettingsRoute({
+const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
-  requests: settingsRequests,
+  path: '/',
+  component: DashboardPage,
+})
+const catalogRoutes = createCatalogRoutes(rootRoute)
+const orderRoutes = createOrderRoutes(rootRoute)
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: SettingsPage,
 })
 
 const routeTree = rootRoute.addChildren([

@@ -17,19 +17,17 @@ import { toast } from 'solid-sonner'
 import { updateCatalogProductCache } from './cache'
 import { CatalogFailure, mutationFailure, mutationTransportError } from './errors'
 import { ImageFilePicker } from './image-file-picker'
-import type { CatalogRequests } from './query-options'
 import { catalogMutation } from './query-options'
 
 type GalleryUploadProps = {
   product: AdminCatalogProductDetail
-  requests: CatalogRequests
   onDirtyChange: (dirty: boolean) => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
 }
 
 export function GalleryUpload(props: GalleryUploadProps) {
   const queryClient = useQueryClient()
-  const uploadMutation = useMutation(() => catalogMutation.uploadImage(props.requests))
+  const uploadMutation = useMutation(() => catalogMutation.uploadImage())
   let fileInput: HTMLInputElement | undefined
   const form = createForm(() => ({
     defaultValues: {

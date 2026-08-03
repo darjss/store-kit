@@ -30,7 +30,6 @@ import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
 import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
 import { formatMnt } from '../format'
 import { useQueryResult } from '../query-options/result'
-import type { OrderRequests } from './query-options'
 import { orderQuery } from './query-options'
 import { OrderStatusBadge, PaymentStatusBadge, paymentMethodLabel } from './status'
 
@@ -266,14 +265,13 @@ function MobileOrderList(props: { orders: AdminOrderListItem[] }) {
 }
 
 type OrderListPageProps = {
-  requests: OrderRequests
   search: OrderListSearch
   onSearchChange: (search: OrderListSearch) => void
 }
 
 export function OrderListPage(props: OrderListPageProps) {
   const navigate = useNavigate()
-  const query = useQueryResult(() => orderQuery.list(props.requests, props.search))
+  const query = useQueryResult(() => orderQuery.list(props.search))
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminOrderError | undefined>({ ok: () => undefined, err: error => error })

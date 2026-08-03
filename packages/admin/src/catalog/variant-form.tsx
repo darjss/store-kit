@@ -40,7 +40,6 @@ import {
   validationMessages,
 } from './errors'
 import { OptionRows } from './options'
-import type { CatalogRequests } from './query-options'
 import { catalogKeys, catalogMutation } from './query-options'
 
 type VariantInput = AdminVariantCreate | AdminVariantUpdate
@@ -71,7 +70,6 @@ const updateValues = (variant: AdminCatalogVariant): AdminVariantUpdate => ({
 
 type VariantFormProps = {
   product: AdminCatalogProductDetail
-  requests: CatalogRequests
   variant?: AdminCatalogVariant
   onClose: () => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
@@ -79,12 +77,10 @@ type VariantFormProps = {
 
 export function VariantForm(props: VariantFormProps) {
   const queryClient = useQueryClient()
-  const createMutation = useMutation(() => catalogMutation.createVariant(props.requests))
-  const updateMutation = useMutation(() => catalogMutation.updateVariant(props.requests))
-  const activationMutation = useMutation(() =>
-    catalogMutation.updateVariantActivation(props.requests),
-  )
-  const deleteMutation = useMutation(() => catalogMutation.deleteVariant(props.requests))
+  const createMutation = useMutation(() => catalogMutation.createVariant())
+  const updateMutation = useMutation(() => catalogMutation.updateVariant())
+  const activationMutation = useMutation(() => catalogMutation.updateVariantActivation())
+  const deleteMutation = useMutation(() => catalogMutation.deleteVariant())
   const [deleteOpen, setDeleteOpen] = createSignal(false)
   const resetMutations = () => {
     createMutation.reset()

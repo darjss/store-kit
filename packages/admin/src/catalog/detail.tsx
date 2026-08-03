@@ -23,7 +23,6 @@ import { ArchivedProduct, DeletedProductState } from './archived-product'
 import { ProductGallery } from './gallery'
 import { ProductEditor } from './product-editor'
 import { LifecycleActions } from './product-lifecycle'
-import type { CatalogRequests } from './query-options'
 import { catalogQuery } from './query-options'
 import { VariantInspector } from './variant-inspector'
 import { VariantTable } from './variant-table'
@@ -43,15 +42,14 @@ const productStatusLabel = (status: AdminCatalogProductDetail['status']) =>
 
 type CatalogDetailPageProps = {
   productId: string
-  requests: CatalogRequests
   variantSelection: string | undefined
   onBack: () => void
   onVariantSelectionChange: (selection: string | undefined) => void
 }
 
 export function CatalogDetailPage(props: CatalogDetailPageProps) {
-  const query = useQueryResult(() => catalogQuery.detail(props.requests, props.productId))
-  const selectorsQuery = useQueryResult(() => catalogQuery.selectors(props.requests))
+  const query = useQueryResult(() => catalogQuery.detail(props.productId))
+  const selectorsQuery = useQueryResult(() => catalogQuery.selectors())
   const [deletedCleanup, setDeletedCleanup] = createSignal<MediaCleanup>()
   const [mediaWarning, setMediaWarning] = createSignal<string>()
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
@@ -143,7 +141,6 @@ export function CatalogDetailPage(props: CatalogDetailPageProps) {
                       <CatalogDetailContent
                         mediaWarning={mediaWarning()}
                         product={product()}
-                        requests={props.requests}
                         selectors={catalogSelectors()}
                         variantSelection={props.variantSelection}
                         onCleanupWarning={message => setMediaWarning(message)}
@@ -193,7 +190,6 @@ function ProductDetailSkeleton() {
 type CatalogDetailContentProps = {
   product: AdminCatalogProductDetail
   selectors: AdminCatalogSelectors
-  requests: CatalogRequests
   mediaWarning: string | undefined
   variantSelection: string | undefined
   onCleanupWarning: (message: string) => void
@@ -234,7 +230,6 @@ function CatalogDetailContent(props: CatalogDetailContentProps) {
           fallback={
             <ArchivedProduct
               product={props.product}
-              requests={props.requests}
               onDeleted={props.onDeleted}
               onReload={props.onReload}
             />
@@ -246,7 +241,6 @@ function CatalogDetailContent(props: CatalogDetailContentProps) {
               <>
                 <ProductGallery
                   product={props.product}
-                  requests={props.requests}
                   onCleanupWarning={props.onCleanupWarning}
                   onDirtyChange={setGalleryDirty}
                   onReload={props.onReload}
@@ -259,19 +253,16 @@ function CatalogDetailContent(props: CatalogDetailContentProps) {
               <LifecycleActions
                 disabled={dirty}
                 product={props.product}
-                requests={props.requests}
                 onDeleted={props.onDeleted}
                 onReload={props.onReload}
               />
             )}
-            requests={props.requests}
             selectors={props.selectors}
             onDirtyChange={setProductDirty}
             onReload={props.onReload}
           />
           <VariantInspector
             product={props.product}
-            requests={props.requests}
             selection={props.variantSelection}
             onClose={() => props.onVariantSelectionChange(undefined)}
             onReload={props.onReload}

@@ -22,12 +22,10 @@ import { toast } from 'solid-sonner'
 
 import { updateCatalogProductCache } from './cache'
 import { CatalogFailure, mutationFailure, mutationTransportError } from './errors'
-import type { CatalogRequests } from './query-options'
 import { catalogKeys, catalogMutation } from './query-options'
 
 export type LifecycleActionsProps = {
   product: AdminCatalogProductDetail
-  requests: CatalogRequests
   disabled?: boolean
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
   onDeleted: (cleanup: MediaCleanup) => void
@@ -35,9 +33,9 @@ export type LifecycleActionsProps = {
 
 export function LifecycleActions(props: LifecycleActionsProps) {
   const queryClient = useQueryClient()
-  const archiveMutation = useMutation(() => catalogMutation.archiveProduct(props.requests))
-  const restoreMutation = useMutation(() => catalogMutation.restoreProduct(props.requests))
-  const deleteMutation = useMutation(() => catalogMutation.deleteProduct(props.requests))
+  const archiveMutation = useMutation(() => catalogMutation.archiveProduct())
+  const restoreMutation = useMutation(() => catalogMutation.restoreProduct())
+  const deleteMutation = useMutation(() => catalogMutation.deleteProduct())
   const [deleteOpen, setDeleteOpen] = createSignal(false)
   const confirmationForm = createForm(() => ({
     defaultValues: { confirmation: '' },

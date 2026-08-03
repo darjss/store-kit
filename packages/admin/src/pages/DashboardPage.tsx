@@ -9,14 +9,11 @@ import { Skeleton } from '@store-kit/ui'
 import { Link } from '@tanstack/solid-router'
 import { For, Match, Show, Switch } from 'solid-js'
 
+import { catalogQuery } from '../catalog/query-options'
 import { InlineAlert, PageHeader, RetryState, StatusBadge } from '../components/foundation'
 import { formatMnt } from '../format'
 import { orderStatusDisplay, paymentStatusDisplay } from '../orders/status'
 import { dashboardQuery } from '../query-options/dashboard'
-import type {
-  AdminDashboardCatalogRequest,
-  AdminDashboardRequest,
-} from '../query-options/dashboard'
 import { useQueryResult } from '../query-options/result'
 
 const dateFormatter = new Intl.DateTimeFormat('mn-MN', {
@@ -410,19 +407,13 @@ function DashboardContent(props: DashboardContentProps) {
   )
 }
 
-export type DashboardPageProps = {
-  request: AdminDashboardRequest
-  activeCatalogRequest: AdminDashboardCatalogRequest
-  draftCatalogRequest: AdminDashboardCatalogRequest
-}
-
-export function DashboardPage(props: DashboardPageProps) {
-  const query = useQueryResult(() => dashboardQuery.overview(props.request))
+export function DashboardPage() {
+  const query = useQueryResult(() => dashboardQuery.overview())
   const activeCatalogQuery = useQueryResult(() =>
-    dashboardQuery.catalogReadiness(props.activeCatalogRequest, 'active'),
+    catalogQuery.list({ limit: 1, offset: 0, status: 'active' }),
   )
   const draftCatalogQuery = useQueryResult(() =>
-    dashboardQuery.catalogReadiness(props.draftCatalogRequest, 'draft'),
+    catalogQuery.list({ limit: 1, offset: 0, status: 'draft' }),
   )
   const activeCatalog = () =>
     activeCatalogQuery.data?.match<AdminCatalogProductList | undefined>({

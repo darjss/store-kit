@@ -30,7 +30,6 @@ import {
 } from '../components/foundation'
 import { formatMnt } from '../format'
 import { useQueryResult } from '../query-options/result'
-import type { OrderRequests } from './query-options'
 import { orderKeys, orderMutation, orderQuery } from './query-options'
 import {
   OrderStatusBadge,
@@ -315,14 +314,13 @@ function DetailContent(props: DetailContentProps) {
 
 type OrderDetailPageProps = {
   orderId: string
-  requests: OrderRequests
   onBack: () => void
 }
 
 export function OrderDetailPage(props: OrderDetailPageProps) {
   const queryClient = useQueryClient()
-  const query = useQueryResult(() => orderQuery.detail(props.requests, props.orderId))
-  const updateStatus = useMutation(() => orderMutation.updateStatus(props.requests))
+  const query = useQueryResult(() => orderQuery.detail(props.orderId))
+  const updateStatus = useMutation(() => orderMutation.updateStatus())
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminOrderError | undefined>({ ok: () => undefined, err: error => error })

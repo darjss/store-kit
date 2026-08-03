@@ -6,17 +6,15 @@ import { Show } from 'solid-js'
 import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
 import { useQueryResult } from '../query-options/result'
 import { CreateProductForm } from './create-form'
-import type { CatalogRequests } from './query-options'
 import { catalogQuery } from './query-options'
 
 type CatalogCreatePageProps = {
-  requests: CatalogRequests
   onBack: () => void
   onCreated: (productId: string) => void
 }
 
 export function CatalogCreatePage(props: CatalogCreatePageProps) {
-  const selectorsQuery = useQueryResult(() => catalogQuery.selectors(props.requests))
+  const selectorsQuery = useQueryResult(() => catalogQuery.selectors())
   const selectors = () => selectorsQuery.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     selectorsQuery.data?.match<AdminCatalogError | undefined>({
@@ -74,13 +72,7 @@ export function CatalogCreatePage(props: CatalogCreatePageProps) {
               }
             >
               <Show when={selectors()} keyed>
-                {value => (
-                  <CreateProductForm
-                    onCreated={props.onCreated}
-                    requests={props.requests}
-                    selectors={value}
-                  />
-                )}
+                {value => <CreateProductForm onCreated={props.onCreated} selectors={value} />}
               </Show>
             </Show>
           </Show>

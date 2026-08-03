@@ -6,7 +6,6 @@ import { toast } from 'solid-sonner'
 import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
 import { useQueryResult } from '../query-options/result'
 import { StoreSettingsForm } from './form'
-import type { SettingsRequests } from './query-options'
 import { settingsKeys, settingsMutation, settingsQuery } from './query-options'
 
 function SettingsFormSkeleton() {
@@ -51,14 +50,10 @@ function SettingsFormSkeleton() {
   )
 }
 
-export type SettingsPageProps = {
-  requests: SettingsRequests
-}
-
-export function SettingsPage(props: SettingsPageProps) {
+export function SettingsPage() {
   const queryClient = useQueryClient()
-  const query = useQueryResult(() => settingsQuery.store(props.requests))
-  const mutation = useMutation(() => settingsMutation.updateStore(props.requests))
+  const query = useQueryResult(() => settingsQuery.store())
+  const mutation = useMutation(() => settingsMutation.updateStore())
   const settings = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () => query.data?.match({ ok: () => undefined, err: error => error })
 

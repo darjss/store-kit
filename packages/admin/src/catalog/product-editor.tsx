@@ -31,7 +31,6 @@ import {
   mutationTransportError,
   validationMessages,
 } from './errors'
-import type { CatalogRequests } from './query-options'
 import { catalogMutation } from './query-options'
 
 const productValues = (product: AdminCatalogProductDetail): AdminProductUpdate => ({
@@ -62,14 +61,13 @@ type ProductEditorProps = {
   mainAfter: JSX.Element
   lifecycleBlocked: boolean
   railAfter: (dirty: boolean) => JSX.Element
-  requests: CatalogRequests
   onDirtyChange: (dirty: boolean) => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
 }
 
 export function ProductEditor(props: ProductEditorProps) {
   const queryClient = useQueryClient()
-  const updateMutation = useMutation(() => catalogMutation.updateProduct(props.requests))
+  const updateMutation = useMutation(() => catalogMutation.updateProduct())
   let baseline = productValues(props.product)
   const form = createForm(() => ({
     defaultValues: baseline,

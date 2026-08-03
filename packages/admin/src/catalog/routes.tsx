@@ -5,7 +5,6 @@ import { CatalogCreatePage } from './create'
 import { CatalogDetailPage } from './detail'
 import type { CatalogListSearch } from './list'
 import { CatalogListPage } from './list'
-import type { CatalogRequests } from './query-options'
 
 const integerSearchValue = (value: unknown, fallback: number, minimum: number, maximum: number) => {
   const candidate =
@@ -34,7 +33,25 @@ const normalizeCatalogDetailSearch = (search: Record<string, unknown>) => ({
     typeof search.variant === 'string' && search.variant.trim() ? search.variant.trim() : undefined,
 })
 
-export const createCatalogRoutes = (parentRoute: AnyRootRoute, requests: CatalogRequests) => {
+function CatalogCreateRoute() {
+  const navigate = useNavigate()
+
+  return (
+    <CatalogCreatePage
+      onBack={() => void navigate({ to: '/catalog' })}
+      onCreated={productId =>
+        void navigate({
+          to: '/catalog/$productId',
+          params: { productId },
+          search: { variant: undefined },
+          replace: true,
+        })
+      }
+    />
+  )
+}
+
+export const createCatalogRoutes = (parentRoute: AnyRootRoute) => {
   const catalogListRoute = createRoute({
     getParentRoute: () => parentRoute,
     path: '/catalog',
@@ -61,29 +78,9 @@ export const createCatalogRoutes = (parentRoute: AnyRootRoute, requests: Catalog
 
     return (
       <CatalogListPage
-        requests={requests}
         search={search()}
         onSearchChange={nextSearch =>
           void navigate({ to: '/catalog', search: nextSearch, replace: true })
-        }
-      />
-    )
-  }
-
-  function CatalogCreateRoute() {
-    const navigate = useNavigate()
-
-    return (
-      <CatalogCreatePage
-        requests={requests}
-        onBack={() => void navigate({ to: '/catalog' })}
-        onCreated={productId =>
-          void navigate({
-            to: '/catalog/$productId',
-            params: { productId },
-            search: { variant: undefined },
-            replace: true,
-          })
         }
       />
     )
@@ -97,7 +94,6 @@ export const createCatalogRoutes = (parentRoute: AnyRootRoute, requests: Catalog
     return (
       <CatalogDetailPage
         productId={params().productId}
-        requests={requests}
         variantSelection={search().variant}
         onBack={() => void navigate({ to: '/catalog' })}
         onVariantSelectionChange={variant =>

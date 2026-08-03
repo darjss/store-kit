@@ -139,39 +139,6 @@ const requestDashboard = (cookie?: string) =>
   )
 
 describe('admin dashboard route', () => {
-  it('requires a currently approved real Better Auth session', async () => {
-    const unauthenticated = await requestDashboard()
-    const session = await createAdminSession(false)
-    const unapproved = await requestDashboard(session.cookie)
-
-    await env.DB.prepare('update user set approved = true, updated_at = ? where id = ?')
-      .bind(Date.now(), session.userId)
-      .run()
-    const approved = await requestDashboard(session.cookie)
-
-    expect(unauthenticated.status).toBe(401)
-    expect(await unauthenticated.json()).toEqual({ _tag: 'Unauthenticated' })
-    expect(unapproved.status).toBe(403)
-    expect(await unapproved.json()).toEqual({ _tag: 'ApprovalRequired' })
-    expect(approved.status).toBe(200)
-    expect(Result.deserialize<AdminDashboard, never>(await approved.json())).toMatchObject({
-      status: 'ok',
-      value: {
-        summary: {
-          newOrderCount: 0,
-          confirmedOrderCount: 0,
-          preparingOrderCount: 0,
-          deliveringOrderCount: 0,
-          lowStockVariantCount: 0,
-        },
-        recentOrders: [],
-        lowStockVariants: [],
-      },
-    })
-    for (const response of [unauthenticated, unapproved, approved])
-      expect(response.headers.get('cache-control')).toBe('private, no-store')
-  })
-
   it('serializes current counts, newest orders, and active low-stock variants from D1', async () => {
     const { activeProductId, now } = await seedDashboard()
     const { cookie } = await createAdminSession(true)

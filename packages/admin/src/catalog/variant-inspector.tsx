@@ -13,12 +13,10 @@ import {
 import { Show } from 'solid-js'
 
 import { InlineAlert } from '../components/foundation'
-import type { CatalogRequests } from './query-options'
 import { VariantForm } from './variant-form'
 
 type VariantInspectorProps = {
   product: AdminCatalogProductDetail
-  requests: CatalogRequests
   selection: string | undefined
   onClose: () => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
@@ -62,7 +60,6 @@ export function VariantInspector(props: VariantInspectorProps) {
                 {(value: AdminCatalogVariant) => (
                   <VariantForm
                     product={props.product}
-                    requests={props.requests}
                     variant={value}
                     onClose={props.onClose}
                     onReload={props.onReload}
@@ -73,7 +70,6 @@ export function VariantInspector(props: VariantInspectorProps) {
           >
             <VariantForm
               product={props.product}
-              requests={props.requests}
               onClose={props.onClose}
               onReload={props.onReload}
             />

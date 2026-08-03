@@ -28,7 +28,6 @@ import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
 import { updateCatalogProductCache } from './cache'
 import { CatalogFailure, mutationFailure, mutationTransportError } from './errors'
-import type { CatalogRequests } from './query-options'
 import { catalogMutation } from './query-options'
 
 const cleanupMessage = (cleanup: MediaCleanup) => {
@@ -55,7 +54,6 @@ type GalleryImageEditorProps = {
   pendingMove: boolean
   productId: string
   productUpdatedAt: number
-  requests: CatalogRequests
   onCleanupWarning: (message: string) => void
   onDirtyChange: (dirty: boolean) => void
   onMove: (direction: -1 | 1) => void
@@ -64,8 +62,8 @@ type GalleryImageEditorProps = {
 
 export function GalleryImageEditor(props: GalleryImageEditorProps) {
   const queryClient = useQueryClient()
-  const updateMutation = useMutation(() => catalogMutation.updateImage(props.requests))
-  const deleteMutation = useMutation(() => catalogMutation.deleteImage(props.requests))
+  const updateMutation = useMutation(() => catalogMutation.updateImage())
+  const deleteMutation = useMutation(() => catalogMutation.deleteImage())
   const [removeOpen, setRemoveOpen] = createSignal(false)
   const values = () => ({
     alt: props.image.alt,
