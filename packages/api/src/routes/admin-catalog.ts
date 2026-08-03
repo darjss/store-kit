@@ -1,5 +1,6 @@
 import { commerce } from '@store-kit/commerce'
 import {
+  adminCatalogImageMaxBytes,
   adminCatalogProductListFiltersSchema,
   adminExpectedProductVersionSchema,
   adminProductCreateSchema,
@@ -19,9 +20,24 @@ import { imageIdPattern, productIdPattern, variantIdPattern } from '@store-kit/c
 import { Result } from 'better-result'
 import { t } from 'elysia'
 
-import { contractBody, contractMultipartBody, contractQuery } from '~/typebox-contract'
-
+import { contractBody, contractMultipartBody, contractQuery } from '../typebox-contract'
 import { createApprovedAdminRoutes } from './approved-admin'
+
+const lengthRequired = { _tag: 'LengthRequired' as const }
+const payloadTooLarge = { _tag: 'PayloadTooLarge' as const }
+const maximumImageRequestBytes = adminCatalogImageMaxBytes + 64 * 1024
+const imageUploadPath = /^\/api\/admin\/catalog\/products\/[^/]+\/images$/u
+
+const guardCatalogRequest = (request: Request) => {
+  if (request.method !== 'POST' || !imageUploadPath.test(new URL(request.url).pathname)) return
+
+  const contentLengthHeader = request.headers.get('content-length')
+  const contentLength = Number(contentLengthHeader)
+  if (contentLengthHeader === null || !Number.isSafeInteger(contentLength) || contentLength <= 0)
+    return Response.json(lengthRequired, { status: 411 })
+  if (contentLength > maximumImageRequestBytes)
+    return Response.json(payloadTooLarge, { status: 413 })
+}
 
 const productParams = t.Object(
   { productId: t.String({ pattern: productIdPattern }) },
@@ -44,7 +60,7 @@ const imageParams = t.Object(
   { additionalProperties: false },
 )
 
-export const adminCatalogRoutes = createApprovedAdminRoutes('/catalog')
+export const adminCatalogRoutes = createApprovedAdminRoutes('/catalog', guardCatalogRequest)
   .get('/catalog/selectors', async () =>
     Result.serialize(await commerce.catalog.listAdminSelectors()),
   )

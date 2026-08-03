@@ -29,7 +29,7 @@ writeFileSync(
     'DEPLOYMENT_ENV=development',
     `PUBLIC_APP_URL=${appUrl}`,
     'PUBLIC_MEDIA_BASE_URL=https://browser-media.invalid/',
-    `BETTER_AUTH_SECRETS=1:${authSecret}`,
+    `BETTER_AUTH_SECRET=${authSecret}`,
     'GOOGLE_CLIENT_ID=admin-browser-google-client-id',
     'GOOGLE_CLIENT_SECRET=admin-browser-google-client-secret',
     'QPAY_USERNAME=admin-browser',

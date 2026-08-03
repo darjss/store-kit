@@ -1,63 +1,17 @@
-import { AltArrowLeft, AltArrowRight, GalleryAdd, TrashBinTrash } from '@solar-icons/solid/Linear'
-import type {
-  AdminCatalogError,
-  AdminCatalogImage,
-  AdminCatalogProductDetail,
-  AdminCatalogVariant,
-  MediaCleanup,
-} from '@store-kit/contracts/admin-catalog'
-import {
-  Button,
-  Checkbox,
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Field,
-  FieldDescription,
-  FieldLabel,
-  Input,
-  Spinner,
-} from '@store-kit/ui'
+import type { AdminCatalogProductDetail } from '@store-kit/contracts/admin-catalog'
 import { useMutation, useQueryClient } from '@tanstack/solid-query'
-import { Image } from '@unpic/solid/base'
-import { Result } from 'better-result'
-import { For, Show, createEffect, createSignal, on, onCleanup, untrack } from 'solid-js'
+import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js'
 import { toast } from 'solid-sonner'
-import { generate as cloudflare } from 'unpic/providers/cloudflare'
 
 import { AdminEmptyState } from '../components/foundation'
-import { CatalogFailure, transportMessage } from './forms'
-import { ImageFilePicker } from './image-file-picker'
-import type { CatalogRequests } from './query-options'
-import { catalogKeys, catalogMutation } from './query-options'
-
-const sameVariantIds = (left: string[], right: string[]) =>
-  left.length === right.length && left.every(id => right.includes(id))
-
-const imageDomain = (url: string) => {
-  try {
-    return new URL(url).hostname || undefined
-  } catch {
-    return undefined
-  }
-}
-
-const cleanupMessage = (cleanup: MediaCleanup) => {
-  if (cleanup === 'pending')
-    return 'Барааны бүртгэл устсан боловч зургийн файлыг цэвэрлэх шаардлагатай байна.'
-  if (cleanup === 'retained-for-orders')
-    return 'Өмнөх захиалгад ашигласан тул зургийн файлыг хадгалж үлдээлээ.'
-  return undefined
-}
+import { updateCatalogProductCache } from './cache'
+import { CatalogFailure, mutationFailure, mutationTransportError } from './errors'
+import { GalleryImageEditor } from './gallery-image-editor'
+import { GalleryUpload } from './gallery-upload'
+import { catalogMutation } from './query-options'
 
 type ProductGalleryProps = {
   product: AdminCatalogProductDetail
-  requests: CatalogRequests
-  onProduct: (product: AdminCatalogProductDetail) => void
   onCleanupWarning: (message: string) => void
   onDirtyChange: (dirty: boolean) => void
   onReload: () => Promise<AdminCatalogProductDetail | undefined>
@@ -65,128 +19,17 @@ type ProductGalleryProps = {
 
 export function ProductGallery(props: ProductGalleryProps) {
   const queryClient = useQueryClient()
-  const uploadMutation = useMutation(() => catalogMutation.uploadImage(props.requests))
-  const updateMutation = useMutation(() => catalogMutation.updateImage(props.requests))
-  const reorderMutation = useMutation(() => catalogMutation.reorderImages(props.requests))
-  const deleteMutation = useMutation(() => catalogMutation.deleteImage(props.requests))
-  const [file, setFile] = createSignal<File>()
-  const [alt, setAlt] = createSignal('')
-  const [variantIds, setVariantIds] = createSignal<string[]>([])
-  const [uploadExpectedUpdatedAt, setUploadExpectedUpdatedAt] = createSignal<number>()
+  const reorderMutation = useMutation(() => catalogMutation.reorderImages())
+  const [uploadDirty, setUploadDirty] = createSignal(false)
   const [dirtyImageIds, setDirtyImageIds] = createSignal<string[]>([])
-  const [resetVersion, setResetVersion] = createSignal(0)
-  const [failure, setFailure] = createSignal<AdminCatalogError>()
-  const [requestError, setRequestError] = createSignal<string>()
-  const [reorderingImageId, setReorderingImageId] = createSignal<string>()
-  const [removingImageId, setRemovingImageId] = createSignal<string>()
-  let fileInput: HTMLInputElement | undefined
-
-  const installProduct = (product: AdminCatalogProductDetail) => {
-    queryClient.setQueryData(catalogKeys.detail(product.id), Result.ok(product))
-    props.onProduct(product)
-    void queryClient.invalidateQueries({ queryKey: catalogKeys.lists() })
-    void queryClient.invalidateQueries({ queryKey: catalogKeys.publicProducts })
-    void queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] })
-  }
-
-  const clearUploadDraft = () => {
-    setFile()
-    setAlt('')
-    setVariantIds([])
-    setUploadExpectedUpdatedAt()
-    if (fileInput) fileInput.value = ''
-  }
-
-  const reload = async () => {
-    setFailure()
-    setRequestError()
-    const product = await props.onReload()
-    if (!product) return
-    clearUploadDraft()
-    setResetVersion(version => version + 1)
-  }
-
-  const beginUploadDraft = () =>
-    setUploadExpectedUpdatedAt(current => current ?? props.product.updatedAt)
-
-  const toggleUploadVariant = (variantId: string, checked: boolean) => {
-    beginUploadDraft()
-    setVariantIds(current =>
-      checked ? [...new Set([...current, variantId])] : current.filter(id => id !== variantId),
-    )
-  }
 
   const setImageDirty = (imageId: string, dirty: boolean) =>
     setDirtyImageIds(current =>
       dirty ? [...new Set([...current, imageId])] : current.filter(id => id !== imageId),
     )
 
-  createEffect(() =>
-    props.onDirtyChange(uploadExpectedUpdatedAt() !== undefined || dirtyImageIds().length > 0),
-  )
+  createEffect(() => props.onDirtyChange(uploadDirty() || dirtyImageIds().length > 0))
   onCleanup(() => props.onDirtyChange(false))
-
-  const upload = async () => {
-    const selected = file()
-    const imageAlt = alt().trim()
-    if (!selected || !imageAlt) {
-      setFailure()
-      setRequestError('Зураг сонгож, зургийн тайлбар оруулна уу.')
-      return
-    }
-    setFailure()
-    setRequestError()
-    try {
-      const result = await uploadMutation.mutateAsync({
-        productId: props.product.id,
-        input: {
-          file: selected,
-          alt: imageAlt,
-          variantIds: variantIds(),
-          expectedUpdatedAt: uploadExpectedUpdatedAt() ?? props.product.updatedAt,
-        },
-      })
-      if (result.isErr()) {
-        setFailure(result.error)
-        return
-      }
-      installProduct(result.value)
-      clearUploadDraft()
-      toast.success('Барааны зураг орлоо.')
-    } catch (error) {
-      setRequestError(transportMessage(error))
-    }
-  }
-
-  const updateImage = async (
-    image: AdminCatalogImage,
-    nextAlt: string,
-    nextVariantIds: string[],
-    expectedUpdatedAt: number,
-  ) => {
-    setFailure()
-    setRequestError()
-    try {
-      const result = await updateMutation.mutateAsync({
-        productId: props.product.id,
-        imageId: image.id,
-        input: {
-          alt: nextAlt.trim(),
-          variantIds: nextVariantIds,
-          expectedUpdatedAt,
-        },
-      })
-      if (result.isErr()) {
-        setFailure(result.error)
-        return
-      }
-      installProduct(result.value)
-      toast.success('Зургийн мэдээллийг хадгаллаа.')
-      return result.value
-    } catch (error) {
-      setRequestError(transportMessage(error))
-    }
-  }
 
   const reorder = async (imageId: string, direction: -1 | 1) => {
     const imageIds = props.product.images.map(image => image.id)
@@ -197,53 +40,25 @@ export function ProductGallery(props: ProductGalleryProps) {
     const [moved] = ordered.splice(index, 1)
     if (!moved) return
     ordered.splice(destination, 0, moved)
-    setFailure()
-    setRequestError()
-    setReorderingImageId(imageId)
-    try {
-      const result = await reorderMutation.mutateAsync({
+
+    reorderMutation.reset()
+    const result = await reorderMutation
+      .mutateAsync({
         productId: props.product.id,
         input: { imageIds: ordered, expectedUpdatedAt: props.product.updatedAt },
       })
-      if (result.isErr()) {
-        setFailure(result.error)
-        return
-      }
-      installProduct(result.value)
-      toast.success('Зургийн дарааллыг шинэчиллээ.')
-    } catch (error) {
-      setRequestError(transportMessage(error))
-    } finally {
-      setReorderingImageId()
-    }
+      .catch(() => undefined)
+    if (!result?.isOk()) return
+
+    await updateCatalogProductCache(queryClient, result.value)
+    toast.success('Зургийн дарааллыг шинэчиллээ.')
   }
 
-  const remove = async (image: AdminCatalogImage) => {
-    setFailure()
-    setRequestError()
-    setRemovingImageId(image.id)
-    try {
-      const result = await deleteMutation.mutateAsync({
-        productId: props.product.id,
-        imageId: image.id,
-        input: { expectedUpdatedAt: props.product.updatedAt },
-      })
-      if (result.isErr()) {
-        setFailure(result.error)
-        return false
-      }
-      const message = cleanupMessage(result.value.mediaCleanup)
-      if (message) props.onCleanupWarning(message)
-      installProduct(result.value.product)
-      if (message) toast.warning(message)
-      else toast.success('Зургийг хаслаа.')
-      return true
-    } catch (error) {
-      setRequestError(transportMessage(error))
-      return false
-    } finally {
-      setRemovingImageId()
-    }
+  const reload = async () => {
+    reorderMutation.reset()
+    setUploadDirty(false)
+    setDirtyImageIds([])
+    return props.onReload()
   }
 
   return (
@@ -262,87 +77,15 @@ export function ProductGallery(props: ProductGalleryProps) {
         </span>
       </div>
 
-      <div class="mt-4 grid gap-3 border-y bg-card px-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(12rem,1fr)_auto] md:items-end">
-        <Field>
-          <FieldLabel for="catalog-image-file">Зургийн файл</FieldLabel>
-          <ImageFilePicker
-            file={file()}
-            id="catalog-image-file"
-            inputRef={element => {
-              fileInput = element
-            }}
-            onChange={selected => {
-              if (selected) beginUploadDraft()
-              setFile(selected)
-            }}
-          />
-        </Field>
-        <Field>
-          <FieldLabel for="catalog-image-alt">Зургийн тайлбар</FieldLabel>
-          <Input
-            class="min-h-12! text-base! md:h-8! md:text-sm!"
-            id="catalog-image-alt"
-            maxlength="300"
-            placeholder="Зураг дээрх барааг товч тайлбарлана уу"
-            value={alt()}
-            onInput={event => {
-              beginUploadDraft()
-              setAlt(event.currentTarget.value)
-            }}
-          />
-        </Field>
-        <div class="flex gap-1.5">
-          <Button
-            class="min-h-11! md:h-8!"
-            disabled={uploadMutation.isPending || !file() || !alt().trim()}
-            onClick={() => void upload()}
-            type="button"
-          >
-            <Show when={uploadMutation.isPending} fallback={<GalleryAdd aria-hidden="true" />}>
-              <Spinner aria-hidden="true" />
-            </Show>
-            {uploadMutation.isPending ? 'Оруулж байна…' : 'Зураг оруулах'}
-          </Button>
-          <Show when={uploadExpectedUpdatedAt() !== undefined}>
-            <Button
-              class="min-h-11! md:h-8!"
-              onClick={clearUploadDraft}
-              type="button"
-              variant="ghost"
-            >
-              Цэвэрлэх
-            </Button>
-          </Show>
-        </div>
-        <Show when={props.product.variants.length > 0}>
-          <div class="md:col-span-3">
-            <FieldLabel>Хувилбарт холбох</FieldLabel>
-            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-              <For each={props.product.variants}>
-                {variant => (
-                  <Checkbox
-                    checked={variantIds().includes(variant.id)}
-                    onChange={checked => toggleUploadVariant(variant.id, checked)}
-                  >
-                    {variant.name}
-                  </Checkbox>
-                )}
-              </For>
-            </div>
-            <FieldDescription class="mt-1">
-              Сонгохгүй бол зураг бүх хувилбарт харагдана.
-            </FieldDescription>
-          </div>
-        </Show>
-      </div>
+      <GalleryUpload product={props.product} onDirtyChange={setUploadDirty} onReload={reload} />
 
-      <Show when={failure() || requestError()}>
+      <Show when={reorderMutation.isError || reorderMutation.data?.isErr()}>
         <div class="mt-3">
           <CatalogFailure
-            failure={failure()}
+            failure={mutationFailure(reorderMutation)}
             onReload={() => void reload()}
-            title="Зургийн үйлдлийг гүйцэтгэж чадсангүй"
-            transportError={requestError()}
+            title="Зургийн дарааллыг шинэчилж чадсангүй"
+            transportError={mutationTransportError(reorderMutation)}
           />
         </div>
       </Show>
@@ -359,28 +102,20 @@ export function ProductGallery(props: ProductGalleryProps) {
         >
           <For each={props.product.images.map(image => image.id)}>
             {(imageId, index) => (
-              <Show when={props.product.images.find(image => image.id === imageId)}>
+              <Show when={props.product.images.find(image => image.id === imageId)} keyed>
                 {image => (
-                  <ImageEditor
-                    image={image()}
-                    index={index()}
+                  <GalleryImageEditor
+                    image={image}
                     imageCount={props.product.images.length}
-                    pendingMove={reorderingImageId() === imageId}
-                    pendingRemove={removingImageId() === imageId}
+                    index={index()}
+                    pendingMove={reorderMutation.isPending}
+                    productId={props.product.id}
                     productUpdatedAt={props.product.updatedAt}
-                    resetVersion={resetVersion()}
                     variants={props.product.variants}
+                    onCleanupWarning={props.onCleanupWarning}
                     onDirtyChange={dirty => setImageDirty(imageId, dirty)}
                     onMove={direction => void reorder(imageId, direction)}
-                    onReload={() => {
-                      setFailure()
-                      setRequestError()
-                      return props.onReload()
-                    }}
-                    onRemove={() => remove(image())}
-                    onSave={(nextAlt, nextVariantIds, expectedUpdatedAt) =>
-                      updateImage(image(), nextAlt, nextVariantIds, expectedUpdatedAt)
-                    }
+                    onReload={reload}
                   />
                 )}
               </Show>
@@ -389,222 +124,5 @@ export function ProductGallery(props: ProductGalleryProps) {
         </Show>
       </div>
     </section>
-  )
-}
-
-type ImageEditorProps = {
-  image: AdminCatalogImage
-  imageCount: number
-  index: number
-  variants: AdminCatalogVariant[]
-  pendingMove: boolean
-  pendingRemove: boolean
-  productUpdatedAt: number
-  resetVersion: number
-  onDirtyChange: (dirty: boolean) => void
-  onMove: (direction: -1 | 1) => void
-  onReload: () => Promise<AdminCatalogProductDetail | undefined>
-  onRemove: () => Promise<boolean>
-  onSave: (
-    alt: string,
-    variantIds: string[],
-    expectedUpdatedAt: number,
-  ) => Promise<AdminCatalogProductDetail | undefined>
-}
-
-function ImageEditor(props: ImageEditorProps) {
-  const [alt, setAlt] = createSignal(props.image.alt)
-  const [variantIds, setVariantIds] = createSignal([...props.image.variantIds])
-  const [baselineAlt, setBaselineAlt] = createSignal(props.image.alt)
-  const [baselineVariantIds, setBaselineVariantIds] = createSignal([...props.image.variantIds])
-  const [expectedUpdatedAt, setExpectedUpdatedAt] = createSignal(props.productUpdatedAt)
-  const [saving, setSaving] = createSignal(false)
-  const transformerOptions = () => {
-    const domain = imageDomain(props.image.url)
-    return domain ? { domain } : undefined
-  }
-  const [removeOpen, setRemoveOpen] = createSignal(false)
-  let installedResetVersion = props.resetVersion
-  const dirty = () => alt() !== baselineAlt() || !sameVariantIds(variantIds(), baselineVariantIds())
-  const installBaseline = (image: AdminCatalogImage, updatedAt: number) => {
-    setAlt(image.alt)
-    setVariantIds([...image.variantIds])
-    setBaselineAlt(image.alt)
-    setBaselineVariantIds([...image.variantIds])
-    setExpectedUpdatedAt(updatedAt)
-  }
-
-  createEffect(
-    on(
-      () => [props.image, props.productUpdatedAt, props.resetVersion] as const,
-      ([image, updatedAt, resetVersion]) => {
-        if (resetVersion !== installedResetVersion) {
-          installedResetVersion = resetVersion
-          installBaseline(image, updatedAt)
-          return
-        }
-        if (!untrack(dirty)) installBaseline(image, updatedAt)
-      },
-      { defer: true },
-    ),
-  )
-  createEffect(() => props.onDirtyChange(dirty()))
-  onCleanup(() => props.onDirtyChange(false))
-
-  const save = async () => {
-    if (!alt().trim()) return
-    setSaving(true)
-    const product = await props.onSave(alt(), variantIds(), expectedUpdatedAt())
-    if (product) {
-      const image = product.images.find(item => item.id === props.image.id)
-      if (image) installBaseline(image, product.updatedAt)
-    }
-    setSaving(false)
-  }
-
-  const reload = async () => {
-    const product = await props.onReload()
-    if (!product) return
-    const image = product.images.find(item => item.id === props.image.id)
-    if (image) installBaseline(image, product.updatedAt)
-  }
-
-  const toggleVariant = (variantId: string, checked: boolean) =>
-    setVariantIds(current =>
-      checked ? [...new Set([...current, variantId])] : current.filter(id => id !== variantId),
-    )
-
-  return (
-    <article class="grid gap-4 border-t px-3 py-4 first:border-t-0 md:grid-cols-[7rem_minmax(0,1fr)]">
-      <Image
-        alt={props.image.alt}
-        breakpoints={[112, 224]}
-        class="aspect-square size-28 rounded-md bg-muted object-cover"
-        height={props.image.height}
-        layout="fixed"
-        operations={{ quality: 80, format: 'auto', fit: 'scale-down' }}
-        options={transformerOptions()}
-        sizes="112px"
-        src={props.image.url}
-        transformer={cloudflare}
-        unstyled
-        width={props.image.width}
-      />
-      <div class="min-w-0">
-        <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <Field>
-            <FieldLabel for={`${props.image.id}-alt`}>Зургийн тайлбар</FieldLabel>
-            <Input
-              class="min-h-12! text-base! md:h-8! md:text-sm!"
-              id={`${props.image.id}-alt`}
-              maxlength="300"
-              value={alt()}
-              onInput={event => setAlt(event.currentTarget.value)}
-            />
-          </Field>
-          <div class="flex flex-wrap gap-1.5">
-            <Button
-              aria-label="Зургийг урагш зөөх"
-              class="min-h-11! min-w-11! md:size-8!"
-              disabled={dirty() || props.index === 0 || props.pendingMove}
-              onClick={() => props.onMove(-1)}
-              size="icon-sm"
-              type="button"
-              variant="outline"
-            >
-              <AltArrowLeft aria-hidden="true" />
-            </Button>
-            <Button
-              aria-label="Зургийг хойш зөөх"
-              class="min-h-11! min-w-11! md:size-8!"
-              disabled={dirty() || props.index === props.imageCount - 1 || props.pendingMove}
-              onClick={() => props.onMove(1)}
-              size="icon-sm"
-              type="button"
-              variant="outline"
-            >
-              <AltArrowRight aria-hidden="true" />
-            </Button>
-            <Button
-              class="min-h-11! md:h-8!"
-              disabled={!dirty() || !alt().trim() || saving()}
-              onClick={() => void save()}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {saving() ? 'Хадгалж байна…' : 'Зураг хадгалах'}
-            </Button>
-            <Button
-              aria-label="Зураг хасах"
-              class="min-h-11! min-w-11! md:size-8!"
-              disabled={dirty() || props.pendingRemove}
-              onClick={() => setRemoveOpen(true)}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <TrashBinTrash aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-        <Show when={props.variants.length > 0}>
-          <div class="mt-3 border-t pt-3">
-            <FieldLabel>Холбосон хувилбар</FieldLabel>
-            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-              <For each={props.variants}>
-                {variant => (
-                  <Checkbox
-                    checked={variantIds().includes(variant.id)}
-                    onChange={checked => toggleVariant(variant.id, checked)}
-                  >
-                    {variant.name}
-                  </Checkbox>
-                )}
-              </For>
-            </div>
-          </div>
-        </Show>
-        <div class="mt-2 flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular-nums">
-          <span>Байрлал {props.index + 1}</span>
-          <span>
-            {props.image.width} × {props.image.height}
-          </span>
-          <button
-            class="min-h-11 underline underline-offset-2 md:min-h-8"
-            onClick={() => void reload()}
-            type="button"
-          >
-            Зургийн засварыг буцаах
-          </button>
-        </div>
-      </div>
-
-      <Dialog open={removeOpen()} onOpenChange={setRemoveOpen}>
-        <DialogContent class="max-w-md rounded-lg border bg-popover p-4">
-          <DialogHeader>
-            <DialogTitle>Зургийг хасах уу?</DialogTitle>
-            <DialogDescription>
-              Зураг бараанаас хасагдана. Өмнөх захиалгад ашигласан файл хэвээр үлдэнэ.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter class="mt-5">
-            <DialogClose as={Button} type="button" variant="outline">
-              Болих
-            </DialogClose>
-            <Button
-              disabled={props.pendingRemove}
-              onClick={async () => {
-                if (await props.onRemove()) setRemoveOpen(false)
-              }}
-              type="button"
-              variant="destructive"
-            >
-              {props.pendingRemove ? 'Хасаж байна…' : 'Зураг хасах'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </article>
   )
 }

@@ -19,6 +19,8 @@ type WranglerEnvironment = {
   name?: string
   d1_databases?: { binding?: string; database_name?: string; database_id?: string }[]
   kv_namespaces?: { binding?: string; id?: string }[]
+  r2_buckets?: { binding?: string; bucket_name?: string }[]
+  images?: { binding?: string }
   vars?: Record<string, string>
 }
 
@@ -34,7 +36,7 @@ const productionMediaBaseUrl = 'https://plugged.storekitcdn.darjs.dev/'
 const developmentAppUrl = 'https://storekit.plugged.darjs.dev'
 const liveQpayBaseUrl = 'https://merchant.qpay.mn'
 const secretNames = [
-  'BETTER_AUTH_SECRETS',
+  'BETTER_AUTH_SECRET',
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
   'QPAY_USERNAME',
@@ -128,6 +130,9 @@ const missing = [
   !kvByBinding.get('CACHE')?.id && 'CACHE KV id',
   !kvByBinding.get('AUTH_KV')?.id && 'AUTH_KV id',
   !kvByBinding.get('SESSION')?.id && 'SESSION KV id',
+  !target.r2_buckets?.some(bucket => bucket.binding === 'MEDIA' && bucket.bucket_name) &&
+    'MEDIA R2 bucket',
+  target.images?.binding !== 'IMAGES' && 'IMAGES binding',
   target.vars?.DEPLOYMENT_ENV !== selectedEnvironment && 'DEPLOYMENT_ENV',
   !target.vars?.PUBLIC_APP_URL && 'PUBLIC_APP_URL',
   !target.vars?.PUBLIC_MEDIA_BASE_URL && 'PUBLIC_MEDIA_BASE_URL',

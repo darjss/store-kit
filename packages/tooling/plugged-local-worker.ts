@@ -89,7 +89,7 @@ const start = async () => {
     [
       'DEPLOYMENT_ENV=development',
       'LOCAL_ADMIN_BYPASS=true',
-      'BETTER_AUTH_SECRETS=1:local-browser-auth-secret-at-least-thirty-two-characters',
+      'BETTER_AUTH_SECRET=local-browser-auth-secret-at-least-thirty-two-characters',
       'GOOGLE_CLIENT_ID=local-browser-client-id',
       'GOOGLE_CLIENT_SECRET=local-browser-client-secret',
       `PUBLIC_APP_URL=${localUrl}`,

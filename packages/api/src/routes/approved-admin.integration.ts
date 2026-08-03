@@ -1,13 +1,12 @@
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
-import { createAdminSession } from '~/test/admin-session'
-
+import { createAdminSession } from '../test/admin-session'
 import { createApprovedAdminRoutes } from './approved-admin'
 
-const guardedProbe = createApprovedAdminRoutes('/foundation').get('/foundation/probe', () => ({
-  ok: true as const,
-}))
+const guardedProbe = createApprovedAdminRoutes('/foundation')
+  .get('/foundation/probe', () => ({ ok: true as const }))
+  .get('/public/probe', () => ({ public: true as const }))
 
 const requestProbe = (cookie?: string) =>
   guardedProbe.handle(
@@ -17,6 +16,15 @@ const requestProbe = (cookie?: string) =>
   )
 
 describe('approved admin route foundation', () => {
+  it('leaves anonymous routes outside its scope unguarded', async () => {
+    const response = await guardedProbe.handle(
+      new Request('https://plugged.mn/api/admin/public/probe'),
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ public: true })
+  })
+
   it('guards a standalone feature plugin with the current D1 approval value', async () => {
     const unauthenticated = await requestProbe()
     const session = await createAdminSession(false)

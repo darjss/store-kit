@@ -1,38 +1,25 @@
-import type {
-  AdminStoreSettings,
-  AdminStoreSettingsError,
-  AdminStoreSettingsUpdate,
-} from '@store-kit/contracts/admin-settings'
+import type { AdminStoreSettingsUpdate } from '@store-kit/contracts/admin-settings'
 import { mutationOptions, queryOptions } from '@tanstack/solid-query'
 
+import { api } from '../client'
 import { deserializeResult } from '../query-options/result'
-import type { ResultResponse } from '../query-options/result'
-
-export type SettingsResultResponse = ResultResponse<AdminStoreSettings, AdminStoreSettingsError>
-
-export type SettingsRequests = {
-  getStore: () => Promise<SettingsResultResponse>
-  updateStore: (input: AdminStoreSettingsUpdate) => Promise<SettingsResultResponse>
-}
-
-const deserialize = (request: Promise<SettingsResultResponse>) =>
-  deserializeResult(request, 'store settings')
 
 export const settingsKeys = {
   all: ['admin', 'settings'] as const,
   store: () => [...settingsKeys.all, 'store'] as const,
 }
 
-const store = (requests: SettingsRequests) =>
+const store = () =>
   queryOptions({
     queryKey: settingsKeys.store(),
-    queryFn: () => deserialize(requests.getStore()),
+    queryFn: () => deserializeResult(api.api.admin.settings.store.get(), 'store settings'),
     retry: false,
   })
 
-const updateStore = (requests: SettingsRequests) =>
+const updateStore = () =>
   mutationOptions({
-    mutationFn: (input: AdminStoreSettingsUpdate) => deserialize(requests.updateStore(input)),
+    mutationFn: (input: AdminStoreSettingsUpdate) =>
+      deserializeResult(api.api.admin.settings.store.put(input), 'store settings'),
   })
 
 export const settingsQuery = { store }

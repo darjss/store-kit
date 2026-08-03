@@ -16,29 +16,29 @@ type SwitchProps<T extends ValidComponent = 'div'> = PolymorphicProps<
 const Switch = <T extends ValidComponent = 'div'>(props: SwitchProps<T>) => {
   const mergedProps = mergeProps({ size: 'default' as const }, props)
   const [local, others] = splitProps(mergedProps as SwitchProps, ['class', 'size', 'id'])
-
   return (
     <SwitchPrimitive.Root
+      data-slot="switch"
+      data-size={local.size}
       class={cn(
-        'group/switch z-switch relative inline-flex items-center transition-all outline-none',
+        'peer group/switch z-switch relative inline-flex items-center transition-all outline-none data-disabled:cursor-not-allowed data-disabled:opacity-50',
         local.class,
       )}
-      data-size={local.size}
-      data-slot="switch"
       {...others}
     >
-      <SwitchPrimitive.Input class="peer sr-only" data-slot="switch-input" id={local.id} />
+      <SwitchPrimitive.Input data-slot="switch-input" class="peer sr-only" id={local.id} />
       <SwitchPrimitive.Control
-        class="z-switch-control flex cursor-pointer items-center rounded-full transition-colors data-disabled:cursor-not-allowed"
         data-slot="switch-control"
+        class="absolute inset-0 flex cursor-pointer items-center rounded-full transition-colors data-disabled:cursor-not-allowed"
+        onClick={e => e.preventDefault()}
       >
         <SwitchPrimitive.Thumb
-          class="z-switch-thumb pointer-events-none block rounded-full ring-0 transition-transform"
           data-slot="switch-thumb"
+          class="z-switch-thumb pointer-events-none block rounded-full ring-0 transition-transform"
         />
       </SwitchPrimitive.Control>
     </SwitchPrimitive.Root>
   )
 }
 
-export { Switch, type SwitchProps }
+export { Switch }

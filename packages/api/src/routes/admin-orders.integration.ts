@@ -9,8 +9,7 @@ import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
-import { createAdminCookie } from '~/test/admin-session'
-
+import { createAdminCookie } from '../test/admin-session'
 import { adminOrderRoutes } from './admin-orders'
 
 const entityId = (prefix: string, value: number) =>

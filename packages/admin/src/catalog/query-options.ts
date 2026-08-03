@@ -1,14 +1,8 @@
 import type {
-  AdminCatalogError,
-  AdminCatalogProductDetail,
-  AdminCatalogProductList,
   AdminCatalogProductListFilters,
-  AdminCatalogSelectors,
   AdminExpectedProductVersion,
   AdminProductCreate,
-  AdminProductDeleteOutcome,
   AdminProductImageDelete,
-  AdminProductImageDeleteOutcome,
   AdminProductImageOrder,
   AdminProductImageUpdate,
   AdminProductImageUpload,
@@ -17,87 +11,14 @@ import type {
   AdminVariantActivation,
   AdminVariantCreate,
   AdminVariantDelete,
-  AdminVariantDeleteOutcome,
   AdminVariantUpdate,
 } from '@store-kit/contracts/admin-catalog'
 import { mutationOptions, queryOptions } from '@tanstack/solid-query'
 
+import { api } from '../client'
 import { deserializeResult } from '../query-options/result'
-import type { ResultResponse } from '../query-options/result'
 
-export type CatalogResultResponse<Value> = ResultResponse<Value, AdminCatalogError>
-
-export type CatalogRequests = {
-  listProducts: (
-    filters: AdminCatalogProductListFilters,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductList>>
-  listSelectors: () => Promise<CatalogResultResponse<AdminCatalogSelectors>>
-  getProduct: (productId: string) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  createProduct: (
-    input: AdminProductCreate,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  updateProduct: (
-    productId: string,
-    input: AdminProductUpdate,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  archiveProduct: (
-    productId: string,
-    input: AdminExpectedProductVersion,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  restoreProduct: (
-    productId: string,
-    input: AdminExpectedProductVersion,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  deleteProduct: (
-    productId: string,
-    input: AdminExpectedProductVersion,
-  ) => Promise<CatalogResultResponse<AdminProductDeleteOutcome>>
-  createVariant: (
-    productId: string,
-    input: AdminVariantCreate,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  updateVariant: (
-    productId: string,
-    variantId: string,
-    input: AdminVariantUpdate,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  updateVariantActivation: (
-    productId: string,
-    variantId: string,
-    input: AdminVariantActivation,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  updateStock: (
-    productId: string,
-    variantId: string,
-    input: AdminStockUpdate,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  deleteVariant: (
-    productId: string,
-    variantId: string,
-    input: AdminVariantDelete,
-  ) => Promise<CatalogResultResponse<AdminVariantDeleteOutcome>>
-  uploadImage: (
-    productId: string,
-    input: AdminProductImageUpload,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  updateImage: (
-    productId: string,
-    imageId: string,
-    input: AdminProductImageUpdate,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  reorderImages: (
-    productId: string,
-    input: AdminProductImageOrder,
-  ) => Promise<CatalogResultResponse<AdminCatalogProductDetail>>
-  deleteImage: (
-    productId: string,
-    imageId: string,
-    input: AdminProductImageDelete,
-  ) => Promise<CatalogResultResponse<AdminProductImageDeleteOutcome>>
-}
-
-const deserialize = <Value>(request: Promise<CatalogResultResponse<Value>>) =>
-  deserializeResult(request, 'catalog')
+const catalogApi = api.api.admin.catalog
 
 export const catalogKeys = {
   all: ['admin', 'catalog'] as const,
@@ -109,60 +30,61 @@ export const catalogKeys = {
   detail: (productId: string) => [...catalogKeys.details(), productId] as const,
 }
 
-const list = (requests: CatalogRequests, filters: AdminCatalogProductListFilters) =>
+const list = (filters: AdminCatalogProductListFilters) =>
   queryOptions({
     queryKey: catalogKeys.list(filters),
-    queryFn: () => deserialize(requests.listProducts(filters)),
+    queryFn: () => deserializeResult(catalogApi.products.get({ query: filters }), 'catalog'),
   })
 
-const selectors = (requests: CatalogRequests) =>
+const selectors = () =>
   queryOptions({
     queryKey: catalogKeys.selectors(),
-    queryFn: () => deserialize(requests.listSelectors()),
+    queryFn: () => deserializeResult(catalogApi.selectors.get(), 'catalog'),
   })
 
-const detail = (requests: CatalogRequests, productId: string) =>
+const detail = (productId: string) =>
   queryOptions({
     queryKey: catalogKeys.detail(productId),
-    queryFn: () => deserialize(requests.getProduct(productId)),
+    queryFn: () => deserializeResult(catalogApi.products({ productId }).get(), 'catalog'),
   })
 
-const createProduct = (requests: CatalogRequests) =>
+const createProduct = () =>
   mutationOptions({
-    mutationFn: (input: AdminProductCreate) => deserialize(requests.createProduct(input)),
+    mutationFn: (input: AdminProductCreate) =>
+      deserializeResult(catalogApi.products.post(input), 'catalog'),
   })
 
-const updateProduct = (requests: CatalogRequests) =>
+const updateProduct = () =>
   mutationOptions({
     mutationFn: ({ productId, input }: { productId: string; input: AdminProductUpdate }) =>
-      deserialize(requests.updateProduct(productId, input)),
+      deserializeResult(catalogApi.products({ productId }).put(input), 'catalog'),
   })
 
-const archiveProduct = (requests: CatalogRequests) =>
+const archiveProduct = () =>
   mutationOptions({
     mutationFn: ({ productId, input }: { productId: string; input: AdminExpectedProductVersion }) =>
-      deserialize(requests.archiveProduct(productId, input)),
+      deserializeResult(catalogApi.products({ productId }).archive.post(input), 'catalog'),
   })
 
-const restoreProduct = (requests: CatalogRequests) =>
+const restoreProduct = () =>
   mutationOptions({
     mutationFn: ({ productId, input }: { productId: string; input: AdminExpectedProductVersion }) =>
-      deserialize(requests.restoreProduct(productId, input)),
+      deserializeResult(catalogApi.products({ productId }).restore.post(input), 'catalog'),
   })
 
-const deleteProduct = (requests: CatalogRequests) =>
+const deleteProduct = () =>
   mutationOptions({
     mutationFn: ({ productId, input }: { productId: string; input: AdminExpectedProductVersion }) =>
-      deserialize(requests.deleteProduct(productId, input)),
+      deserializeResult(catalogApi.products({ productId }).delete(input), 'catalog'),
   })
 
-const createVariant = (requests: CatalogRequests) =>
+const createVariant = () =>
   mutationOptions({
     mutationFn: ({ productId, input }: { productId: string; input: AdminVariantCreate }) =>
-      deserialize(requests.createVariant(productId, input)),
+      deserializeResult(catalogApi.products({ productId }).variants.post(input), 'catalog'),
   })
 
-const updateVariant = (requests: CatalogRequests) =>
+const updateVariant = () =>
   mutationOptions({
     mutationFn: ({
       productId,
@@ -172,10 +94,14 @@ const updateVariant = (requests: CatalogRequests) =>
       productId: string
       variantId: string
       input: AdminVariantUpdate
-    }) => deserialize(requests.updateVariant(productId, variantId, input)),
+    }) =>
+      deserializeResult(
+        catalogApi.products({ productId }).variants({ variantId }).put(input),
+        'catalog',
+      ),
   })
 
-const updateVariantActivation = (requests: CatalogRequests) =>
+const updateVariantActivation = () =>
   mutationOptions({
     mutationFn: ({
       productId,
@@ -185,10 +111,14 @@ const updateVariantActivation = (requests: CatalogRequests) =>
       productId: string
       variantId: string
       input: AdminVariantActivation
-    }) => deserialize(requests.updateVariantActivation(productId, variantId, input)),
+    }) =>
+      deserializeResult(
+        catalogApi.products({ productId }).variants({ variantId }).activation.patch(input),
+        'catalog',
+      ),
   })
 
-const updateStock = (requests: CatalogRequests) =>
+const updateStock = () =>
   mutationOptions({
     mutationFn: ({
       productId,
@@ -198,10 +128,14 @@ const updateStock = (requests: CatalogRequests) =>
       productId: string
       variantId: string
       input: AdminStockUpdate
-    }) => deserialize(requests.updateStock(productId, variantId, input)),
+    }) =>
+      deserializeResult(
+        catalogApi.products({ productId }).variants({ variantId }).stock.patch(input),
+        'catalog',
+      ),
   })
 
-const deleteVariant = (requests: CatalogRequests) =>
+const deleteVariant = () =>
   mutationOptions({
     mutationFn: ({
       productId,
@@ -211,16 +145,20 @@ const deleteVariant = (requests: CatalogRequests) =>
       productId: string
       variantId: string
       input: AdminVariantDelete
-    }) => deserialize(requests.deleteVariant(productId, variantId, input)),
+    }) =>
+      deserializeResult(
+        catalogApi.products({ productId }).variants({ variantId }).delete(input),
+        'catalog',
+      ),
   })
 
-const uploadImage = (requests: CatalogRequests) =>
+const uploadImage = () =>
   mutationOptions({
     mutationFn: ({ productId, input }: { productId: string; input: AdminProductImageUpload }) =>
-      deserialize(requests.uploadImage(productId, input)),
+      deserializeResult(catalogApi.products({ productId }).images.post(input), 'catalog'),
   })
 
-const updateImage = (requests: CatalogRequests) =>
+const updateImage = () =>
   mutationOptions({
     mutationFn: ({
       productId,
@@ -230,16 +168,20 @@ const updateImage = (requests: CatalogRequests) =>
       productId: string
       imageId: string
       input: AdminProductImageUpdate
-    }) => deserialize(requests.updateImage(productId, imageId, input)),
+    }) =>
+      deserializeResult(
+        catalogApi.products({ productId }).images({ imageId }).put(input),
+        'catalog',
+      ),
   })
 
-const reorderImages = (requests: CatalogRequests) =>
+const reorderImages = () =>
   mutationOptions({
     mutationFn: ({ productId, input }: { productId: string; input: AdminProductImageOrder }) =>
-      deserialize(requests.reorderImages(productId, input)),
+      deserializeResult(catalogApi.products({ productId }).images.order.put(input), 'catalog'),
   })
 
-const deleteImage = (requests: CatalogRequests) =>
+const deleteImage = () =>
   mutationOptions({
     mutationFn: ({
       productId,
@@ -249,7 +191,11 @@ const deleteImage = (requests: CatalogRequests) =>
       productId: string
       imageId: string
       input: AdminProductImageDelete
-    }) => deserialize(requests.deleteImage(productId, imageId, input)),
+    }) =>
+      deserializeResult(
+        catalogApi.products({ productId }).images({ imageId }).delete(input),
+        'catalog',
+      ),
   })
 
 export const catalogQuery = { list, selectors, detail }

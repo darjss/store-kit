@@ -7,7 +7,6 @@
     ".": "./index.ts"
   },
   "dependencies": {
-    "@store-kit/config": "workspace:*",
     "@store-kit/contracts": "workspace:*",
     "@store-kit/db": "workspace:*",
     "jsonc-parser": "^3.3.1",

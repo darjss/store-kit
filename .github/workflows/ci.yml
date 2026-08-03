@@ -19,5 +19,5 @@ jobs:
       - run: vp run @store-kit/plugged#generate-types
       - run: vp check
       - run: vp test
-      - run: vp run db:test:integration
+      - run: vp run test:integration
       - run: vp run -r build

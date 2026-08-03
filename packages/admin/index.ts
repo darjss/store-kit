@@ -1,7 +1,6 @@
 export type { AdminSession, AdminSessionResponse } from '@store-kit/contracts/admin'
 
 export { AdminShell } from './src/AdminShell'
-export type { AdminRoute } from './src/AdminPage'
 export {
   AdminEmptyState,
   InlineAlert,

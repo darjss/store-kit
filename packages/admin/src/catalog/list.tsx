@@ -2,7 +2,6 @@ import { AddCircle, Magnifer } from '@solar-icons/solid/Linear'
 import type {
   AdminCatalogError,
   AdminCatalogProductListFilters,
-  AdminCatalogProductListItem,
   AdminInventoryState,
 } from '@store-kit/contracts/admin-catalog'
 import {
@@ -15,132 +14,21 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@store-kit/ui'
-import {
-  createColumnHelper,
-  createSolidTable,
-  flexRender,
-  getCoreRowModel,
-} from '@tanstack/solid-table'
-import { Image } from '@unpic/solid/base'
-import { For, Show, createSignal } from 'solid-js'
-import { generate as cloudflare } from 'unpic/providers/cloudflare'
+import { useNavigate } from '@tanstack/solid-router'
+import { Show, createSignal } from 'solid-js'
 
-import {
-  InlineAlert,
-  PageHeader,
-  RetryState,
-  StatusBadge,
-  TableSkeleton,
-} from '../components/foundation'
-import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
-import { formatMnt } from '../format'
+import { InlineAlert, PageHeader, RetryState, TableSkeleton } from '../components/foundation'
 import { useQueryResult } from '../query-options/result'
-import type { CatalogRequests } from './query-options'
+import { CatalogMobileList } from './list-mobile'
+import { CatalogTable } from './list-table'
 import { catalogQuery } from './query-options'
 
-const priceRange = (product: AdminCatalogProductListItem) => {
-  if (product.minimumPriceMnt === null || product.maximumPriceMnt === null)
-    return 'Идэвхтэй үнэ байхгүй'
-  if (product.minimumPriceMnt === product.maximumPriceMnt) return formatMnt(product.minimumPriceMnt)
-  return `${formatMnt(product.minimumPriceMnt)} – ${formatMnt(product.maximumPriceMnt)}`
-}
-
-const productStatusLabel = (status: AdminCatalogProductListItem['status']) => {
+const productStatusLabel = (status: 'draft' | 'active' | 'archived') => {
   if (status === 'active') return 'Идэвхтэй'
   if (status === 'archived') return 'Архивласан'
   return 'Ноорог'
 }
-
-const inventoryLabel = (quantity: number) => {
-  if (quantity === 0) return 'Дууссан'
-  if (quantity <= 3) return `Цөөн · ${quantity}`
-  return `Бэлэн · ${quantity}`
-}
-
-function InventoryBadge(props: { quantity: number }) {
-  if (props.quantity === 0)
-    return <StatusBadge tone="destructive">{inventoryLabel(props.quantity)}</StatusBadge>
-  if (props.quantity <= 3)
-    return <StatusBadge tone="warning">{inventoryLabel(props.quantity)}</StatusBadge>
-  return <StatusBadge>{inventoryLabel(props.quantity)}</StatusBadge>
-}
-
-const columnHelper = createColumnHelper<AdminCatalogProductListItem>()
-
-const productColumns = (productHref: (productId: string) => string) => [
-  columnHelper.accessor('name', {
-    header: 'Бараа',
-    cell: info => (
-      <div class="flex min-w-52 items-center gap-2.5">
-        <Show
-          when={info.row.original.primaryImage}
-          fallback={<div aria-hidden="true" class="size-9 shrink-0 rounded-sm border bg-muted" />}
-        >
-          {image => (
-            <Image
-              alt=""
-              breakpoints={[36, 72]}
-              class="size-9 shrink-0 rounded-sm bg-muted object-cover"
-              height={image().height}
-              layout="fixed"
-              operations={{ quality: 75, format: 'auto', fit: 'cover' }}
-              options={{ domain: new URL(image().url).hostname }}
-              sizes="36px"
-              src={image().url}
-              transformer={cloudflare}
-              unstyled
-              width={image().width}
-            />
-          )}
-        </Show>
-        <a
-          class="min-w-0 font-medium whitespace-normal text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          href={productHref(info.row.original.id)}
-        >
-          {info.getValue()}
-        </a>
-      </div>
-    ),
-  }),
-  columnHelper.display({
-    id: 'classification',
-    header: 'Брэнд / ангилал',
-    cell: info => (
-      <div class="min-w-36 text-sm">
-        <div>{info.row.original.brandName ?? 'Брэндгүй'}</div>
-        <div class="text-xs text-muted-foreground">
-          {info.row.original.categoryName ?? 'Ангилалгүй'}
-        </div>
-      </div>
-    ),
-  }),
-  columnHelper.accessor('status', {
-    header: 'Төлөв',
-    cell: info => <StatusBadge>{productStatusLabel(info.getValue())}</StatusBadge>,
-  }),
-  columnHelper.accessor('activeVariantCount', {
-    header: 'Хувилбар',
-    cell: info => <span class="tabular-nums">{info.getValue()}</span>,
-  }),
-  columnHelper.accessor('totalStockQuantity', {
-    header: 'Үлдэгдэл',
-    cell: info => <InventoryBadge quantity={info.getValue()} />,
-  }),
-  columnHelper.display({
-    id: 'price',
-    header: 'Үнэ',
-    cell: info => (
-      <span class="whitespace-nowrap tabular-nums">{priceRange(info.row.original)}</span>
-    ),
-  }),
-]
 
 export type CatalogListSearch = AdminCatalogProductListFilters & {
   inventory: AdminInventoryState
@@ -149,27 +37,17 @@ export type CatalogListSearch = AdminCatalogProductListFilters & {
 }
 
 type CatalogListPageProps = {
-  requests: CatalogRequests
   search: CatalogListSearch
   onSearchChange: (search: CatalogListSearch) => void
-  productHref: (productId: string) => string
-  onNewProduct: () => void
 }
 
 export function CatalogListPage(props: CatalogListPageProps) {
-  const query = useQueryResult(() => catalogQuery.list(props.requests, props.search))
+  const navigate = useNavigate()
+  const query = useQueryResult(() => catalogQuery.list(props.search))
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminCatalogError | undefined>({ ok: () => undefined, err: error => error })
-  const [activeRow, setActiveRow] = createSignal<number>()
   const [filtersOpen, setFiltersOpen] = createSignal(false)
-  const table = createSolidTable({
-    get data() {
-      return data()?.items ?? []
-    },
-    columns: productColumns(productId => props.productHref(productId)),
-    getCoreRowModel: getCoreRowModel(),
-  })
   const setSearch = (patch: Partial<CatalogListSearch>) =>
     props.onSearchChange({ ...props.search, ...patch, offset: patch.offset ?? 0 })
   const clearFilters = () =>
@@ -184,14 +62,6 @@ export function CatalogListPage(props: CatalogListPageProps) {
   const hasFilters = () => Boolean(props.search.status || props.search.inventory !== 'all')
   const activeFilterCount = () =>
     Number(Boolean(props.search.status)) + Number(props.search.inventory !== 'all')
-  const rowIds = () => table.getRowModel().rows.map(row => row.original.id)
-  const onTableKeyDown = (
-    event: KeyboardEvent & { currentTarget: HTMLDivElement; target: Element },
-  ) =>
-    handleTableNavigation(event, rowIds(), activeRow(), setActiveRow, productId =>
-      window.location.assign(props.productHref(productId)),
-    )
-
   const statusFilter = (id: string) => (
     <label class="flex flex-col gap-1.5 text-sm font-medium" for={id}>
       Төлөв
@@ -241,7 +111,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
           actions={
             <Button
               class="fixed right-4 bottom-20 z-30 min-h-12! px-5! shadow-sm lg:static lg:h-8! lg:shadow-none"
-              onClick={() => props.onNewProduct()}
+              onClick={() => void navigate({ to: '/catalog/new' })}
               type="button"
             >
               <AddCircle aria-hidden="true" />
@@ -425,141 +295,8 @@ export function CatalogListPage(props: CatalogListPageProps) {
                   </div>
                 }
               >
-                <ul aria-label="Барааны жагсаалт" class="divide-y border-y lg:hidden">
-                  <For each={data()!.items}>
-                    {product => (
-                      <li>
-                        <a
-                          class="grid min-h-24 grid-cols-[4rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset active:bg-muted"
-                          href={props.productHref(product.id)}
-                        >
-                          <Show
-                            when={product.primaryImage}
-                            fallback={
-                              <div aria-hidden="true" class="size-16 rounded-md border bg-muted" />
-                            }
-                          >
-                            {image => (
-                              <Image
-                                alt=""
-                                breakpoints={[64, 128]}
-                                class="size-16 rounded-md bg-muted object-cover"
-                                height={image().height}
-                                layout="fixed"
-                                operations={{ quality: 78, format: 'auto', fit: 'cover' }}
-                                options={{ domain: new URL(image().url).hostname }}
-                                sizes="64px"
-                                src={image().url}
-                                transformer={cloudflare}
-                                unstyled
-                                width={image().width}
-                              />
-                            )}
-                          </Show>
-                          <div class="min-w-0">
-                            <div class="line-clamp-2 text-base leading-5 font-semibold">
-                              {product.name}
-                            </div>
-                            <div class="mt-1 text-sm font-medium tabular-nums">
-                              {priceRange(product)}
-                            </div>
-                            <div class="mt-1 text-sm text-muted-foreground">
-                              {productStatusLabel(product.status)}
-                            </div>
-                          </div>
-                          <div class="min-w-16 text-right">
-                            <div class="text-xs text-muted-foreground">Үлдэгдэл</div>
-                            <div
-                              class={`mt-1 text-lg font-semibold tabular-nums ${
-                                product.totalStockQuantity === 0
-                                  ? 'text-destructive'
-                                  : product.totalStockQuantity <= 3
-                                    ? 'text-(--admin-warning-foreground)'
-                                    : ''
-                              }`}
-                            >
-                              {product.totalStockQuantity}
-                            </div>
-                            <div class="mt-0.5 text-xs text-muted-foreground">
-                              {inventoryLabel(product.totalStockQuantity).split(' · ')[0]}
-                            </div>
-                          </div>
-                        </a>
-                      </li>
-                    )}
-                  </For>
-                </ul>
-
-                <div
-                  aria-activedescendant={activeTableRowId(
-                    'catalog-products',
-                    rowIds(),
-                    activeRow(),
-                  )}
-                  aria-label="Барааны хүснэгт. Сумтай товчоор мөр сонгож, Enter товчоор нээнэ."
-                  class="hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 lg:block"
-                  onKeyDown={onTableKeyDown}
-                  role="group"
-                  tabIndex={0}
-                >
-                  <Table aria-label="Барааны хүснэгт">
-                    <TableHeader>
-                      <For each={table.getHeaderGroups()}>
-                        {headerGroup => (
-                          <TableRow>
-                            <For each={headerGroup.headers}>
-                              {header => (
-                                <TableHead
-                                  class={
-                                    header.column.id === 'activeVariantCount' ||
-                                    header.column.id === 'totalStockQuantity' ||
-                                    header.column.id === 'price'
-                                      ? 'text-right'
-                                      : undefined
-                                  }
-                                >
-                                  {header.isPlaceholder
-                                    ? null
-                                    : flexRender(
-                                        header.column.columnDef.header,
-                                        header.getContext(),
-                                      )}
-                                </TableHead>
-                              )}
-                            </For>
-                          </TableRow>
-                        )}
-                      </For>
-                    </TableHeader>
-                    <TableBody>
-                      <For each={table.getRowModel().rows}>
-                        {(row, index) => (
-                          <TableRow
-                            aria-selected={activeRow() === index()}
-                            data-state={activeRow() === index() ? 'selected' : undefined}
-                            id={tableRowId('catalog-products', row.original.id)}
-                          >
-                            <For each={row.getVisibleCells()}>
-                              {cell => (
-                                <TableCell
-                                  class={
-                                    cell.column.id === 'activeVariantCount' ||
-                                    cell.column.id === 'totalStockQuantity' ||
-                                    cell.column.id === 'price'
-                                      ? 'text-right'
-                                      : undefined
-                                  }
-                                >
-                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </TableCell>
-                              )}
-                            </For>
-                          </TableRow>
-                        )}
-                      </For>
-                    </TableBody>
-                  </Table>
-                </div>
+                <CatalogMobileList products={data()!.items} />
+                <CatalogTable products={data()!.items} />
 
                 <div class="mt-4 flex items-center justify-between gap-3 px-4 text-sm text-muted-foreground md:px-0">
                   <p class="tabular-nums">

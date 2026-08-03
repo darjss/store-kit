@@ -2,7 +2,7 @@ import { createId } from '@store-kit/db/ids'
 import { makeSignature } from 'better-auth/crypto'
 import { env } from 'cloudflare:workers'
 
-import { auth } from '~/auth'
+import { auth } from '../auth'
 
 export const createAdminSession = async (approved: boolean) => {
   const context = await auth.$context

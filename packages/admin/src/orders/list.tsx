@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@store-kit/ui'
+import { Link, useNavigate } from '@tanstack/solid-router'
 import {
   createColumnHelper,
   createSolidTable,
@@ -29,7 +30,6 @@ import { InlineAlert, PageHeader, RetryState } from '../components/foundation'
 import { activeTableRowId, handleTableNavigation, tableRowId } from '../components/table-navigation'
 import { formatMnt } from '../format'
 import { useQueryResult } from '../query-options/result'
-import type { OrderRequests } from './query-options'
 import { orderQuery } from './query-options'
 import { OrderStatusBadge, PaymentStatusBadge, paymentMethodLabel } from './status'
 
@@ -44,17 +44,18 @@ const dateTime = (value: number) => new Date(value).toISOString()
 
 const columnHelper = createColumnHelper<AdminOrderListItem>()
 
-const orderColumns = (orderHref: (orderId: string) => string) => [
+const orderColumns = [
   columnHelper.accessor('number', {
     header: 'Захиалга',
     cell: info => (
       <div class="min-w-32">
-        <a
+        <Link
           class="font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          href={orderHref(info.row.original.id)}
+          params={{ orderId: info.row.original.id }}
+          to="/orders/$orderId"
         >
           {info.getValue()}
-        </a>
+        </Link>
         <p class="mt-0.5 text-xs text-muted-foreground">
           <time dateTime={dateTime(info.row.original.createdAt)}>
             {formatDate(info.row.original.createdAt)}
@@ -221,10 +222,7 @@ function OrderListSkeleton() {
   )
 }
 
-function MobileOrderList(props: {
-  orders: AdminOrderListItem[]
-  orderHref: (orderId: string) => string
-}) {
+function MobileOrderList(props: { orders: AdminOrderListItem[] }) {
   return (
     <ol
       aria-label="Дэлгүүрийн захиалгууд"
@@ -233,10 +231,11 @@ function MobileOrderList(props: {
       <For each={props.orders}>
         {order => (
           <li>
-            <a
+            <Link
               aria-label={`${order.number}, ${order.customerName}, ${formatMoney(order.totalMnt)}`}
               class="block min-h-28 px-4 py-4 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-              href={props.orderHref(order.id)}
+              params={{ orderId: order.id }}
+              to="/orders/$orderId"
             >
               <span class="flex items-start justify-between gap-4">
                 <span class="min-w-0">
@@ -257,7 +256,7 @@ function MobileOrderList(props: {
                   {formatDate(order.createdAt)}
                 </time>
               </span>
-            </a>
+            </Link>
           </li>
         )}
       </For>
@@ -266,14 +265,13 @@ function MobileOrderList(props: {
 }
 
 type OrderListPageProps = {
-  requests: OrderRequests
   search: OrderListSearch
   onSearchChange: (search: OrderListSearch) => void
-  orderHref: (orderId: string) => string
 }
 
 export function OrderListPage(props: OrderListPageProps) {
-  const query = useQueryResult(() => orderQuery.list(props.requests, props.search))
+  const navigate = useNavigate()
+  const query = useQueryResult(() => orderQuery.list(props.search))
   const data = () => query.data?.match({ ok: value => value, err: () => undefined })
   const expectedError = () =>
     query.data?.match<AdminOrderError | undefined>({ ok: () => undefined, err: error => error })
@@ -282,7 +280,7 @@ export function OrderListPage(props: OrderListPageProps) {
     get data() {
       return data()?.items ?? []
     },
-    columns: orderColumns(orderId => props.orderHref(orderId)),
+    columns: orderColumns,
     getCoreRowModel: getCoreRowModel(),
   })
   const setSearch = (patch: Partial<OrderListSearch>) =>
@@ -296,9 +294,9 @@ export function OrderListPage(props: OrderListPageProps) {
   const onTableKeyDown = (
     event: KeyboardEvent & { currentTarget: HTMLDivElement; target: Element },
   ) =>
-    handleTableNavigation(event, rowIds(), activeRow(), setActiveRow, orderId =>
-      window.location.assign(props.orderHref(orderId)),
-    )
+    handleTableNavigation(event, rowIds(), activeRow(), setActiveRow, orderId => {
+      void navigate({ to: '/orders/$orderId', params: { orderId } })
+    })
 
   return (
     <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
@@ -394,7 +392,7 @@ export function OrderListPage(props: OrderListPageProps) {
                   </div>
                 }
               >
-                <MobileOrderList orderHref={props.orderHref} orders={data()?.items ?? []} />
+                <MobileOrderList orders={data()?.items ?? []} />
 
                 <div
                   aria-activedescendant={activeTableRowId('store-orders', rowIds(), activeRow())}
