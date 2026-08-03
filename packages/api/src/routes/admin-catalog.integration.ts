@@ -10,9 +10,8 @@ import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
-import { createAdminSession } from '~/test/admin-session'
-import fixtureDataUrl from '~/test/fixtures/catalog-upload.jpg?inline'
-
+import { createAdminSession } from '../test/admin-session'
+import fixtureDataUrl from '../test/fixtures/catalog-upload.jpg?inline'
 import { adminCatalogRoutes } from './admin-catalog'
 import { catalogRoutes } from './catalog'
 

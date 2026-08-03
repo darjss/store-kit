@@ -72,11 +72,10 @@ describe('Plugged Wrangler deployment configuration', () => {
       r2_buckets: [{ binding: 'MEDIA', bucket_name: 'plugged' }],
       images: { binding: 'IMAGES' },
       secrets: {
-        required: ['BETTER_AUTH_SECRETS', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+        required: ['BETTER_AUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
       },
       vars: {
         DEPLOYMENT_ENV: 'production',
-        LOCAL_ADMIN_BYPASS: 'false',
         PUBLIC_APP_URL: 'https://pluggedaudio.store',
         PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
         QPAY_BASE_URL: 'https://merchant.qpay.mn',
@@ -106,15 +105,21 @@ describe('Plugged Wrangler deployment configuration', () => {
       SESSION: expect.stringMatching(/^[0-9a-f]{32}$/u),
     })
     expect(new Set(Object.values(namespaces)).size).toBe(3)
+    expect(production.r2_buckets).toEqual([
+      {
+        binding: 'MEDIA',
+        bucket_name: 'plugged',
+      },
+    ])
+    expect(production.images).toEqual({ binding: 'IMAGES' })
     expect(production.vars).toEqual({
       DEPLOYMENT_ENV: 'production',
-      LOCAL_ADMIN_BYPASS: 'false',
       PUBLIC_APP_URL: 'https://pluggedaudio.store',
       PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
       QPAY_BASE_URL: 'https://merchant.qpay.mn',
     })
     expect(production.secrets.required).toEqual([
-      'BETTER_AUTH_SECRETS',
+      'BETTER_AUTH_SECRET',
       'GOOGLE_CLIENT_ID',
       'GOOGLE_CLIENT_SECRET',
       'QPAY_USERNAME',
@@ -161,13 +166,12 @@ describe('Plugged Wrangler deployment configuration', () => {
     expect(development.images).toEqual({ binding: 'IMAGES' })
     expect(development.vars).toEqual({
       DEPLOYMENT_ENV: 'development',
-      LOCAL_ADMIN_BYPASS: 'false',
       PUBLIC_APP_URL: 'https://storekit.plugged.darjs.dev',
       PUBLIC_MEDIA_BASE_URL: 'https://storekitcdn.plugged.darjs.dev/',
       QPAY_BASE_URL: 'https://merchant.qpay.mn',
     })
     expect(development.secrets.required).toEqual([
-      'BETTER_AUTH_SECRETS',
+      'BETTER_AUTH_SECRET',
       'GOOGLE_CLIENT_ID',
       'GOOGLE_CLIENT_SECRET',
       'QPAY_USERNAME',

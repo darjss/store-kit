@@ -3,8 +3,8 @@ import { productListFiltersSchema } from '@store-kit/contracts/catalog'
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
-import { publicImage } from '~/media'
-import { contractQuery } from '~/typebox-contract'
+import { publicImage } from '../media'
+import { contractQuery } from '../typebox-contract'
 
 const slugPattern = '^[a-z0-9]+(?:-[a-z0-9]+)*$'
 

@@ -8,7 +8,7 @@ import { validateDevelopmentSecretsFile } from './deployment-secrets.ts'
 
 const directories: string[] = []
 const authSecrets = [
-  'BETTER_AUTH_SECRETS=1:auth-secret-at-least-thirty-two-characters',
+  'BETTER_AUTH_SECRET=auth-secret-at-least-thirty-two-characters',
   'GOOGLE_CLIENT_ID=google-client-id',
   'GOOGLE_CLIENT_SECRET=google-client-secret',
 ]
@@ -61,7 +61,7 @@ describe('Plugged development secrets file', () => {
     ],
     [
       'a malformed Better Auth secret',
-      requiredSecrets().replace(authSecrets[0], 'BETTER_AUTH_SECRETS=1:too-short'),
+      requiredSecrets().replace(authSecrets[0], 'BETTER_AUTH_SECRET=too-short'),
     ],
     ['a partial Telegram group', 'TELEGRAM_BOT_TOKEN=bot-token'],
     ['an unsupported key', 'EXTRA_SECRET=value'],

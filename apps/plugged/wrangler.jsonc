@@ -23,11 +23,10 @@
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "plugged" }],
   "images": { "binding": "IMAGES" },
   "secrets": {
-    "required": ["BETTER_AUTH_SECRETS", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+    "required": ["BETTER_AUTH_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   },
   "vars": {
     "DEPLOYMENT_ENV": "production",
-    "LOCAL_ADMIN_BYPASS": "false",
     "PUBLIC_APP_URL": "https://pluggedaudio.store",
     "PUBLIC_MEDIA_BASE_URL": "https://plugged.storekitcdn.darjs.dev/",
     "QPAY_BASE_URL": "https://merchant.qpay.mn",
@@ -58,16 +57,22 @@
           "id": "25da21dde4484cf1a80352173d6d423d",
         },
       ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA",
+          "bucket_name": "plugged",
+        },
+      ],
+      "images": { "binding": "IMAGES" },
       "vars": {
         "DEPLOYMENT_ENV": "production",
-        "LOCAL_ADMIN_BYPASS": "false",
         "PUBLIC_APP_URL": "https://pluggedaudio.store",
         "PUBLIC_MEDIA_BASE_URL": "https://plugged.storekitcdn.darjs.dev/",
         "QPAY_BASE_URL": "https://merchant.qpay.mn",
       },
       "secrets": {
         "required": [
-          "BETTER_AUTH_SECRETS",
+          "BETTER_AUTH_SECRET",
           "GOOGLE_CLIENT_ID",
           "GOOGLE_CLIENT_SECRET",
           "QPAY_USERNAME",
@@ -117,14 +122,13 @@
       "images": { "binding": "IMAGES" },
       "vars": {
         "DEPLOYMENT_ENV": "development",
-        "LOCAL_ADMIN_BYPASS": "false",
         "PUBLIC_APP_URL": "https://storekit.plugged.darjs.dev",
         "PUBLIC_MEDIA_BASE_URL": "https://storekitcdn.plugged.darjs.dev/",
         "QPAY_BASE_URL": "https://merchant.qpay.mn",
       },
       "secrets": {
         "required": [
-          "BETTER_AUTH_SECRETS",
+          "BETTER_AUTH_SECRET",
           "GOOGLE_CLIENT_ID",
           "GOOGLE_CLIENT_SECRET",
           "QPAY_USERNAME",

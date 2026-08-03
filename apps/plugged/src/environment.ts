@@ -1,4 +1,3 @@
-import { parseBetterAuthSecrets } from '@store-kit/config'
 import { remoteMediaBaseUrl } from '@store-kit/contracts/media'
 import { toStandardSchema } from '@store-kit/contracts/standard-schema'
 import { createEnv } from '@t3-oss/env-core'
@@ -30,7 +29,7 @@ const telegramCredentialNames = [
 
 export type PluggedRuntimeEnvironment = {
   AUTH_KV?: unknown
-  BETTER_AUTH_SECRETS?: string
+  BETTER_AUTH_SECRET?: string
   DB?: unknown
   DEPLOYMENT_ENV?: string
   GOOGLE_CLIENT_ID?: string
@@ -79,7 +78,7 @@ export const validatePluggedEnvironment = (
 
   const environment = createEnv({
     server: {
-      BETTER_AUTH_SECRETS: toStandardSchema(Type.String({ minLength: 1 })),
+      BETTER_AUTH_SECRET: toStandardSchema(Type.String({ minLength: 32 })),
       DEPLOYMENT_ENV: deploymentEnvironment,
       GOOGLE_CLIENT_ID: toStandardSchema(Type.String({ minLength: 1 })),
       GOOGLE_CLIENT_SECRET: toStandardSchema(Type.String({ minLength: 1 })),
@@ -111,13 +110,6 @@ export const validatePluggedEnvironment = (
 
   assertCompleteGroup(environment, 'QPay', qpayCredentialNames)
   assertCompleteGroup(environment, 'Telegram', telegramCredentialNames)
-  try {
-    parseBetterAuthSecrets(environment.BETTER_AUTH_SECRETS)
-  } catch (error) {
-    throw new Error('Invalid Plugged environment. BETTER_AUTH_SECRETS: malformed value.', {
-      cause: error,
-    })
-  }
 
   if (environment.DEPLOYMENT_ENV === 'production' && environment.LOCAL_ADMIN_BYPASS === 'true') {
     throw new Error('LOCAL_ADMIN_BYPASS is only available in development.')

@@ -112,7 +112,7 @@ PLUGGED_SMOKE_URL=https://storekit.plugged.darjs.dev/ \
 The secret-name task only prints interactive `wrangler secret put` commands. It never reads or
 writes secret values. Required names are:
 
-- `BETTER_AUTH_SECRETS`
+- `BETTER_AUTH_SECRET`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `QPAY_USERNAME`
@@ -129,10 +129,10 @@ deploy therefore accepts Cloudflare's first-deploy `--secrets-file` equivalent t
 QPay secrets, and contain either all four Telegram secrets or none. Never put the file in the
 repository.
 
-Set `BETTER_AUTH_SECRETS` to comma-separated, newest-first versioned keys such as
-`1:<32-or-more-random-characters>`. To rotate a key, prepend a new version and keep all older keys
-that can decrypt stored OAuth tokens, for example `2:<new-key>,1:<old-key>`. Remove an old key only
-after all accounts that used it are disconnected or their OAuth tokens are replaced.
+Set `BETTER_AUTH_SECRET` to one random value of at least 32 characters. Changing it invalidates
+sessions and encrypted OAuth tokens, so admins may need to sign in with Google again. Before moving
+an existing environment from versioned keys, check its `account` rows: tokens stored with the old
+`$ba$` version envelope cannot be read with the plain secret.
 
 Astro selects the named Cloudflare environment at build time with
 `CLOUDFLARE_ENV=development`. The guarded command validates `env.development`, builds it, and gives

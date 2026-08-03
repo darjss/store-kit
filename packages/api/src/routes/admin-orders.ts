@@ -7,8 +7,7 @@ import { orderIdPattern } from '@store-kit/contracts/orders'
 import { Result } from 'better-result'
 import { t } from 'elysia'
 
-import { contractBody, contractQuery } from '~/typebox-contract'
-
+import { contractBody, contractQuery } from '../typebox-contract'
 import { createApprovedAdminRoutes } from './approved-admin'
 
 const orderParams = t.Object(

@@ -3,8 +3,7 @@ import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
-import { createAdminSession } from '~/test/admin-session'
-
+import { createAdminSession } from '../test/admin-session'
 import { adminDashboardRoutes } from './admin-dashboard'
 
 const entityId = (prefix: string, value: number) =>

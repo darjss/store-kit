@@ -1,5 +1,4 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
-import { parseBetterAuthSecrets } from '@store-kit/config'
 import { authSchema, db } from '@store-kit/db'
 import { createId } from '@store-kit/db/ids'
 import { betterAuth } from 'better-auth'
@@ -7,7 +6,6 @@ import { env } from 'cloudflare:workers'
 
 const rateLimitKeyPrefix = 'better-auth:rate-limit:'
 const rateLimitWindowSeconds = 60
-const authSecrets = parseBetterAuthSecrets(env.BETTER_AUTH_SECRETS)
 const authIdEntities = {
   user: 'authUser',
   session: 'authSession',
@@ -18,7 +16,7 @@ const authIdEntities = {
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: 'sqlite', schema: authSchema }),
   baseURL: env.PUBLIC_APP_URL,
-  secrets: authSecrets,
+  secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: [env.PUBLIC_APP_URL],
   socialProviders: {
     google: {

@@ -8,8 +8,7 @@ import { Result } from 'better-result'
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
-import { createAdminCookie } from '~/test/admin-session'
-
+import { createAdminCookie } from '../test/admin-session'
 import { adminSettingsRoutes } from './admin-settings'
 
 const settingsId = 'cfg_00000000000000000000000001'

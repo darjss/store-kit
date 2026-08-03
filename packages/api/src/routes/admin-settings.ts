@@ -2,8 +2,7 @@ import { commerce } from '@store-kit/commerce'
 import { adminStoreSettingsUpdateSchema } from '@store-kit/contracts/admin-settings'
 import { Result } from 'better-result'
 
-import { contractBody } from '~/typebox-contract'
-
+import { contractBody } from '../typebox-contract'
 import { createApprovedAdminRoutes } from './approved-admin'
 
 export const adminSettingsRoutes = createApprovedAdminRoutes('/settings')

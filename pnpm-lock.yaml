@@ -207,9 +207,6 @@ importers:
       '@store-kit/commerce':
         specifier: workspace:*
         version: link:../commerce
-      '@store-kit/config':
-        specifier: workspace:*
-        version: link:../config
       '@store-kit/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -346,9 +343,6 @@ importers:
 
   packages/tooling:
     dependencies:
-      '@store-kit/config':
-        specifier: workspace:*
-        version: link:../config
       '@store-kit/contracts':
         specifier: workspace:*
         version: link:../contracts

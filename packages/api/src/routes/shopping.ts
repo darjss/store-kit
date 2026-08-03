@@ -1,5 +1,6 @@
 import { commerce } from '@store-kit/commerce'
 import { checkoutInputSchema } from '@store-kit/contracts/checkout'
+import type { CheckoutCreated, CheckoutError } from '@store-kit/contracts/checkout'
 import { orderIdPattern } from '@store-kit/contracts/orders'
 import type { PublicOrder } from '@store-kit/contracts/orders'
 import type {
@@ -11,8 +12,8 @@ import type {
 import { Result } from 'better-result'
 import { Elysia, t } from 'elysia'
 
-import { nullablePublicImage } from '~/media'
-import { contractBody } from '~/typebox-contract'
+import { nullablePublicImage } from '../media'
+import { contractBody } from '../typebox-contract'
 
 export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   .onAfterHandle(({ set }) => {
@@ -20,7 +21,8 @@ export const shoppingRoutes = new Elysia({ aot: false, prefix: '/api' })
   })
   .post(
     '/checkout',
-    async ({ body }) => Result.serialize(await commerce.checkout.createOrder(body)),
+    async ({ body }) =>
+      Result.serialize<CheckoutCreated, CheckoutError>(await commerce.checkout.createOrder(body)),
     {
       body: contractBody(checkoutInputSchema),
     },
