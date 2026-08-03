@@ -441,7 +441,7 @@ test('shows focus only for keyboard navigation on admin controls at mobile and d
   await expectFocusBehaviorAtViewport(page, 1280, 800)
 })
 
-test('guards drafts and runs the displayed command shortcuts', async ({ page }) => {
+test('guards drafts and opens command navigation from the keyboard', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 })
   await page.goto('/admin/catalog')
   await expect(page.getByRole('heading', { level: 1, name: 'Бараа' })).toBeVisible()
@@ -450,8 +450,10 @@ test('guards drafts and runs the displayed command shortcuts', async ({ page }) 
   const newProductButton = page.getByRole('button', { name: 'Шинэ бараа' })
   await expect(newProductButton).toBeVisible()
   expect((await newProductButton.boundingBox())?.height).toBeGreaterThanOrEqual(44)
-  await page.keyboard.press('g')
-  await page.keyboard.press('n')
+  await page.keyboard.press('Control+k')
+  const commandDialog = page.getByRole('dialog')
+  await expect(commandDialog).toBeVisible()
+  await commandDialog.getByText('Шинэ бараа', { exact: true }).click()
   await expect(page).toHaveURL(/\/admin\/catalog\/new$/u)
 
   await page.getByLabel('Барааны нэр', { exact: true }).fill('Хадгалаагүй ноорог бараа')

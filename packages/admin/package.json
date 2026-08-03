@@ -10,6 +10,7 @@
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",
     "@solar-icons/solid": "^1.0.1",
+    "@solid-primitives/keyboard": "^1.3.7",
     "@store-kit/api": "workspace:*",
     "@store-kit/contracts": "workspace:*",
     "@store-kit/ui": "workspace:*",

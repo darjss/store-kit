@@ -1,4 +1,5 @@
 import { Logout2, Magnifer } from '@solar-icons/solid/Linear'
+import { createShortcut } from '@solid-primitives/keyboard'
 import type { AdminSession } from '@store-kit/contracts/admin'
 import {
   Button,
@@ -8,7 +9,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandShortcut,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,7 +19,7 @@ import {
 } from '@store-kit/ui'
 import { useMutation } from '@tanstack/solid-query'
 import { Link, useLocation } from '@tanstack/solid-router'
-import { ErrorBoundary, Show, createSignal, onCleanup, onMount } from 'solid-js'
+import { ErrorBoundary, Show, createSignal } from 'solid-js'
 
 import { InlineAlert, RetryState } from './components/foundation'
 import { adminMutation } from './query-options/session'
@@ -211,26 +211,11 @@ function AdminCommandPalette(props: { open: boolean; onOpenChange: (open: boolea
           <CommandList class="p-1" lang="mn">
             <CommandEmpty>Илэрц олдсонгүй.</CommandEmpty>
             <CommandGroup heading="Шилжих">
-              <CommandItem onSelect={() => run(adminNavigation.dashboard)}>
-                Нүүр
-                <CommandShortcut>G D</CommandShortcut>
-              </CommandItem>
-              <CommandItem onSelect={() => run(adminNavigation.catalog)}>
-                Бараа
-                <CommandShortcut>G C</CommandShortcut>
-              </CommandItem>
-              <CommandItem onSelect={() => run(adminNavigation.newProduct)}>
-                Шинэ бараа
-                <CommandShortcut>G N</CommandShortcut>
-              </CommandItem>
-              <CommandItem onSelect={() => run(adminNavigation.orders)}>
-                Захиалга
-                <CommandShortcut>G O</CommandShortcut>
-              </CommandItem>
-              <CommandItem onSelect={() => run(adminNavigation.settings)}>
-                Тохиргоо
-                <CommandShortcut>G S</CommandShortcut>
-              </CommandItem>
+              <CommandItem onSelect={() => run(adminNavigation.dashboard)}>Нүүр</CommandItem>
+              <CommandItem onSelect={() => run(adminNavigation.catalog)}>Бараа</CommandItem>
+              <CommandItem onSelect={() => run(adminNavigation.newProduct)}>Шинэ бараа</CommandItem>
+              <CommandItem onSelect={() => run(adminNavigation.orders)}>Захиалга</CommandItem>
+              <CommandItem onSelect={() => run(adminNavigation.settings)}>Тохиргоо</CommandItem>
             </CommandGroup>
           </CommandList>
         </Command>
@@ -274,67 +259,20 @@ export function ApprovedWorkspace(props: { session: AdminSession; storeName: str
     return 'Нүүр'
   }
 
-  onMount(() => {
-    let goTimer: ReturnType<typeof setTimeout> | undefined
-    let goPending = false
-    const resetGoShortcut = () => {
-      goPending = false
-      if (goTimer) clearTimeout(goTimer)
-      goTimer = undefined
-    }
-    const goCommands = {
-      d: adminNavigation.dashboard,
-      c: adminNavigation.catalog,
-      n: adminNavigation.newProduct,
-      o: adminNavigation.orders,
-      s: adminNavigation.settings,
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        setCommandOpen(open => !open)
-        return
-      }
-
-      if (!event.metaKey && !event.ctrlKey && !event.altKey && !isEditableTarget(event.target)) {
-        const key = event.key.toLowerCase()
-        if (key === 'g') {
-          event.preventDefault()
-          resetGoShortcut()
-          goPending = true
-          goTimer = setTimeout(resetGoShortcut, 750)
-          return
-        }
-        if (goPending && key in goCommands) {
-          event.preventDefault()
-          const command = goCommands[key as keyof typeof goCommands]
-          resetGoShortcut()
-          void command()
-          return
-        }
-        resetGoShortcut()
-      }
-
-      if (
-        event.key === '/' &&
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.altKey &&
-        !isEditableTarget(event.target)
-      ) {
-        const search = document.querySelector<HTMLElement>('[data-admin-list-search]')
-        if (!search) return
-        event.preventDefault()
-        search.focus()
-      }
-    }
-
-    document.addEventListener('keydown', onKeyDown)
-    onCleanup(() => {
-      resetGoShortcut()
-      document.removeEventListener('keydown', onKeyDown)
-    })
-  })
+  const toggleCommandPalette = () => setCommandOpen(open => !open)
+  createShortcut(['Meta', 'K'], toggleCommandPalette, { requireReset: true })
+  createShortcut(['Control', 'K'], toggleCommandPalette, { requireReset: true })
+  createShortcut(
+    ['/'],
+    event => {
+      if (isEditableTarget(event?.target ?? null)) return
+      const search = document.querySelector<HTMLElement>('[data-admin-list-search]')
+      if (!search) return
+      event?.preventDefault()
+      search.focus()
+    },
+    { preventDefault: false, requireReset: true },
+  )
 
   return (
     <div class={`${pageClass} lg:grid lg:grid-cols-[13rem_minmax(0,1fr)]`}>
