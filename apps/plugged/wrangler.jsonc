@@ -20,6 +20,11 @@
     },
   ],
   "kv_namespaces": [{ "binding": "CACHE" }, { "binding": "AUTH_KV" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "plugged" }],
+  "images": { "binding": "IMAGES" },
+  "secrets": {
+    "required": ["BETTER_AUTH_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+  },
   "vars": {
     "DEPLOYMENT_ENV": "production",
     "PUBLIC_APP_URL": "https://pluggedaudio.store",
@@ -52,6 +57,13 @@
           "id": "25da21dde4484cf1a80352173d6d423d",
         },
       ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA",
+          "bucket_name": "plugged",
+        },
+      ],
+      "images": { "binding": "IMAGES" },
       "vars": {
         "DEPLOYMENT_ENV": "production",
         "PUBLIC_APP_URL": "https://pluggedaudio.store",
@@ -59,7 +71,14 @@
         "QPAY_BASE_URL": "https://merchant.qpay.mn",
       },
       "secrets": {
-        "required": ["QPAY_USERNAME", "QPAY_PASSWORD", "QPAY_INVOICE_CODE"],
+        "required": [
+          "BETTER_AUTH_SECRET",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "QPAY_USERNAME",
+          "QPAY_PASSWORD",
+          "QPAY_INVOICE_CODE",
+        ],
       },
       "routes": [
         {
@@ -93,6 +112,14 @@
           "id": "470331f571da4b08ae62430790e630b8",
         },
       ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA",
+          "bucket_name": "plugged-development-media",
+          "remote": true,
+        },
+      ],
+      "images": { "binding": "IMAGES" },
       "vars": {
         "DEPLOYMENT_ENV": "development",
         "PUBLIC_APP_URL": "https://storekit.plugged.darjs.dev",
@@ -100,7 +127,14 @@
         "QPAY_BASE_URL": "https://merchant.qpay.mn",
       },
       "secrets": {
-        "required": ["QPAY_USERNAME", "QPAY_PASSWORD", "QPAY_INVOICE_CODE"],
+        "required": [
+          "BETTER_AUTH_SECRET",
+          "GOOGLE_CLIENT_ID",
+          "GOOGLE_CLIENT_SECRET",
+          "QPAY_USERNAME",
+          "QPAY_PASSWORD",
+          "QPAY_INVOICE_CODE",
+        ],
       },
       "routes": [
         {

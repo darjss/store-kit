@@ -11,6 +11,7 @@ const wranglerConfigPath = resolve(
 )
 
 type Binding = { binding: string; id?: string }
+type R2Binding = Binding & { bucket_name: string; remote?: boolean }
 type D1Binding = Binding & {
   database_name: string
   database_id?: string
@@ -21,6 +22,8 @@ type WranglerEnvironment = {
   name: string
   d1_databases: D1Binding[]
   kv_namespaces: Binding[]
+  r2_buckets: R2Binding[]
+  images: { binding: string }
   vars: Record<string, string>
   secrets: { required: string[] }
   routes: { pattern: string; custom_domain?: boolean; zone_name?: string }[]
@@ -35,6 +38,9 @@ type WranglerConfig = {
   assets: { directory: string; binding: string }
   d1_databases: Omit<D1Binding, 'database_id'>[]
   kv_namespaces: Binding[]
+  r2_buckets: R2Binding[]
+  images: { binding: string }
+  secrets: { required: string[] }
   vars: Record<string, string>
   env: { development: WranglerEnvironment; production: WranglerEnvironment }
   observability: { enabled: boolean }
@@ -63,6 +69,11 @@ describe('Plugged Wrangler deployment configuration', () => {
         },
       ],
       kv_namespaces: [{ binding: 'CACHE' }, { binding: 'AUTH_KV' }],
+      r2_buckets: [{ binding: 'MEDIA', bucket_name: 'plugged' }],
+      images: { binding: 'IMAGES' },
+      secrets: {
+        required: ['BETTER_AUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+      },
       vars: {
         DEPLOYMENT_ENV: 'production',
         PUBLIC_APP_URL: 'https://pluggedaudio.store',
@@ -94,6 +105,13 @@ describe('Plugged Wrangler deployment configuration', () => {
       SESSION: expect.stringMatching(/^[0-9a-f]{32}$/u),
     })
     expect(new Set(Object.values(namespaces)).size).toBe(3)
+    expect(production.r2_buckets).toEqual([
+      {
+        binding: 'MEDIA',
+        bucket_name: 'plugged',
+      },
+    ])
+    expect(production.images).toEqual({ binding: 'IMAGES' })
     expect(production.vars).toEqual({
       DEPLOYMENT_ENV: 'production',
       PUBLIC_APP_URL: 'https://pluggedaudio.store',
@@ -101,6 +119,9 @@ describe('Plugged Wrangler deployment configuration', () => {
       QPAY_BASE_URL: 'https://merchant.qpay.mn',
     })
     expect(production.secrets.required).toEqual([
+      'BETTER_AUTH_SECRET',
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET',
       'QPAY_USERNAME',
       'QPAY_PASSWORD',
       'QPAY_INVOICE_CODE',
@@ -135,6 +156,14 @@ describe('Plugged Wrangler deployment configuration', () => {
       SESSION: expect.stringMatching(/^[0-9a-f]{32}$/u),
     })
     expect(new Set(Object.values(namespaces)).size).toBe(3)
+    expect(development.r2_buckets).toEqual([
+      {
+        binding: 'MEDIA',
+        bucket_name: 'plugged-development-media',
+        remote: true,
+      },
+    ])
+    expect(development.images).toEqual({ binding: 'IMAGES' })
     expect(development.vars).toEqual({
       DEPLOYMENT_ENV: 'development',
       PUBLIC_APP_URL: 'https://storekit.plugged.darjs.dev',
@@ -142,6 +171,9 @@ describe('Plugged Wrangler deployment configuration', () => {
       QPAY_BASE_URL: 'https://merchant.qpay.mn',
     })
     expect(development.secrets.required).toEqual([
+      'BETTER_AUTH_SECRET',
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET',
       'QPAY_USERNAME',
       'QPAY_PASSWORD',
       'QPAY_INVOICE_CODE',

@@ -5,6 +5,7 @@ import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vite-plus/test'
 
 import { app } from './index'
+import { createAdminCookie, createAdminSession } from './test/admin-session'
 
 const entityId = (prefix: string, value: number) =>
   `${prefix}_${value.toString().padStart(26, '0')}`
@@ -73,6 +74,107 @@ const postJson = (
       body: JSON.stringify(body),
     }),
   )
+
+describe('admin authentication', () => {
+  it('mounts the Google social sign-in handler at the default Better Auth path', async () => {
+    const response = await postJson(
+      '/api/auth/sign-in/social',
+      { provider: 'google', callbackURL: '/admin' },
+      { origin: 'https://plugged.mn' },
+      'https://plugged.mn',
+    )
+    const body = (await response.json()) as { redirect?: unknown; url?: unknown }
+
+    expect(response.status).toBe(200)
+    expect(body.redirect).toBe(true)
+    expect(body.url).toEqual(expect.stringMatching(/^https:\/\/accounts\.google\.com\//u))
+  })
+
+  it('returns the unauthenticated contract without exposing session details', async () => {
+    const response = await app.handle(
+      new Request('https://plugged.mn/api/admin/session', {
+        headers: { origin: 'https://plugged.mn' },
+      }),
+    )
+
+    expect(response.status).toBe(401)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(await response.json()).toEqual({ _tag: 'Unauthenticated' })
+  })
+
+  it('does not expose unsupported email-and-password sign-up', async () => {
+    const before = await env.DB.prepare('select count(*) as count from user').first<{
+      count: number
+    }>()
+    const response = await postJson(
+      '/api/auth/sign-up/email',
+      { name: 'Unexpected User', email: 'unexpected@example.com', password: 'password123' },
+      { origin: 'https://plugged.mn' },
+      'https://plugged.mn',
+    )
+    const after = await env.DB.prepare('select count(*) as count from user').first<{
+      count: number
+    }>()
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({
+      code: 'EMAIL_PASSWORD_SIGN_UP_DISABLED',
+      message: 'Email and password sign up is not enabled',
+    })
+    expect(after?.count).toBe(before?.count)
+  })
+
+  it('checks the current D1 approval value for a real Better Auth session', async () => {
+    const unapprovedResponse = await app.handle(
+      new Request('https://plugged.mn/api/admin/session', {
+        headers: { cookie: await createAdminCookie(false), origin: 'https://plugged.mn' },
+      }),
+    )
+    const approvedResponse = await app.handle(
+      new Request('https://plugged.mn/api/admin/session', {
+        headers: { cookie: await createAdminCookie(true), origin: 'https://plugged.mn' },
+      }),
+    )
+
+    expect(unapprovedResponse.status).toBe(403)
+    expect(await unapprovedResponse.json()).toEqual({ _tag: 'ApprovalRequired' })
+    expect(approvedResponse.status).toBe(200)
+    expect(await approvedResponse.json()).toMatchObject({
+      _tag: 'AdminSession',
+      user: { name: 'Admin User' },
+    })
+  })
+
+  it('stores and revokes Better Auth sessions in D1', async () => {
+    const { cookie, session } = await createAdminSession(true)
+    const persisted = await env.DB.prepare('select id, token from session where token = ?')
+      .bind(session.token)
+      .first<{ id: string; token: string }>()
+
+    expect(persisted).toEqual({ id: session.id, token: session.token })
+    expect(session.id).toMatch(/^ses_[0-7][0123456789abcdefghjkmnpqrstvwxyz]{25}$/u)
+
+    const signOutResponse = await postJson(
+      '/api/auth/sign-out',
+      {},
+      { cookie, origin: 'https://plugged.mn' },
+      'https://plugged.mn',
+    )
+    const revoked = await env.DB.prepare('select id from session where token = ?')
+      .bind(session.token)
+      .first()
+    const oldCookieResponse = await app.handle(
+      new Request('https://plugged.mn/api/admin/session', {
+        headers: { cookie, origin: 'https://plugged.mn' },
+      }),
+    )
+
+    expect(signOutResponse.status).toBe(200)
+    expect(revoked).toBeNull()
+    expect(oldCookieResponse.status).toBe(401)
+    expect(await oldCookieResponse.json()).toEqual({ _tag: 'Unauthenticated' })
+  })
+})
 
 describe('checked shared request contracts', () => {
   it('rejects malformed checkout and cart bodies at the Elysia boundary', async () => {

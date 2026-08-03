@@ -9,8 +9,10 @@
     "./cart": "./src/cart/operations.ts",
     "./qpay": "./src/adapters/qpay.ts",
     "./checkout": "./src/checkout/operations.ts",
+    "./dashboard": "./src/dashboard/operations.ts",
     "./orders": "./src/orders/operations.ts",
     "./payments": "./src/payments/operations.ts",
+    "./settings": "./src/settings/operations.ts",
     "./system": "./src/operations/system-status.ts",
     "./telegram": "./src/adapters/telegram.ts"
   },

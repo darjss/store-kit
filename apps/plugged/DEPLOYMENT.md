@@ -2,8 +2,8 @@
 
 Catalog media is always read from a remote R2 custom domain. The production origin is fixed at
 `https://plugged.storekitcdn.darjs.dev/`. Development must use a separate remote bucket and custom
-domain; it may never fall back to the production origin. The Astro Worker has no public R2 read
-binding or media route.
+domain; it may never fall back to the production origin. The Astro Worker has no media delivery
+route. Its `MEDIA` binding is only for approved admin writes and reference-aware deletes.
 
 The non-production client demo uses:
 
@@ -27,6 +27,7 @@ Deployment tasks require an explicit `env.development` or `env.production` entry
 - a unique Worker `name`
 - `DB` with both `database_name` and `database_id`
 - `CACHE`, `AUTH_KV`, and Astro's `SESSION` binding with IDs
+- `MEDIA` bound to the environment's R2 bucket and an `IMAGES` binding
 - `DEPLOYMENT_ENV`, `PUBLIC_APP_URL`, `PUBLIC_MEDIA_BASE_URL`, and `QPAY_BASE_URL` variables
 
 Wrangler variables and bindings are non-inheritable between environments, so declare every item in
@@ -44,7 +45,8 @@ and production domains on their matching buckets. Uploaded catalog objects recei
 to cache the catalog image types.
 
 For local development, copy `.dev.vars.example`, set `DEPLOYMENT_ENV=development`, and provide the
-remote development custom-domain origin. An empty value intentionally fails validation.
+remote development custom-domain origin. Configure Google's authorized redirect URI as
+`{PUBLIC_APP_URL}/api/auth/callback/google`. An empty value intentionally fails validation.
 
 ## Reliable local browser runtime
 
@@ -110,6 +112,9 @@ PLUGGED_SMOKE_URL=https://storekit.plugged.darjs.dev/ \
 The secret-name task only prints interactive `wrangler secret put` commands. It never reads or
 writes secret values. Required names are:
 
+- `BETTER_AUTH_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 - `QPAY_USERNAME`
 - `QPAY_PASSWORD`
 - `QPAY_INVOICE_CODE`
@@ -120,8 +125,14 @@ writes secret values. Required names are:
 
 For a new Worker, Wrangler cannot run `secret put` until the Worker exists. The guarded development
 deploy therefore accepts Cloudflare's first-deploy `--secrets-file` equivalent through
-`PLUGGED_SECRETS_FILE`. The file must be absolute, mode `600`, contain all three QPay secrets, and
-contain either all four Telegram secrets or none. Never put the file in the repository.
+`PLUGGED_SECRETS_FILE`. The file must be absolute, mode `600`, contain all three auth and all three
+QPay secrets, and contain either all four Telegram secrets or none. Never put the file in the
+repository.
+
+Set `BETTER_AUTH_SECRET` to one random value of at least 32 characters. Changing it invalidates
+sessions and encrypted OAuth tokens, so admins may need to sign in with Google again. Before moving
+an existing environment from versioned keys, check its `account` rows: tokens stored with the old
+`$ba$` version envelope cannot be read with the plain secret.
 
 Astro selects the named Cloudflare environment at build time with
 `CLOUDFLARE_ENV=development`. The guarded command validates `env.development`, builds it, and gives

@@ -4,7 +4,12 @@ import { validatePluggedEnvironment } from './environment'
 import type { PluggedRuntimeEnvironment } from './environment'
 
 const localEnvironment = {
+  AUTH_KV: {},
+  BETTER_AUTH_SECRET: 'test-auth-secret-at-least-thirty-two-characters',
+  DB: {},
   DEPLOYMENT_ENV: 'development',
+  GOOGLE_CLIENT_ID: 'google-client-id',
+  GOOGLE_CLIENT_SECRET: 'google-client-secret',
   PUBLIC_APP_URL: 'https://plugged.localhost',
   PUBLIC_MEDIA_BASE_URL: 'https://plugged-development-media.example.com/',
   QPAY_BASE_URL: 'https://merchant-sandbox.qpay.mn',
@@ -25,6 +30,23 @@ test('accepts local development without provider credentials', () => {
   expect(environment.TELEGRAM_BOT_TOKEN).toBeUndefined()
   expectTypeOf(environment.PUBLIC_MEDIA_BASE_URL).toBeString()
   expectTypeOf(environment.QPAY_USERNAME).toEqualTypeOf<string | undefined>()
+})
+
+test('accepts the local admin bypass only in development', () => {
+  const environment = validatePluggedEnvironment({
+    ...localEnvironment,
+    LOCAL_ADMIN_BYPASS: 'true',
+  })
+
+  expect(environment.LOCAL_ADMIN_BYPASS).toBe('true')
+  expect(() =>
+    validatePluggedEnvironment({
+      ...localEnvironment,
+      DEPLOYMENT_ENV: 'production',
+      LOCAL_ADMIN_BYPASS: 'true',
+      PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
+    }),
+  ).toThrow('LOCAL_ADMIN_BYPASS is only available in development.')
 })
 
 test('accepts complete provider credential groups', () => {
@@ -76,6 +98,7 @@ test('rejects the production environment during local development', () => {
 })
 
 test.each([
+  ['BETTER_AUTH_SECRET', { BETTER_AUTH_SECRET: 'too-short' }],
   ['PUBLIC_APP_URL', { PUBLIC_APP_URL: 'not a URL' }],
   ['QPAY_BASE_URL', { QPAY_BASE_URL: '/relative' }],
   ['TELEGRAM_CHAT_ID', { TELEGRAM_BOT_TOKEN: 'token', TELEGRAM_CHAT_ID: 'chat' }],

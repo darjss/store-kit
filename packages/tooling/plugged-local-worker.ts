@@ -11,7 +11,37 @@ const logPath = resolve(stateDirectory, 'worker.log')
 const envPath = resolve(stateDirectory, 'worker.vars')
 const localUrl = 'http://127.0.0.1:4321'
 const productionMediaBaseUrl = 'https://plugged.storekitcdn.darjs.dev/'
+const developmentMediaBaseUrl = 'https://storekitcdn.plugged.darjs.dev/'
 const command = process.argv[2]
+
+const run = (executable: string, args: string[], failureMessage: string) => {
+  const result = spawnSync(executable, args, { cwd: appDirectory, stdio: 'inherit' })
+  if (result.status !== 0) throw new Error(failureMessage)
+}
+
+const prepareLocalDatabase = () => {
+  const localD1Args = ['DB', '--local', '--persist-to', '.wrangler/state']
+  run(
+    'vp',
+    ['exec', 'wrangler', 'd1', 'migrations', 'apply', ...localD1Args],
+    'Local D1 migrations failed.',
+  )
+  run(
+    'vp',
+    [
+      'exec',
+      'wrangler',
+      'd1',
+      'execute',
+      ...localD1Args,
+      '--command',
+      `insert or ignore into checkout_settings
+        (id, delivery_fee_mnt, bank_name, bank_account_name, bank_account_number, updated_at)
+       values ('cfg_00000000000000000000000001', 5000, 'Local bank', 'Local Store', '0000000000', ${Date.now()})`,
+    ],
+    'Local checkout settings setup failed.',
+  )
+}
 
 const readPid = () => {
   if (!existsSync(pidPath)) return undefined
@@ -46,28 +76,30 @@ const start = async () => {
   if (isRunning(currentPid))
     throw new Error(`Local Worker is already running with PID ${currentPid}.`)
 
-  const mediaBaseUrl = remoteMediaBaseUrl(process.env.PLUGGED_LOCAL_MEDIA_BASE_URL ?? '')
+  const mediaBaseUrl = remoteMediaBaseUrl(
+    process.env.PLUGGED_LOCAL_MEDIA_BASE_URL ?? developmentMediaBaseUrl,
+  )
   if (mediaBaseUrl === productionMediaBaseUrl) {
     throw new Error('Local browser development must not use the production media origin.')
   }
-
-  const build = spawnSync('vp', ['exec', 'astro', 'build'], {
-    cwd: appDirectory,
-    stdio: 'inherit',
-  })
-  if (build.status !== 0) throw new Error('Astro build failed.')
 
   mkdirSync(stateDirectory, { recursive: true })
   writeFileSync(
     envPath,
     [
       'DEPLOYMENT_ENV=development',
+      'LOCAL_ADMIN_BYPASS=true',
+      'BETTER_AUTH_SECRET=local-browser-auth-secret-at-least-thirty-two-characters',
+      'GOOGLE_CLIENT_ID=local-browser-client-id',
+      'GOOGLE_CLIENT_SECRET=local-browser-client-secret',
       `PUBLIC_APP_URL=${localUrl}`,
       `PUBLIC_MEDIA_BASE_URL=${mediaBaseUrl}`,
       'QPAY_BASE_URL=https://merchant-sandbox.qpay.mn',
       '',
     ].join('\n'),
   )
+  prepareLocalDatabase()
+  run('vp', ['exec', 'astro', 'build'], 'Astro build failed.')
   const log = openSync(logPath, 'w')
   const worker = spawn(
     'vp',
@@ -75,6 +107,8 @@ const start = async () => {
       'exec',
       'wrangler',
       'dev',
+      '--env',
+      'development',
       '--local',
       '--ip',
       '127.0.0.1',

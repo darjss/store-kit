@@ -1,3 +1,4 @@
+import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -5,6 +6,7 @@ import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-worker
 import { defineConfig } from 'vite-plus'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
+const migrationRoot = path.join(root, 'packages/db/migrations')
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
@@ -15,9 +17,25 @@ export default defineConfig({
       miniflare: {
         bindings: {
           DEPLOYMENT_ENV: 'production',
-          TEST_MIGRATIONS: await readD1Migrations(
-            path.join(root, 'packages/db/migrations/20260723180551_old_karnak'),
-          ),
+          TEST_MIGRATIONS: (
+            await Promise.all(
+              (
+                await readdir(migrationRoot, { withFileTypes: true })
+              )
+                .filter(entry => entry.isDirectory())
+                .map(entry => entry.name)
+                .toSorted()
+                .map(async directory =>
+                  (await readD1Migrations(path.join(migrationRoot, directory))).map(migration => ({
+                    ...migration,
+                    name: `${directory}/${migration.name}`,
+                  })),
+                ),
+            )
+          ).flat(),
+          BETTER_AUTH_SECRET: 'integration-auth-secret-at-least-thirty-two-characters',
+          GOOGLE_CLIENT_ID: 'integration-test-google-client-id',
+          GOOGLE_CLIENT_SECRET: 'integration-test-google-client-secret',
           PUBLIC_APP_URL: 'https://plugged.mn',
           PUBLIC_MEDIA_BASE_URL: 'https://plugged.storekitcdn.darjs.dev/',
           QPAY_USERNAME: 'integration-test',

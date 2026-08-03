@@ -56,6 +56,7 @@ type SheetContentProps<T extends ValidComponent = 'div'> = PolymorphicProps<
   SheetPrimitive.DialogContentProps<T>
 > &
   Pick<ComponentProps<T>, 'class' | 'children'> & {
+    overlayClass?: string
     side?: 'top' | 'right' | 'bottom' | 'left'
     showCloseButton?: boolean
   }
@@ -65,10 +66,16 @@ const SheetContent = <T extends ValidComponent = 'div'>(props: SheetContentProps
     { side: 'right', showCloseButton: true } as SheetContentProps,
     props,
   )
-  const [local, others] = splitProps(mergedProps, ['class', 'children', 'side', 'showCloseButton'])
+  const [local, others] = splitProps(mergedProps, [
+    'class',
+    'children',
+    'overlayClass',
+    'side',
+    'showCloseButton',
+  ])
   return (
     <SheetPortal>
-      <SheetOverlay />
+      <SheetOverlay class={local.overlayClass} />
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={local.side}
@@ -85,7 +92,7 @@ const SheetContent = <T extends ValidComponent = 'div'>(props: SheetContentProps
             class="z-sheet-close"
           >
             <CloseCircle />
-            <span class="sr-only">Close</span>
+            <span class="sr-only">Хаах</span>
           </SheetPrimitive.CloseButton>
         </Show>
       </SheetPrimitive.Content>

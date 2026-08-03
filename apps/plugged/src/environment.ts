@@ -28,7 +28,13 @@ const telegramCredentialNames = [
 ] as const
 
 export type PluggedRuntimeEnvironment = {
+  AUTH_KV?: unknown
+  BETTER_AUTH_SECRET?: string
+  DB?: unknown
   DEPLOYMENT_ENV?: string
+  GOOGLE_CLIENT_ID?: string
+  GOOGLE_CLIENT_SECRET?: string
+  LOCAL_ADMIN_BYPASS?: string
   PUBLIC_APP_URL?: string
   PUBLIC_MEDIA_BASE_URL?: string
   QPAY_BASE_URL?: string
@@ -64,9 +70,21 @@ export const validatePluggedEnvironment = (
   runtimeEnv: PluggedRuntimeEnvironment,
   options: { localDevelopment?: boolean } = {},
 ) => {
+  const { DB, AUTH_KV, ...stringEnvironment } = runtimeEnv
+  const missingBindings = [!DB && 'DB', !AUTH_KV && 'AUTH_KV'].filter(Boolean)
+  if (missingBindings.length > 0) {
+    throw new Error(`Invalid Plugged environment. Missing: ${missingBindings.join(', ')}.`)
+  }
+
   const environment = createEnv({
     server: {
+      BETTER_AUTH_SECRET: toStandardSchema(Type.String({ minLength: 32 })),
       DEPLOYMENT_ENV: deploymentEnvironment,
+      GOOGLE_CLIENT_ID: toStandardSchema(Type.String({ minLength: 1 })),
+      GOOGLE_CLIENT_SECRET: toStandardSchema(Type.String({ minLength: 1 })),
+      LOCAL_ADMIN_BYPASS: toStandardSchema(
+        Type.Union([Type.Literal('true'), Type.Literal('false'), Type.Undefined()]),
+      ),
       QPAY_BASE_URL: url,
       QPAY_USERNAME: optionalSecret,
       QPAY_PASSWORD: optionalSecret,
@@ -81,7 +99,7 @@ export const validatePluggedEnvironment = (
       PUBLIC_APP_URL: url,
       PUBLIC_MEDIA_BASE_URL: url,
     },
-    runtimeEnv,
+    runtimeEnv: stringEnvironment,
     emptyStringAsUndefined: true,
     isServer: true,
     onValidationError: issues => {
@@ -92,6 +110,10 @@ export const validatePluggedEnvironment = (
 
   assertCompleteGroup(environment, 'QPay', qpayCredentialNames)
   assertCompleteGroup(environment, 'Telegram', telegramCredentialNames)
+
+  if (environment.DEPLOYMENT_ENV === 'production' && environment.LOCAL_ADMIN_BYPASS === 'true') {
+    throw new Error('LOCAL_ADMIN_BYPASS is only available in development.')
+  }
 
   const mediaBaseUrl = remoteMediaBaseUrl(environment.PUBLIC_MEDIA_BASE_URL)
   if (environment.DEPLOYMENT_ENV === 'production' && mediaBaseUrl !== productionMediaBaseUrl) {

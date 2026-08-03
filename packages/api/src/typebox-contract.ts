@@ -5,9 +5,8 @@ import { Value } from 'typebox/value'
 const decodeContract = <Schema extends TSchema>(
   location: 'body' | 'query',
   schema: Schema,
-  value: unknown,
+  decoded: unknown,
 ) => {
-  const decoded = location === 'query' ? Value.Convert(schema, value) : value
   if (!Value.Check(schema, decoded))
     throw new ValidationError(
       location,
@@ -23,8 +22,19 @@ export const contractBody = <Schema extends TSchema>(schema: Schema) =>
     .Decode((value): Static<Schema> => decodeContract('body', schema, value))
     .Encode(value => value)
 
+export const contractMultipartBody = <Schema extends TSchema>(
+  schema: Schema,
+  convert: (value: unknown) => unknown,
+) =>
+  t
+    .Transform(t.Unknown())
+    .Decode((value): Static<Schema> => decodeContract('body', schema, convert(value)))
+    .Encode(value => value)
+
 export const contractQuery = <Schema extends TSchema>(schema: Schema) =>
   t
     .Transform(t.Unknown())
-    .Decode((value): Static<Schema> => decodeContract('query', schema, value))
+    .Decode(
+      (value): Static<Schema> => decodeContract('query', schema, Value.Convert(schema, value)),
+    )
     .Encode(value => value)

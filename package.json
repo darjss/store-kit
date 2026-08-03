@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "vp run -r build",
     "prepare": "vp config"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.18.7",
     "@letstri/oxlint-config": "^1.2.2",
+    "@playwright/test": "^1.62.0",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0",
     "oxlint-tailwindcss": "^1.3.5",

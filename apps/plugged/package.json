@@ -15,6 +15,7 @@
     "@astrojs/solid-js": "^7.0.1",
     "@fontsource-variable/golos-text": "^5.3.0",
     "@solar-icons/solid": "^1.0.1",
+    "@store-kit/admin": "workspace:*",
     "@store-kit/api": "workspace:*",
     "@store-kit/commerce": "workspace:*",
     "@store-kit/config": "workspace:*",

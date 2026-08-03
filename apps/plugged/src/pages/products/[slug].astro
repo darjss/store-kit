@@ -93,7 +93,7 @@ const formatFact = (key: string, value: string | number | boolean | string[]) =>
         <p class="m-0 max-w-[32ch] text-paper/70 max-md:mt-4">Каталогт баталгаажсан мэдээлэл. Хувилбарын үнэ болон үлдэгдлийг дээрээс сонгож шалгана уу.</p>
       </div>
       <div class="grid grid-cols-2 border-t-2 border-paper/30 max-md:grid-cols-1">
-        {Object.entries(product.details).map(([key, value], index) => (
+        {Object.entries(product.details ?? {}).map(([key, value], index) => (
           <dl class:list={["m-0 grid grid-cols-[minmax(8rem,0.7fr)_1.3fr] gap-4 border-b-2 border-paper/30 py-5 max-[340px]:grid-cols-1 max-[340px]:gap-1", index % 2 === 0 ? "md:border-r-2 md:pr-6" : "md:pl-6"]}>
             <dt class="font-black text-signal">{factLabels[key] ?? key}</dt>
             <dd class="m-0 font-extrabold text-paper">{formatFact(key, value)}</dd>

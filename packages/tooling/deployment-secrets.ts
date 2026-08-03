@@ -2,6 +2,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { isAbsolute } from 'node:path'
 import { parseEnv } from 'node:util'
 
+const authSecretNames = ['BETTER_AUTH_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const
 const qpaySecretNames = ['QPAY_USERNAME', 'QPAY_PASSWORD', 'QPAY_INVOICE_CODE'] as const
 const telegramSecretNames = [
   'TELEGRAM_BOT_TOKEN',
@@ -9,7 +10,11 @@ const telegramSecretNames = [
   'TELEGRAM_WEBHOOK_SECRET',
   'TELEGRAM_ADMIN_USER_ID',
 ] as const
-const allowedSecretNames = new Set<string>([...qpaySecretNames, ...telegramSecretNames])
+const allowedSecretNames = new Set<string>([
+  ...authSecretNames,
+  ...qpaySecretNames,
+  ...telegramSecretNames,
+])
 
 export const validateDevelopmentSecretsFile = async (pathValue: string | undefined) => {
   const path = pathValue?.trim()
@@ -27,6 +32,13 @@ export const validateDevelopmentSecretsFile = async (pathValue: string | undefin
   const unknown = names.filter(name => !allowedSecretNames.has(name))
   if (unknown.length > 0) {
     throw new Error('PLUGGED_SECRETS_FILE contains an unsupported secret name.')
+  }
+  const betterAuthSecret = secrets.BETTER_AUTH_SECRET?.trim()
+  if (!betterAuthSecret || authSecretNames.some(name => !secrets[name]?.trim())) {
+    throw new Error('PLUGGED_SECRETS_FILE must contain every non-empty auth secret.')
+  }
+  if (betterAuthSecret.length < 32) {
+    throw new Error('BETTER_AUTH_SECRET must contain at least 32 characters.')
   }
   if (qpaySecretNames.some(name => !secrets[name]?.trim())) {
     throw new Error('PLUGGED_SECRETS_FILE must contain every non-empty QPay secret.')

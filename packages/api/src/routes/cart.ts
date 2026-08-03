@@ -4,8 +4,8 @@ import type { CartValidationError, ValidatedCart } from '@store-kit/contracts/ca
 import { Result } from 'better-result'
 import { Elysia } from 'elysia'
 
-import { nullablePublicImage } from '~/media'
-import { contractBody } from '~/typebox-contract'
+import { nullablePublicImage } from '../media'
+import { contractBody } from '../typebox-contract'
 
 export const cartRoutes = new Elysia({ aot: false, prefix: '/api/cart' }).post(
   '/validate',

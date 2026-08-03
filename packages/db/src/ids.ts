@@ -11,6 +11,10 @@ export const entityIdPrefixes = {
   order: 'ord',
   orderLine: 'line',
   payment: 'pay',
+  authUser: 'usr',
+  authSession: 'ses',
+  authAccount: 'acct',
+  authVerification: 'ver',
 } as const
 
 export type Entity = keyof typeof entityIdPrefixes

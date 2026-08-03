@@ -5,6 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./admin": "./src/admin.ts",
+    "./admin-catalog": "./src/admin-catalog.ts",
+    "./admin-dashboard": "./src/admin-dashboard.ts",
+    "./admin-orders": "./src/admin-orders.ts",
+    "./admin-settings": "./src/admin-settings.ts",
     "./cart": "./src/cart.ts",
     "./catalog": "./src/catalog.ts",
     "./checkout": "./src/checkout.ts",

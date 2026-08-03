@@ -13,7 +13,7 @@ const Spinner = (props: SpinnerProps) => {
   return (
     <span
       role="status"
-      aria-label="Loading"
+      aria-label="Ачаалж байна"
       class={cn('z-spinner inline-flex size-4 animate-spin', local.class)}
       data-slot="spinner"
       {...others}

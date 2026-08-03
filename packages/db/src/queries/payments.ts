@@ -240,7 +240,7 @@ export const confirmAndDecrementStock = async (
     .update(productVariant)
     .set({
       stockQuantity: sql`${productVariant.stockQuantity} - ${orderedQuantity}`,
-      updatedAt: input.paidAt,
+      updatedAt: sql`max(${productVariant.updatedAt} + 1, ${input.paidAt})`,
     })
     .where(
       and(
