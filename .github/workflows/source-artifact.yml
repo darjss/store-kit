@@ -1,0 +1,27 @@
+name: Source Artifact
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Archive tracked source
+        run: git archive --format=tar.gz --output=store-kit-source.tar.gz HEAD
+
+      - name: Publish source artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: store-kit-source-${{ github.sha }}
+          path: store-kit-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
