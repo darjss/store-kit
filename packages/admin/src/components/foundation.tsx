@@ -56,14 +56,17 @@ export function PageHeader(props: PageHeaderProps) {
   const titleId = () => props.titleId ?? generatedTitleId
 
   return (
-    <header class="flex min-h-16 flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+    <header class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
       <div class="min-w-0">
-        <h1 class="text-xl leading-7 font-semibold tracking-[-0.015em] text-balance" id={titleId()}>
+        <h1
+          class="text-3xl leading-[1.08] font-extrabold tracking-[-0.035em] text-balance lg:text-[2rem]"
+          id={titleId()}
+        >
           {props.title}
         </h1>
         <Show when={props.description}>
           {description => (
-            <p class="mt-1 max-w-[70ch] text-sm leading-5 text-pretty text-muted-foreground">
+            <p class="mt-2 max-w-prose text-sm leading-5 text-pretty text-muted-foreground">
               {description()}
             </p>
           )}

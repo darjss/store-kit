@@ -171,106 +171,128 @@ function WorkQueue(props: WorkQueueProps) {
   const items = () =>
     [
       {
+        kind: 'new' as const,
+        code: 'ЗХ',
         count: props.summary.newOrderCount,
         title: 'Шинэ захиалга',
-        description: 'Төлбөр болон захиалгын мэдээллийг шалгана.',
-        status: 'new' as const,
+        description: 'Төлбөр болон хүргэлтийн мэдээллийг шалгаж баталгаажуулна.',
       },
       {
+        kind: 'confirmed' as const,
+        code: 'БТ',
         count: props.summary.confirmedOrderCount,
         title: 'Бэлтгэх захиалга',
         description: 'Төлбөр баталгаажсан захиалгыг бэлтгэж эхэлнэ.',
-        status: 'confirmed' as const,
       },
       {
+        kind: 'preparing' as const,
+        code: 'СВ',
         count: props.summary.preparingOrderCount,
         title: 'Бэлтгэж буй захиалга',
-        description: 'Бэлэн болсон захиалгыг хүргэлтэд шилжүүлнэ.',
-        status: 'preparing' as const,
+        description: 'Савласан захиалгыг хүргэлтийн шугамд шилжүүлнэ.',
       },
       {
+        kind: 'delivering' as const,
+        code: 'ХР',
         count: props.summary.deliveringOrderCount,
-        title: 'Хүргэлтэд гарсан захиалга',
-        description: 'Хүргэгдсэн захиалгыг дуусгана.',
-        status: 'delivering' as const,
+        title: 'Хүргэлтэд гарсан',
+        description: 'Хүргэгдсэн захиалгыг шалгаад дуусгана.',
       },
       {
+        kind: 'stock' as const,
+        code: 'ҮЛ',
         count: props.summary.lowStockVariantCount,
-        title: 'Үлдэгдэл багассан бараа',
-        description: '3 буюу түүнээс цөөн үлдэгдэлтэй хувилбаруудыг шалгана.',
-        status: undefined,
+        title: 'Бага үлдэгдэл',
+        description: '3 буюу түүнээс цөөн үлдсэн хувилбаруудыг шалгана.',
       },
     ].filter(item => item.count > 0)
+  const total = () => items().reduce((sum, item) => sum + item.count, 0)
 
   return (
-    <section aria-labelledby="work-queue-title">
-      <div class="mb-3 flex items-end justify-between gap-4">
-        <div>
-          <h2 class="text-base font-semibold" id="work-queue-title">
-            Одоо хийх ажил
+    <Show
+      when={items().length > 0}
+      fallback={
+        <section
+          class="border border-(--border) bg-card px-5 py-6"
+          aria-labelledby="work-queue-title"
+        >
+          <h2 class="text-lg font-extrabold" id="work-queue-title">
+            Яаралтай ажил алга
           </h2>
-          <p class="mt-1 text-sm text-muted-foreground">Анхаарал шаардаж буй ажлууд.</p>
-        </div>
-        <Show when={items().length > 0}>
-          <span class="text-sm text-muted-foreground">{items().length} төрөл</span>
-        </Show>
-      </div>
-      <Show
-        when={items().length > 0}
-        fallback={
-          <div class="-mx-4 border-y bg-card px-4 py-5 sm:mx-0 sm:rounded-lg sm:border-x">
-            <p class="text-base font-medium">Яаралтай ажил алга</p>
-            <p class="mt-1 text-sm leading-5 text-muted-foreground">
-              Шинэ захиалга болон бага үлдэгдэл гарвал энд шууд харагдана.
+          <p class="mt-1 text-sm text-muted-foreground">
+            Шинэ захиалга болон бага үлдэгдэл гарвал энд шууд харагдана.
+          </p>
+        </section>
+      }
+    >
+      <section aria-labelledby="work-queue-title">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 bg-destructive px-5 py-4 text-white">
+          <div>
+            <p class="text-xs font-extrabold tracking-[0.08em] text-white/80 uppercase">
+              Шууд хийх ажил
             </p>
+            <h2 class="mt-1 text-xl font-extrabold tracking-tight" id="work-queue-title">
+              Анхаарах ажил
+            </h2>
+            <p class="mt-1 text-sm text-white/85">Эдгээр ажлыг эхэлж дуусгана.</p>
           </div>
-        }
-      >
-        <ul class="-mx-4 divide-y border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x">
+          <strong class="border border-white/60 px-3 py-2 text-lg font-extrabold tabular-nums">
+            {total()} ажил
+          </strong>
+        </div>
+
+        <ul class="divide-y divide-(--border) border-x border-b border-(--border) bg-card">
           <For each={items()}>
             {item => (
               <li>
                 <Link
-                  class="flex min-h-20 items-center gap-4 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                  class="grid min-h-24 grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 transition-colors outline-none hover:bg-background focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                   search={
-                    item.status
-                      ? { status: item.status, limit: 25, offset: 0 }
-                      : { inventory: 'low', limit: 24, offset: 0 }
+                    item.kind === 'stock'
+                      ? { inventory: 'low', limit: 24, offset: 0 }
+                      : { status: item.kind, limit: 25, offset: 0 }
                   }
-                  to={item.status ? '/orders' : '/catalog'}
+                  to={item.kind === 'stock' ? '/catalog' : '/orders'}
                 >
-                  <span class="min-w-0 flex-1">
-                    <span class="block text-base font-medium">{item.title}</span>
-                    <span class="mt-0.5 block text-sm leading-5 text-muted-foreground">
+                  <span class="grid size-8 place-items-center border border-primary text-xs font-black text-primary">
+                    {item.code}
+                  </span>
+                  <span class="min-w-0">
+                    <span class="block font-extrabold">{item.title}</span>
+                    <span class="mt-1 block text-sm leading-5 text-muted-foreground">
                       {item.description}
                     </span>
                   </span>
-                  <span class="text-xl font-semibold text-primary tabular-nums">{item.count}</span>
-                  <span aria-hidden="true" class="text-xl text-muted-foreground">
-                    ›
+                  <span class="flex items-center gap-3">
+                    <strong class="text-xl font-extrabold text-primary tabular-nums">
+                      {item.count}
+                    </strong>
+                    <span aria-hidden="true" class="text-xl text-muted-foreground">
+                      ›
+                    </span>
                   </span>
                 </Link>
               </li>
             )}
           </For>
         </ul>
-      </Show>
-    </section>
+      </section>
+    </Show>
   )
 }
 
 function RecentOrders(props: { orders: AdminOrderListItem[] }) {
   return (
-    <section aria-labelledby="recent-orders-title">
-      <div class="mb-3 flex items-end justify-between gap-4">
+    <section class="border border-(--border) bg-card" aria-labelledby="recent-orders-title">
+      <div class="flex items-end justify-between gap-4 border-b border-(--border) bg-secondary px-4 py-4">
         <div>
-          <h2 class="text-base font-semibold" id="recent-orders-title">
+          <h2 class="text-lg font-extrabold tracking-[-0.02em]" id="recent-orders-title">
             Сүүлийн захиалга
           </h2>
           <p class="mt-1 text-sm text-muted-foreground">Хамгийн сүүлд орсон захиалгууд.</p>
         </div>
         <Link
-          class="flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring"
+          class="flex min-h-11 items-center text-sm font-bold text-primary underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
           search={{ limit: 25, offset: 0 }}
           to="/orders"
         >
@@ -280,7 +302,7 @@ function RecentOrders(props: { orders: AdminOrderListItem[] }) {
       <Show
         when={props.orders.length > 0}
         fallback={
-          <div class="-mx-4 border-y bg-card px-4 py-5 sm:mx-0 sm:rounded-lg sm:border-x">
+          <div class="px-4 py-5">
             <p class="text-base font-medium">Захиалга хараахан алга</p>
             <p class="mt-1 text-sm leading-5 text-muted-foreground">
               Хэрэглэгч захиалга өгөхөд энд автоматаар гарч ирнэ.
@@ -288,7 +310,7 @@ function RecentOrders(props: { orders: AdminOrderListItem[] }) {
           </div>
         }
       >
-        <ul class="-mx-4 divide-y border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x">
+        <ul class="divide-y divide-(--border)">
           <For each={props.orders}>
             {order => {
               const orderStatus = () => orderStatusDisplay(order.status)
@@ -297,7 +319,7 @@ function RecentOrders(props: { orders: AdminOrderListItem[] }) {
                 <li>
                   <Link
                     aria-label={`${order.number}, ${order.customerName}, ${formatMoney(order.totalMnt)}, ${paymentStatus().label}, ${orderStatus().label}, ${formatDate(order.createdAt)}`}
-                    class="block min-h-24 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    class="block min-h-24 px-4 py-3 transition-colors outline-none hover:bg-background focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     params={{ orderId: order.id }}
                     to="/orders/$orderId"
                   >
@@ -346,19 +368,19 @@ function InventoryStatus(props: { stockQuantity: number }) {
 function LowStock(props: { variants: AdminLowStockVariant[] }) {
   return (
     <Show when={props.variants.length > 0}>
-      <section aria-labelledby="low-stock-title">
-        <div class="mb-3">
-          <h2 class="text-base font-semibold" id="low-stock-title">
+      <section class="border border-(--border) bg-card" aria-labelledby="low-stock-title">
+        <div class="border-b border-(--border) bg-secondary px-4 py-4">
+          <h2 class="text-lg font-extrabold tracking-[-0.02em]" id="low-stock-title">
             Нөөц нөхөх бараа
           </h2>
           <p class="mt-1 text-sm text-muted-foreground">Хамгийн бага үлдэгдэлтэй хувилбарууд.</p>
         </div>
-        <ul class="-mx-4 divide-y border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x">
+        <ul class="divide-y divide-(--border)">
           <For each={props.variants}>
             {variant => (
               <li>
                 <Link
-                  class="flex min-h-20 items-center gap-4 px-4 py-3 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                  class="flex min-h-20 items-center gap-4 px-4 py-3 transition-colors outline-none hover:bg-background focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                   params={{ productId: variant.productId }}
                   search={{ variant: variant.variantId }}
                   to="/catalog/$productId"
@@ -396,13 +418,20 @@ type DashboardContentProps = {
 
 function DashboardContent(props: DashboardContentProps) {
   return (
-    <div class="mt-6 space-y-8">
+    <div class="mt-6 space-y-5">
       <Show when={props.isNewStore}>
         <ReadinessSequence draftProductId={props.draftProductId} />
       </Show>
       <WorkQueue summary={props.dashboard.summary} />
-      <RecentOrders orders={props.dashboard.recentOrders} />
-      <LowStock variants={props.dashboard.lowStockVariants} />
+      <div
+        classList={{
+          'grid items-start gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]':
+            props.dashboard.lowStockVariants.length > 0,
+        }}
+      >
+        <RecentOrders orders={props.dashboard.recentOrders} />
+        <LowStock variants={props.dashboard.lowStockVariants} />
+      </div>
     </div>
   )
 }
@@ -429,7 +458,7 @@ export function DashboardPage() {
   const draftProductId = () => draftCatalog()?.items[0]?.id
 
   return (
-    <section class="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-7">
+    <section class="mx-auto w-full max-w-365 px-4 py-6 sm:px-7 lg:px-10 lg:py-8 xl:px-14">
       <PageHeader
         description="Захиалга, нөөц болон дэлгүүрийн бэлэн байдлыг нэг дороос шалгана."
         title="Өнөөдрийн ажил"

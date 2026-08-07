@@ -1,3 +1,7 @@
+## Project context
+
+If `.private/founders-brief.md` exists, read it before doing any work in this repository. Use it to guide product and technical choices.
+
 ## Development
 
 When starting the dev server, use background mode:

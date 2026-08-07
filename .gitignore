@@ -1,4 +1,5 @@
-# private project brief
+# private workspace
+/.private/
 /brief.md*
 
 # build output

@@ -27,24 +27,27 @@ const inventoryLabel = (quantity: number) => {
 
 export function CatalogMobileList(props: { products: AdminCatalogProductListItem[] }) {
   return (
-    <ul aria-label="Барааны жагсаалт" class="divide-y border-y lg:hidden">
+    <ul
+      aria-label="Барааны жагсаалт"
+      class="divide-y divide-(--border) border border-(--border) bg-card lg:hidden"
+    >
       <For each={props.products}>
         {product => (
           <li>
             <Link
-              class="grid min-h-24 grid-cols-[4rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset active:bg-muted"
+              class="grid min-h-24 grid-cols-[4rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset active:bg-accent sm:px-4"
               params={{ productId: product.id }}
               to="/catalog/$productId"
             >
               <Show
                 when={product.primaryImage}
-                fallback={<div aria-hidden="true" class="size-16 rounded-md border bg-muted" />}
+                fallback={<div aria-hidden="true" class="size-16 border bg-muted" />}
               >
                 {image => (
                   <Image
                     alt=""
                     breakpoints={[64, 128]}
-                    class="size-16 rounded-md bg-muted object-cover"
+                    class="size-16 bg-muted object-cover"
                     height={image().height}
                     layout="fixed"
                     operations={{ quality: 78, format: 'auto', fit: 'cover' }}

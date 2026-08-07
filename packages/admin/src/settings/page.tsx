@@ -63,7 +63,7 @@ export function SettingsPage() {
   }
 
   return (
-    <section class="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 lg:px-7">
+    <section class="mx-auto w-full max-w-5xl px-4 py-6 sm:px-7 lg:px-10 lg:py-8">
       <PageHeader
         description="Шинэ захиалгад ашиглах хүргэлтийн үнэ болон банкны дансыг удирдана."
         title="Дэлгүүрийн тохиргоо"
