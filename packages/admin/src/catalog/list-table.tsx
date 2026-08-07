@@ -42,18 +42,18 @@ const productColumns = [
       <div class="flex min-w-52 items-center gap-2.5">
         <Show
           when={info.row.original.primaryImage}
-          fallback={<div aria-hidden="true" class="size-9 shrink-0 rounded-sm border bg-muted" />}
+          fallback={<div aria-hidden="true" class="size-10 shrink-0 border bg-muted" />}
         >
           {image => (
             <Image
               alt=""
               breakpoints={[36, 72]}
-              class="size-9 shrink-0 rounded-sm bg-muted object-cover"
+              class="size-10 shrink-0 bg-muted object-cover"
               height={image().height}
               layout="fixed"
               operations={{ quality: 75, format: 'auto', fit: 'cover' }}
               options={{ domain: new URL(image().url).hostname }}
-              sizes="36px"
+              sizes="40px"
               src={image().url}
               transformer={cloudflare}
               unstyled
@@ -120,7 +120,7 @@ export function CatalogTable(props: { products: AdminCatalogProductListItem[] })
     <div
       aria-activedescendant={activeTableRowId('catalog-products', rowIds(), activeRow())}
       aria-label="Барааны хүснэгт. Сумтай товчоор мөр сонгож, Enter товчоор нээнэ."
-      class="hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 lg:block"
+      class="hidden border border-(--border) bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 lg:block"
       onKeyDown={event =>
         handleTableNavigation(event, rowIds(), activeRow(), setActiveRow, productId => {
           void navigate({ to: '/catalog/$productId', params: { productId } })

@@ -105,12 +105,12 @@ export function CatalogListPage(props: CatalogListPageProps) {
   )
 
   return (
-    <section class="mx-auto w-full max-w-7xl pb-28 md:px-6 md:py-5 md:pb-6 lg:px-7">
-      <div class="px-4 pt-5 md:px-0 md:pt-0">
+    <section class="mx-auto w-full max-w-365 px-4 py-6 pb-28 sm:px-7 md:pb-8 lg:px-10 lg:py-8 xl:px-14">
+      <div>
         <PageHeader
           actions={
             <Button
-              class="fixed right-4 bottom-20 z-30 min-h-12! px-5! shadow-sm lg:static lg:h-8! lg:shadow-none"
+              class="min-h-12! w-full px-5! sm:w-auto lg:h-9!"
               onClick={() => void navigate({ to: '/catalog/new' })}
               type="button"
             >
@@ -124,7 +124,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
         />
       </div>
 
-      <div class="mt-4 px-4 md:px-0">
+      <div class="mt-6 border border-(--border) bg-card p-3">
         <label class="sr-only" for="catalog-search">
           Бараа хайх
         </label>
@@ -147,7 +147,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
         </div>
       </div>
 
-      <div class="mt-3 px-4 lg:hidden">
+      <div class="mt-3 lg:hidden">
         <div class="flex items-center gap-2 overflow-x-auto pb-1">
           <Button
             class="min-h-11! shrink-0"
@@ -184,7 +184,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
         </div>
       </div>
 
-      <div class="mt-3 hidden items-end gap-2 border-y bg-card px-4 py-3 lg:flex">
+      <div class="mt-3 hidden items-end gap-2 border border-(--border) bg-secondary px-4 py-3 lg:flex">
         {statusFilter('catalog-status-filter')}
         {inventoryFilter('catalog-inventory-filter')}
         <Show when={hasFilters()}>
@@ -221,11 +221,11 @@ export function CatalogListPage(props: CatalogListPageProps) {
         </SheetContent>
       </Sheet.Root>
 
-      <div class="mt-4">
+      <div class="mt-5">
         <Show
           when={!query.isPending}
           fallback={
-            <div class="px-4 md:px-0">
+            <div>
               <TableSkeleton
                 columns={[
                   { label: 'Бараа' },
@@ -243,7 +243,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
           <Show
             when={!query.isError}
             fallback={
-              <div class="px-4 md:px-0">
+              <div>
                 <RetryState
                   message="Барааны жагсаалтыг ачаалж чадсангүй."
                   onRetry={() => void query.refetch()}
@@ -255,7 +255,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
             <Show
               when={!expectedError()}
               fallback={
-                <div class="px-4 md:px-0">
+                <div>
                   <InlineAlert title="Барааны жагсаалт нээгдсэнгүй" tone="destructive">
                     {expectedError()?.message ?? 'Хүсэлтийг гүйцэтгэж чадсангүй.'}
                   </InlineAlert>
@@ -265,7 +265,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
               <Show
                 when={(data()?.items.length ?? 0) > 0}
                 fallback={
-                  <div class="px-4 md:px-0">
+                  <div>
                     <Show
                       when={Boolean(props.search.query || hasFilters())}
                       fallback={
@@ -298,7 +298,7 @@ export function CatalogListPage(props: CatalogListPageProps) {
                 <CatalogMobileList products={data()!.items} />
                 <CatalogTable products={data()!.items} />
 
-                <div class="mt-4 flex items-center justify-between gap-3 px-4 text-sm text-muted-foreground md:px-0">
+                <div class="mt-4 flex items-center justify-between gap-3 text-sm text-muted-foreground">
                   <p class="tabular-nums">
                     {data()!.offset + 1}–
                     {Math.min(data()!.offset + data()!.items.length, data()!.total)} /{' '}

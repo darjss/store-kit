@@ -4,20 +4,21 @@
 
 The admin is a mobile-first retail operating tool for bright shop environments. It is light-first, Mongolian-first, task-led, and practical. Shopify Mobile and Square are workflow references only.
 
-The selected visual probe is `.impeccable/probes/admin-retail-ledger.png`. Use its edge-to-edge product ledger and direct mobile hierarchy. Do not copy its generated gradient or exact styling.
+The selected direction is `prototypes/admin-directions/combined-command-center.html`. Use its cobalt shell, pale blue work canvas, square record panels, strong section headers, task queue, and dense product ledger. Port the visual hierarchy into real data and controls; do not copy prototype-only state or fake content.
 
 ## Color
 
-Use a restrained palette:
+Use a committed cobalt palette:
 
-- true white primary canvas
-- cool neutral secondary surfaces
-- graphite primary text
-- readable gray secondary text
-- one flat burnt-orange identity accent
-- green, amber, and red only for real semantic state
+- pale cool-blue work canvas that clearly separates from records
+- true white primary record surfaces
+- stronger blue-tinted utility and table-header surfaces
+- graphite primary text and readable blue-gray secondary text
+- saturated cobalt for the desktop shell, primary actions, links, focus, and selected state
+- red only for urgent and destructive state
+- green and amber only for real semantic state
 
-Do not use purple, violet, gradients, glass effects, decorative color blocks, forced dark mode, or storefront-specific themes.
+Do not use purple, violet, gradients, glass effects, forced dark mode, or storefront-specific themes. Cobalt provides identity; semantic colors must not compete with it.
 
 ## Typography
 
@@ -26,7 +27,7 @@ Use Inter throughout.
 - mobile body and input text: 16px minimum
 - supporting text: 14px minimum
 - metadata: 12px only when nonessential and still readable
-- compact page titles with clear weight, not oversized display type
+- bold 30–32px page titles with tight but readable tracking
 - tabular numbers for money, stock, order numbers, and dates
 
 Use plain Mongolian commerce language. Hide technical implementation terms from primary workflows.
@@ -35,14 +36,15 @@ Use plain Mongolian commerce language. Hide technical implementation terms from 
 
 Start at 360px.
 
-- use edge-to-edge content and separators rather than floating card grids
+- use a pale work canvas, white record surfaces, strong rules, and square or lightly rounded corners
 - use labeled four-item bottom navigation on phones
+- use a full-height cobalt navigation shell on desktop
 - keep the primary screen action in the thumb zone
 - use 44–48px touch targets
 - put secondary filters and actions in sheets or progressive disclosures
 - use dedicated mobile product and order summaries
 - enhance records into complete tables on desktop
-- add persistent desktop navigation only when space supports it
+- use asymmetric desktop grids to make the current task more prominent than supporting records
 
 ## Components
 

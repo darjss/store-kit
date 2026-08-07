@@ -1,0 +1,2945 @@
+<!doctype html>
+<html lang="mn-MN" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#314bc4" />
+    <meta name="description" content="Plugged дэлгүүрийн өдөр тутмын удирдлага" />
+    <title>Өнөөдрийн ажил — Plugged admin</title>
+    <style>
+      :root {
+        --white: oklch(1 0 0);
+        --canvas: oklch(0.965 0.012 255);
+        --utility: oklch(0.94 0.026 255);
+        --utility-strong: oklch(0.89 0.045 255);
+        --ink: oklch(0.2 0.025 260);
+        --ink-soft: oklch(0.34 0.028 260);
+        --muted: oklch(0.48 0.026 260);
+        --rule: oklch(0.79 0.026 255);
+        --rule-strong: oklch(0.61 0.035 255);
+        --ultra: oklch(0.48 0.205 263);
+        --ultra-dark: oklch(0.31 0.13 263);
+        --ultra-pale: oklch(0.935 0.045 255);
+        --red: oklch(0.57 0.21 28);
+        --red-dark: oklch(0.41 0.16 28);
+        --red-pale: oklch(0.95 0.045 28);
+        --amber: oklch(0.66 0.14 72);
+        --amber-dark: oklch(0.41 0.1 72);
+        --amber-pale: oklch(0.96 0.04 80);
+        --green: oklch(0.5 0.14 151);
+        --green-dark: oklch(0.35 0.1 151);
+        --green-pale: oklch(0.95 0.03 151);
+        --focus: oklch(0.72 0.17 78);
+        --sidebar-width: 236px;
+        --bottom-nav-height: 76px;
+        --text-1: 12px;
+        --text-2: 14px;
+        --text-3: 16px;
+        --text-4: 20px;
+        --text-5: 30px;
+        --radius-1: 0;
+        --radius-2: 4px;
+        --radius-3: 6px;
+        --radius-4: 8px;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--canvas);
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100svh;
+        margin: 0;
+        overflow-x: hidden;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: var(--text-3);
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      a,
+      button,
+      input,
+      select {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      button,
+      input,
+      select {
+        color: inherit;
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 3px;
+      }
+
+      ::selection {
+        background: var(--ultra);
+        color: var(--white);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .skip-link {
+        position: fixed;
+        z-index: 20;
+        top: 8px;
+        left: 8px;
+        padding: 10px 14px;
+        transform: translateY(-160%);
+        border: 2px solid var(--ink);
+        border-radius: var(--radius-2);
+        background: var(--white);
+        color: var(--ink);
+        font-weight: 800;
+        text-decoration: none;
+        transition: transform 150ms ease-out;
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .app-shell {
+        min-height: 100svh;
+      }
+
+      .sidebar {
+        display: none;
+        position: fixed;
+        z-index: 10;
+        inset: 0 auto 0 0;
+        width: var(--sidebar-width);
+        flex-direction: column;
+        padding: 24px 16px 18px;
+        background: var(--ultra);
+        color: var(--white);
+      }
+
+      .brand-lockup {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 76px;
+        padding: 0 8px 20px;
+        border-bottom: 1px solid oklch(1 0 0 / 0.32);
+        text-decoration: none;
+      }
+
+      .brand-lockup strong {
+        display: block;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        line-height: 1;
+      }
+
+      .brand-lockup small {
+        display: block;
+        margin-top: 8px;
+        color: oklch(1 0 0 / 0.76);
+        font-size: var(--text-1);
+        font-weight: 750;
+        letter-spacing: 0.1em;
+        line-height: 1.25;
+        text-transform: uppercase;
+      }
+
+      .registration-mark {
+        position: relative;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        border: 1px solid currentColor;
+        color: oklch(1 0 0 / 0.84);
+      }
+
+      .registration-mark::before,
+      .registration-mark::after {
+        position: absolute;
+        background: currentColor;
+        content: '';
+      }
+
+      .registration-mark::before {
+        inset: 9px -5px auto;
+        height: 1px;
+      }
+
+      .registration-mark::after {
+        inset: -5px auto auto 9px;
+        width: 1px;
+        height: 28px;
+      }
+
+      .sidebar-nav {
+        display: grid;
+        gap: 4px;
+        padding-top: 22px;
+      }
+
+      .nav-label {
+        margin: 0 8px 8px;
+        color: oklch(1 0 0 / 0.64);
+        font-size: var(--text-1);
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .nav-link {
+        display: flex;
+        min-height: 46px;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-2);
+        color: oklch(1 0 0 / 0.78);
+        font-size: var(--text-2);
+        font-weight: 680;
+        text-decoration: none;
+        transition:
+          background-color 150ms ease-out,
+          border-color 150ms ease-out,
+          color 150ms ease-out;
+      }
+
+      .nav-link:hover {
+        border-color: oklch(1 0 0 / 0.32);
+        color: var(--white);
+      }
+
+      .nav-link[aria-current='page'] {
+        border-color: oklch(1 0 0 / 0.34);
+        background: var(--white);
+        color: var(--ultra-dark);
+      }
+
+      .nav-glyph {
+        display: grid;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        place-items: center;
+        border: 1px solid currentColor;
+        font-size: 10px;
+        font-weight: 850;
+        line-height: 1;
+      }
+
+      .sidebar-foot {
+        margin-top: auto;
+        padding: 16px 8px 4px;
+        border-top: 1px solid oklch(1 0 0 / 0.32);
+        color: oklch(1 0 0 / 0.78);
+        font-size: var(--text-2);
+      }
+
+      .sidebar-foot strong {
+        display: block;
+        color: var(--white);
+        font-size: var(--text-3);
+      }
+
+      .sidebar-foot small {
+        display: block;
+        margin-top: 4px;
+        font-size: var(--text-1);
+      }
+
+      .main-shell {
+        min-width: 0;
+      }
+
+      .mobile-topbar,
+      .desktop-topbar {
+        display: flex;
+        min-height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--rule);
+        background: var(--white);
+      }
+
+      .mobile-topbar {
+        position: sticky;
+        z-index: 8;
+        top: 0;
+      }
+
+      .desktop-topbar {
+        display: none;
+      }
+
+      .mobile-brand {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 9px;
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        place-items: center;
+        border: 2px solid var(--ultra);
+        color: var(--ultra);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0;
+      }
+
+      .mobile-brand strong {
+        overflow: hidden;
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .store-state,
+      .topbar-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--green-dark);
+        font-size: var(--text-1);
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .state-dot {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 8px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+
+      .topbar-context {
+        margin: 0;
+        color: var(--muted);
+        font-size: var(--text-2);
+      }
+
+      .topbar-context strong {
+        color: var(--ink);
+      }
+
+      .topbar-meta {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        color: var(--muted);
+        font-size: var(--text-2);
+        font-variant-numeric: tabular-nums;
+      }
+
+      main {
+        min-width: 0;
+      }
+
+      .content-shell {
+        width: min(100%, 1460px);
+        margin: 0 auto;
+        padding: 24px 16px calc(var(--bottom-nav-height) + 28px + env(safe-area-inset-bottom));
+      }
+
+      .view-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+
+      .view-header__copy {
+        min-width: 0;
+      }
+
+      .route-label,
+      .field-label,
+      .filter-fieldset legend,
+      .panel-code,
+      .detail-label,
+      .fact-label {
+        font-size: var(--text-1);
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .route-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--ultra);
+      }
+
+      .route-label::before {
+        width: 18px;
+        height: 1px;
+        background: currentColor;
+        content: '';
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-block-start: 0;
+      }
+
+      h1,
+      h2,
+      h3 {
+        text-wrap: balance;
+      }
+
+      h1 {
+        max-width: 16ch;
+        margin-block: 9px 0;
+        color: var(--ink);
+        font-size: var(--text-5);
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        line-height: 1.08;
+      }
+
+      .view-header__copy > p {
+        max-width: 62ch;
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: var(--text-2);
+        text-wrap: pretty;
+      }
+
+      .date-stamp {
+        display: none;
+        flex: 0 0 auto;
+        padding: 9px 11px;
+        border: 1px solid var(--rule);
+        background: var(--utility);
+        color: var(--muted);
+        font-size: var(--text-1);
+        font-variant-numeric: tabular-nums;
+        line-height: 1.35;
+        text-align: end;
+      }
+
+      .date-stamp strong {
+        display: block;
+        color: var(--ink);
+        font-size: var(--text-2);
+      }
+
+      .header-action,
+      .primary-action,
+      .quiet-action,
+      .text-link,
+      .clear-button {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border-radius: var(--radius-2);
+        font-size: var(--text-2);
+        font-weight: 800;
+        text-decoration: none;
+        transition:
+          background-color 150ms ease-out,
+          border-color 150ms ease-out,
+          color 150ms ease-out,
+          transform 150ms ease-out;
+      }
+
+      .header-action,
+      .primary-action {
+        padding: 10px 14px;
+        border: 1px solid var(--ultra);
+        background: var(--ultra);
+        color: var(--white);
+        white-space: nowrap;
+      }
+
+      .header-action:hover,
+      .primary-action:hover {
+        border-color: var(--ultra-dark);
+        background: var(--ultra-dark);
+      }
+
+      .quiet-action,
+      .clear-button {
+        padding: 10px 14px;
+        border: 1px solid var(--rule-strong);
+        background: var(--white);
+        color: var(--ink);
+      }
+
+      .quiet-action:hover,
+      .clear-button:hover:not(:disabled) {
+        border-color: var(--ultra);
+        background: var(--ultra-pale);
+        color: var(--ultra-dark);
+      }
+
+      .header-action:active,
+      .primary-action:active,
+      .quiet-action:active,
+      .clear-button:active:not(:disabled),
+      .text-link:active {
+        transform: scale(0.96);
+      }
+
+      .clear-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+      }
+
+      .priority-banner {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 18px;
+        padding: 16px 18px;
+        border: 1px solid var(--ultra-dark);
+        background: var(--ultra);
+        color: var(--white);
+      }
+
+      .priority-banner__copy {
+        min-width: 0;
+      }
+
+      .priority-banner__label {
+        display: block;
+        color: oklch(1 0 0 / 0.78);
+        font-size: var(--text-1);
+        font-weight: 850;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .priority-banner h2 {
+        margin: 4px 0 0;
+        color: var(--white);
+        font-size: var(--text-4);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+
+      .priority-banner p {
+        max-width: 70ch;
+        margin: 5px 0 0;
+        color: oklch(1 0 0 / 0.78);
+        font-size: var(--text-2);
+      }
+
+      .priority-count {
+        min-width: 92px;
+        padding: 8px 10px;
+        border: 1px solid oklch(1 0 0 / 0.44);
+        color: var(--white);
+        font-size: var(--text-2);
+        font-weight: 800;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .command-grid {
+        display: grid;
+        grid-template-columns: minmax(270px, 0.76fr) minmax(0, 1.24fr);
+        align-items: start;
+        gap: 18px;
+      }
+
+      .panel {
+        min-width: 0;
+        border: 1px solid var(--rule);
+        background: var(--white);
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        min-height: 74px;
+        padding: 15px 16px 13px;
+        border-bottom: 1px solid var(--rule);
+        background: var(--utility);
+      }
+
+      .panel-head h2 {
+        margin: 4px 0 0;
+        color: var(--ink);
+        font-size: var(--text-4);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        line-height: 1.15;
+      }
+
+      .panel-head p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: var(--text-2);
+      }
+
+      .panel-code {
+        flex: 0 0 auto;
+        padding: 4px 6px;
+        border: 1px solid var(--rule);
+        background: var(--white);
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .queue-list {
+        display: grid;
+      }
+
+      .queue-item {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 12px;
+        width: 100%;
+        min-height: 106px;
+        padding: 16px;
+        border: 0;
+        border-bottom: 1px solid var(--rule);
+        background: var(--white);
+        color: var(--ink);
+        text-align: start;
+        transition:
+          background-color 150ms ease-out,
+          color 150ms ease-out;
+      }
+
+      .queue-item:last-child {
+        border-bottom: 0;
+      }
+
+      .queue-item:hover {
+        background: var(--canvas);
+      }
+
+      .queue-item[aria-pressed='true'] {
+        background: var(--ultra-pale);
+        color: var(--ultra-dark);
+      }
+
+      .queue-number {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 1px solid var(--ultra);
+        color: var(--ultra);
+        font-size: var(--text-1);
+        font-weight: 850;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .queue-item[data-work='preparing'] .queue-number {
+        border-color: var(--amber);
+        color: var(--amber-dark);
+      }
+
+      .queue-item[data-work='low-stock'] .queue-number {
+        border-color: var(--red);
+        color: var(--red-dark);
+      }
+
+      .queue-copy {
+        min-width: 0;
+      }
+
+      .queue-title {
+        display: block;
+        font-size: var(--text-3);
+        font-weight: 800;
+        line-height: 1.2;
+      }
+
+      .queue-detail {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: var(--text-2);
+        line-height: 1.35;
+        text-wrap: pretty;
+      }
+
+      .queue-item[aria-pressed='true'] .queue-detail {
+        color: var(--ultra-dark);
+      }
+
+      .queue-meta {
+        display: grid;
+        justify-items: end;
+        gap: 7px;
+      }
+
+      .queue-age {
+        color: var(--muted);
+        font-size: var(--text-1);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .queue-count {
+        display: inline-flex;
+        min-width: 32px;
+        min-height: 30px;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 7px;
+        border: 1px solid var(--ultra);
+        color: var(--ultra-dark);
+        font-size: var(--text-2);
+        font-weight: 850;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .status,
+      .status-chip {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border: 1px solid currentColor;
+        border-radius: var(--radius-2);
+        font-size: var(--text-1);
+        font-weight: 800;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .status::before,
+      .status-chip::before {
+        width: 7px;
+        height: 7px;
+        flex: 0 0 7px;
+        border-radius: 50%;
+        background: currentColor;
+        content: '';
+      }
+
+      .status--urgent,
+      .status-chip--new {
+        border-color: oklch(0.78 0.12 28);
+        background: var(--red-pale);
+        color: var(--red-dark);
+      }
+
+      .status--preparing,
+      .status-chip--preparing {
+        border-color: oklch(0.8 0.1 72);
+        background: var(--amber-pale);
+        color: var(--amber-dark);
+      }
+
+      .status--low,
+      .status-chip--out {
+        border-color: oklch(0.78 0.12 28);
+        background: var(--red-pale);
+        color: var(--red-dark);
+      }
+
+      .status--blue {
+        border-color: oklch(0.75 0.1 263);
+        background: var(--ultra-pale);
+        color: var(--ultra-dark);
+      }
+
+      .status--green,
+      .status-chip--confirmed,
+      .status-chip--active {
+        border-color: oklch(0.78 0.08 151);
+        background: var(--green-pale);
+        color: var(--green-dark);
+      }
+
+      .status--draft,
+      .status-chip--draft {
+        border-color: var(--rule);
+        background: var(--utility);
+        color: var(--muted);
+      }
+
+      .detail-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 18px 20px 17px;
+        border-bottom: 1px solid var(--rule);
+        background: var(--white);
+      }
+
+      .detail-label {
+        margin-bottom: 5px;
+        color: var(--ultra);
+      }
+
+      .detail-head h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: var(--text-4);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        line-height: 1.15;
+      }
+
+      .detail-subtitle {
+        max-width: 62ch;
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: var(--text-2);
+        text-wrap: pretty;
+      }
+
+      .detail-mark {
+        display: grid;
+        min-width: 46px;
+        min-height: 46px;
+        place-items: center;
+        border: 1px solid var(--ultra);
+        background: var(--ultra);
+        color: var(--white);
+        font-size: var(--text-4);
+        font-weight: 850;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .detail-view {
+        padding: 18px 20px 20px;
+      }
+
+      .detail-summary {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .detail-summary h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: var(--text-3);
+        font-weight: 800;
+        line-height: 1.25;
+      }
+
+      .detail-summary p {
+        max-width: 65ch;
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: var(--text-2);
+        text-wrap: pretty;
+      }
+
+      .action-link {
+        display: inline-flex;
+        min-height: 44px;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 13px;
+        border: 1px solid var(--ultra);
+        border-radius: var(--radius-2);
+        background: var(--ultra);
+        color: var(--white);
+        font-size: var(--text-2);
+        font-weight: 800;
+        text-decoration: none;
+        white-space: nowrap;
+        transition:
+          background-color 150ms ease-out,
+          border-color 150ms ease-out,
+          transform 150ms ease-out;
+      }
+
+      .action-link:hover {
+        border-color: var(--ultra-dark);
+        background: var(--ultra-dark);
+      }
+
+      .action-link:active {
+        transform: scale(0.96);
+      }
+
+      .detail-rows {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border: 1px solid var(--rule);
+        background: var(--utility);
+      }
+
+      .detail-row {
+        min-height: 72px;
+        padding: 12px 14px;
+        border-inline-end: 1px solid var(--rule);
+      }
+
+      .detail-row:last-child {
+        border-inline-end: 0;
+      }
+
+      .detail-row dt {
+        color: var(--muted);
+        font-size: var(--text-1);
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .detail-row dd {
+        margin: 3px 0 0;
+        color: var(--ink);
+        font-size: var(--text-3);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .detail-note {
+        margin: 14px 0 0;
+        padding-top: 12px;
+        border-top: 1px solid var(--rule);
+        color: var(--muted);
+        font-size: var(--text-2);
+      }
+
+      .records-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+        align-items: start;
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .record-panel {
+        min-width: 0;
+        border: 1px solid var(--rule);
+        background: var(--white);
+      }
+
+      .record-panel__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 72px;
+        padding: 15px 16px 13px;
+        border-bottom: 1px solid var(--rule);
+        background: var(--utility);
+      }
+
+      .record-panel__head h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: var(--text-4);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        line-height: 1.15;
+      }
+
+      .record-panel__head p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: var(--text-2);
+      }
+
+      .record-panel__count {
+        color: var(--muted);
+        font-size: var(--text-1);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .order-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .order-table caption,
+      .catalog-table caption {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      .order-table th,
+      .order-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--rule);
+        text-align: start;
+        vertical-align: middle;
+      }
+
+      .order-table th {
+        color: var(--muted);
+        font-size: var(--text-1);
+        font-weight: 850;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .order-table td {
+        font-size: var(--text-2);
+      }
+
+      .order-table tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .order-table th:first-child,
+      .order-table td:first-child {
+        width: 31%;
+      }
+
+      .order-table th:nth-child(2),
+      .order-table td:nth-child(2) {
+        width: 22%;
+      }
+
+      .order-table th:nth-child(3),
+      .order-table td:nth-child(3) {
+        width: 22%;
+        text-align: end;
+      }
+
+      .order-table th:last-child,
+      .order-table td:last-child {
+        width: 25%;
+        text-align: end;
+      }
+
+      .order-id,
+      .money,
+      .tabular {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .order-id {
+        color: var(--ultra-dark);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: var(--text-1);
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
+      .customer-name {
+        display: block;
+        margin-top: 3px;
+        color: var(--ink);
+        font-weight: 750;
+      }
+
+      .order-meta {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: var(--text-1);
+      }
+
+      .money {
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .panel-foot {
+        display: flex;
+        min-height: 58px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 14px;
+        border-top: 1px solid var(--rule);
+        background: var(--utility);
+      }
+
+      .panel-foot span {
+        color: var(--muted);
+        font-size: var(--text-1);
+      }
+
+      .text-link {
+        padding: 0 2px;
+        color: var(--ultra-dark);
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+        white-space: nowrap;
+      }
+
+      .mobile-order-list {
+        display: none;
+      }
+
+      .stock-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .stock-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        min-height: 82px;
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--rule);
+      }
+
+      .stock-item:last-child {
+        border-bottom: 0;
+      }
+
+      .stock-name {
+        display: block;
+        color: var(--ink);
+        font-size: var(--text-2);
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
+      .stock-status {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: var(--text-1);
+      }
+
+      .stock-quantity {
+        display: grid;
+        min-width: 48px;
+        min-height: 48px;
+        place-items: center;
+        border: 1px solid oklch(0.78 0.1 72);
+        background: var(--amber-pale);
+        color: var(--amber-dark);
+        font-size: var(--text-4);
+        font-weight: 850;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .stock-quantity.is-zero {
+        border-color: oklch(0.78 0.12 28);
+        background: var(--red-pale);
+        color: var(--red-dark);
+      }
+
+      .catalog-view {
+        min-width: 0;
+      }
+
+      .filter-toolbar {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.4fr) minmax(160px, 0.7fr) minmax(250px, 0.95fr) auto;
+        align-items: end;
+        gap: 12px;
+        margin-bottom: 14px;
+        padding: 14px;
+        border: 1px solid var(--rule);
+        background: var(--utility);
+      }
+
+      .field,
+      .filter-fieldset {
+        min-width: 0;
+      }
+
+      .mobile-filter-toggle {
+        display: none;
+      }
+
+      .mobile-filter-options {
+        display: contents;
+      }
+
+      .field-label,
+      .filter-fieldset legend {
+        display: block;
+        padding: 0;
+        margin: 0 0 6px;
+        color: var(--ink-soft);
+      }
+
+      .field-control {
+        min-width: 0;
+      }
+
+      .field-control input,
+      .field-control select {
+        width: 100%;
+        min-height: 44px;
+        padding: 9px 11px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-2);
+        background: var(--white);
+        color: var(--ink);
+        font-size: var(--text-3);
+      }
+
+      .field-control input::placeholder {
+        color: var(--muted);
+        opacity: 1;
+      }
+
+      .field.is-active .field-label,
+      .filter-fieldset.is-active legend {
+        color: var(--ultra-dark);
+      }
+
+      .field.is-active input,
+      .field.is-active select,
+      .filter-fieldset.is-active .inventory-filter-buttons {
+        border-color: var(--ultra);
+      }
+
+      .inventory-filter-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        min-height: 44px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-2);
+        background: var(--white);
+      }
+
+      .filter-button {
+        min-height: 42px;
+        padding: 8px 10px;
+        border: 0;
+        border-inline-end: 1px solid var(--rule);
+        background: transparent;
+        color: var(--ink-soft);
+        font-size: var(--text-2);
+        font-weight: 800;
+        white-space: nowrap;
+        transition:
+          background-color 150ms ease-out,
+          color 150ms ease-out;
+      }
+
+      .filter-button:last-child {
+        border-inline-end: 0;
+      }
+
+      .filter-button:hover {
+        background: var(--canvas);
+        color: var(--ultra-dark);
+      }
+
+      .filter-button[aria-pressed='true'] {
+        background: var(--ultra);
+        color: var(--white);
+      }
+
+      .catalog-meta {
+        display: flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--muted);
+        font-size: var(--text-2);
+      }
+
+      .catalog-meta strong {
+        color: var(--ink);
+        font-weight: 850;
+      }
+
+      .filter-summary {
+        font-size: var(--text-1);
+        font-weight: 750;
+        text-align: end;
+      }
+
+      .catalog-table-wrap,
+      .catalog-mobile {
+        border: 1px solid var(--rule);
+        background: var(--white);
+      }
+
+      .catalog-table-wrap {
+        display: none;
+        overflow: hidden;
+      }
+
+      .catalog-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .catalog-table th,
+      .catalog-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--rule);
+        text-align: start;
+        vertical-align: middle;
+      }
+
+      .catalog-table th {
+        border-bottom-color: var(--rule-strong);
+        background: var(--utility);
+        color: var(--muted);
+        font-size: var(--text-1);
+        font-weight: 850;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .catalog-table tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .catalog-table tbody tr:hover td {
+        background: var(--ultra-pale);
+      }
+
+      .catalog-table th:first-child,
+      .catalog-table td:first-child {
+        width: 43%;
+      }
+
+      .catalog-table th:nth-child(2),
+      .catalog-table td:nth-child(2) {
+        width: 21%;
+        text-align: end;
+      }
+
+      .catalog-table th:nth-child(3),
+      .catalog-table td:nth-child(3) {
+        width: 13%;
+        text-align: end;
+      }
+
+      .catalog-table th:nth-child(4),
+      .catalog-table td:nth-child(4) {
+        width: 14%;
+      }
+
+      .catalog-table th:last-child,
+      .catalog-table td:last-child {
+        width: 9%;
+        text-align: end;
+      }
+
+      .table-product {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 11px;
+      }
+
+      .product-image {
+        display: grid;
+        width: 56px;
+        height: 56px;
+        flex: 0 0 56px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid var(--rule);
+        background: var(--utility);
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: var(--text-1);
+        font-weight: 850;
+        text-align: center;
+      }
+
+      .product-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        outline: 1px solid oklch(0 0 0 / 0.1);
+        outline-offset: -1px;
+      }
+
+      .product-image.is-fallback img {
+        display: none;
+      }
+
+      .image-fallback {
+        display: none;
+        width: 100%;
+        height: 100%;
+        place-items: center;
+        background: var(--utility-strong);
+        color: var(--ultra-dark);
+      }
+
+      .product-image.is-fallback .image-fallback {
+        display: grid;
+      }
+
+      .product-copy {
+        min-width: 0;
+      }
+
+      .product-name {
+        display: block;
+        color: var(--ink);
+        font-size: var(--text-2);
+        font-weight: 800;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .product-sku {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: var(--text-1);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .catalog-price,
+      .catalog-stock {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .catalog-price {
+        font-size: var(--text-2);
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
+      .catalog-stock strong {
+        display: block;
+        color: var(--ink);
+        font-size: var(--text-4);
+        font-weight: 850;
+        line-height: 1;
+      }
+
+      .catalog-stock span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: var(--text-1);
+      }
+
+      .catalog-stock.is-low strong,
+      .catalog-stock.is-low span {
+        color: var(--amber-dark);
+      }
+
+      .catalog-stock.is-out strong,
+      .catalog-stock.is-out span {
+        color: var(--red-dark);
+      }
+
+      .catalog-mobile {
+        display: grid;
+      }
+
+      .mobile-product {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr);
+        gap: 12px;
+        padding: 13px 12px;
+        border-bottom: 1px solid var(--rule);
+      }
+
+      .mobile-product:last-child {
+        border-bottom: 0;
+      }
+
+      .mobile-product .product-image {
+        width: 58px;
+        height: 58px;
+        flex-basis: 58px;
+      }
+
+      .mobile-product__main {
+        min-width: 0;
+      }
+
+      .mobile-product__top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .mobile-product__top .product-name {
+        font-size: var(--text-3);
+      }
+
+      .mobile-product__price {
+        display: block;
+        margin-top: 5px;
+        color: var(--ink-soft);
+        font-size: var(--text-2);
+        font-weight: 750;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+      }
+
+      .mobile-product__facts {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 10px 12px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--utility-strong);
+      }
+
+      .fact-label {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--muted);
+      }
+
+      .fact-value {
+        display: block;
+        font-size: var(--text-2);
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .mobile-product__status {
+        text-align: end;
+      }
+
+      .empty-state {
+        padding: 30px 18px 32px;
+        border: 1px solid var(--rule);
+        background: var(--utility);
+        text-align: center;
+      }
+
+      .empty-state h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: var(--text-4);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+      }
+
+      .empty-state p {
+        max-width: 42ch;
+        margin: 7px auto 16px;
+        color: var(--muted);
+        font-size: var(--text-2);
+        text-wrap: pretty;
+      }
+
+      .announcement {
+        min-height: 1.5em;
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: var(--text-1);
+      }
+
+      .bottom-nav {
+        position: fixed;
+        z-index: 9;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        min-height: var(--bottom-nav-height);
+        padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+        border-top: 1px solid var(--rule-strong);
+        background: var(--white);
+      }
+
+      .bottom-nav .nav-link {
+        display: flex;
+        min-height: 58px;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 5px 3px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-2);
+        color: var(--muted);
+        font-size: var(--text-1);
+        font-weight: 800;
+        line-height: 1.1;
+        text-align: center;
+      }
+
+      .bottom-nav .nav-link[aria-current='page'] {
+        border-color: var(--ultra);
+        background: var(--ultra-pale);
+        color: var(--ultra-dark);
+      }
+
+      .bottom-nav .nav-glyph {
+        width: 18px;
+        height: 18px;
+        flex-basis: 18px;
+        font-size: 9px;
+      }
+
+      @media (max-width: 1023px) {
+        .command-grid,
+        .records-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .order-table {
+          display: none;
+        }
+
+        .mobile-order-list {
+          display: grid;
+        }
+
+        .mobile-order {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: start;
+          gap: 8px 12px;
+          min-height: 84px;
+          padding: 13px 16px;
+          border-bottom: 1px solid var(--rule);
+        }
+
+        .mobile-order:last-child {
+          border-bottom: 0;
+        }
+
+        .mobile-order__name {
+          min-width: 0;
+        }
+
+        .mobile-order__customer {
+          display: block;
+          margin-top: 4px;
+          color: var(--muted);
+          font-size: var(--text-2);
+        }
+
+        .mobile-order__total {
+          align-self: start;
+          color: var(--ink);
+          font-size: var(--text-2);
+          font-weight: 850;
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+
+        .mobile-order__meta {
+          grid-column: 1 / -1;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          color: var(--muted);
+          font-size: var(--text-1);
+        }
+      }
+
+      @media (max-width: 620px) {
+        .view-header {
+          display: block;
+          margin-bottom: 20px;
+        }
+
+        .view-header .header-action {
+          width: 100%;
+          margin-top: 16px;
+        }
+
+        h1 {
+          font-size: var(--text-5);
+        }
+
+        .priority-banner {
+          grid-template-columns: minmax(0, 1fr) auto;
+          padding: 14px;
+        }
+
+        .priority-count {
+          min-width: 76px;
+          padding-inline: 7px;
+        }
+
+        .panel-head,
+        .detail-head,
+        .record-panel__head {
+          padding-inline: 13px;
+        }
+
+        .queue-item {
+          grid-template-columns: 32px minmax(0, 1fr);
+          min-height: 114px;
+          gap: 10px;
+          padding: 14px 13px;
+        }
+
+        .queue-meta {
+          grid-column: 2;
+          grid-template-columns: auto auto;
+          justify-content: start;
+          justify-items: start;
+          align-items: center;
+          gap: 9px;
+          margin-top: 3px;
+        }
+
+        .detail-head {
+          gap: 12px;
+        }
+
+        .detail-mark {
+          min-width: 40px;
+          min-height: 40px;
+          font-size: var(--text-3);
+        }
+
+        .detail-view {
+          padding: 16px 13px 17px;
+        }
+
+        .detail-summary {
+          display: block;
+          margin-bottom: 15px;
+        }
+
+        .detail-summary .action-link {
+          width: 100%;
+          margin-top: 14px;
+        }
+
+        .detail-rows {
+          grid-template-columns: 1fr;
+        }
+
+        .detail-row {
+          min-height: 58px;
+          border-inline-end: 0;
+          border-bottom: 1px solid var(--rule);
+        }
+
+        .detail-row:last-child {
+          border-bottom: 0;
+        }
+
+        .detail-row dd {
+          display: inline;
+          margin-inline-start: 8px;
+        }
+
+        .order-table {
+          display: none;
+        }
+
+        .mobile-order-list {
+          display: grid;
+        }
+
+        .mobile-order {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: start;
+          gap: 8px 12px;
+          min-height: 84px;
+          padding: 13px;
+          border-bottom: 1px solid var(--rule);
+        }
+
+        .mobile-order:last-child {
+          border-bottom: 0;
+        }
+
+        .mobile-order__name {
+          min-width: 0;
+        }
+
+        .mobile-order__customer {
+          display: block;
+          margin-top: 4px;
+          color: var(--muted);
+          font-size: var(--text-2);
+        }
+
+        .mobile-order__total {
+          align-self: start;
+          color: var(--ink);
+          font-size: var(--text-2);
+          font-weight: 850;
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
+        }
+
+        .mobile-order__meta {
+          grid-column: 1 / -1;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          color: var(--muted);
+          font-size: var(--text-1);
+        }
+
+        .panel-foot {
+          padding-inline: 13px;
+        }
+
+        .stock-item {
+          padding-inline: 13px;
+        }
+
+        .filter-toolbar {
+          grid-template-columns: 1fr;
+          gap: 11px;
+          padding: 12px;
+        }
+
+        .mobile-filter-toggle {
+          display: inline-flex;
+          min-height: 44px;
+          align-items: center;
+          justify-content: space-between;
+          padding: 9px 12px;
+          border: 1px solid var(--rule-strong);
+          border-radius: var(--radius-2);
+          background: var(--white);
+          color: var(--ink);
+          font-weight: 800;
+        }
+
+        .mobile-filter-toggle::after {
+          content: '+';
+          color: var(--ultra);
+          font-size: var(--text-4);
+          line-height: 1;
+        }
+
+        .mobile-filter-toggle[aria-expanded='true']::after {
+          content: '−';
+        }
+
+        .mobile-filter-options {
+          display: none;
+          gap: 11px;
+        }
+
+        .mobile-filter-options.is-open {
+          display: grid;
+        }
+
+        .inventory-filter-buttons {
+          width: 100%;
+        }
+
+        .filter-button {
+          padding-inline: 6px;
+        }
+
+        .filter-toolbar .clear-button {
+          width: 100%;
+        }
+
+        .catalog-meta {
+          display: block;
+          min-height: 54px;
+          padding: 9px 0 10px;
+        }
+
+        .filter-summary {
+          margin-top: 4px;
+          text-align: start;
+        }
+
+        .mobile-product {
+          padding-inline: 12px;
+        }
+      }
+
+      @media (min-width: 621px) and (max-width: 1023px) {
+        .content-shell {
+          padding-inline: 28px;
+        }
+
+        .priority-banner {
+          padding-inline: 20px;
+        }
+
+        .queue-item,
+        .stock-item,
+        .mobile-order {
+          padding-inline: 18px;
+        }
+
+        .filter-toolbar {
+          grid-template-columns: minmax(0, 1fr) 170px;
+        }
+
+        .filter-toolbar .filter-fieldset {
+          grid-column: 1 / -1;
+        }
+
+        .filter-toolbar .clear-button {
+          grid-column: 2;
+          grid-row: 1;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .sidebar {
+          display: flex;
+        }
+
+        .main-shell {
+          margin-inline-start: var(--sidebar-width);
+        }
+
+        .mobile-topbar,
+        .bottom-nav {
+          display: none;
+        }
+
+        .desktop-topbar {
+          display: flex;
+          min-height: 68px;
+          padding-inline: 34px;
+        }
+
+        .content-shell {
+          padding: 34px 40px 58px;
+        }
+
+        .date-stamp {
+          display: block;
+        }
+
+        .catalog-table-wrap {
+          display: block;
+        }
+
+        .catalog-mobile {
+          display: none;
+        }
+      }
+
+      @media (min-width: 1280px) {
+        .content-shell {
+          padding-inline: 56px;
+        }
+
+        .command-grid,
+        .records-grid {
+          gap: 22px;
+        }
+
+        .queue-item {
+          padding-inline: 20px;
+        }
+
+        .detail-view {
+          padding-inline: 22px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      @media (forced-colors: active) {
+        :focus-visible {
+          outline: 3px solid CanvasText;
+        }
+
+        .state-dot,
+        .status::before,
+        .status-chip::before {
+          forced-color-adjust: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Үндсэн хэсэг рүү алгасах</a>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Үндсэн навигаци">
+        <a class="brand-lockup" href="#dashboard" data-route="dashboard" aria-label="Plugged нүүр">
+          <span>
+            <strong>Plugged</strong>
+            <small>дэлгүүрийн удирдлага</small>
+          </span>
+          <span class="registration-mark" aria-hidden="true"></span>
+        </a>
+
+        <nav class="sidebar-nav" aria-label="Ажлын цэс">
+          <p class="nav-label">Чиглэл</p>
+          <a class="nav-link" data-route="dashboard" href="#dashboard" aria-current="page"
+            ><span class="nav-glyph" aria-hidden="true">Н</span><span>Нүүр</span></a
+          >
+          <a class="nav-link" data-route="catalog" href="#catalog"
+            ><span class="nav-glyph" aria-hidden="true">Б</span><span>Бараа</span></a
+          >
+          <a class="nav-link" data-route="dashboard" data-focus="recent-orders" href="#dashboard"
+            ><span class="nav-glyph" aria-hidden="true">З</span><span>Захиалга</span></a
+          >
+          <a class="nav-link" data-route="dashboard" data-unavailable="Тохиргоо" href="#dashboard"
+            ><span class="nav-glyph" aria-hidden="true">Т</span><span>Тохиргоо</span></a
+          >
+        </nav>
+
+        <div class="sidebar-foot">
+          <strong>Plugged дэлгүүр</strong>
+          <small>Нээлттэй · бэлэн</small>
+        </div>
+      </aside>
+
+      <div class="main-shell">
+        <header class="mobile-topbar" aria-label="Дээд хэсэг">
+          <a
+            class="mobile-brand"
+            href="#dashboard"
+            data-route="dashboard"
+            aria-label="Plugged нүүр"
+          >
+            <span class="brand-mark" aria-hidden="true">PLG</span>
+            <strong>Plugged</strong>
+          </a>
+          <span class="store-state"
+            ><span class="state-dot" aria-hidden="true"></span>Нээлттэй</span
+          >
+        </header>
+
+        <header class="desktop-topbar" aria-label="Ажлын орчин">
+          <p class="topbar-context"><strong>Plugged</strong> / дэлгүүрийн удирдлага</p>
+          <div class="topbar-meta">
+            <span class="topbar-state"
+              ><span class="state-dot" aria-hidden="true"></span>Дэлгүүр нээлттэй</span
+            >
+            <span>2026.08.12 · Лхагва</span>
+          </div>
+        </header>
+
+        <main id="main-content" tabindex="-1">
+          <div class="content-shell">
+            <section id="dashboard-view" data-view="dashboard" aria-labelledby="dashboard-title">
+              <header class="view-header">
+                <div class="view-header__copy">
+                  <span class="route-label">ӨДРИЙН ШУГАМ</span>
+                  <h1 id="dashboard-title">Өнөөдрийн ажил</h1>
+                  <p>
+                    Захиалга, үлдэгдэл болон дэлгүүрийн бэлэн байдлыг дараагийн хийх ажлаар нь
+                    шалгана.
+                  </p>
+                </div>
+                <time class="date-stamp" datetime="2026-08-12"
+                  ><strong>12 АВГ 2026</strong>Лхагва · 09:40</time
+                >
+              </header>
+
+              <section class="priority-banner" aria-labelledby="priority-title">
+                <div class="priority-banner__copy">
+                  <span class="priority-banner__label">Шууд хийх ажил</span>
+                  <h2 id="priority-title">Анхаарах ажил</h2>
+                  <p>2 шинэ захиалга, 1 бэлтгэх захиалга, 3 бага үлдэгдэлтэй хувилбар.</p>
+                </div>
+                <span class="priority-count">06 ажил</span>
+              </section>
+
+              <div class="command-grid">
+                <section class="panel queue-panel" aria-labelledby="queue-title">
+                  <header class="panel-head">
+                    <div>
+                      <span class="route-label">АЖЛЫН ДАРААЛАЛ · 6</span>
+                      <h2 id="queue-title">Яаралтай ажил</h2>
+                      <p>Эхлээд хийх дарааллаа сонгоно.</p>
+                    </div>
+                    <span class="panel-code">НЭЭЛТТЭЙ</span>
+                  </header>
+
+                  <div class="queue-list" aria-label="Яаралтай ажлын сонголт">
+                    <button class="queue-item" type="button" data-work="new" aria-pressed="true">
+                      <span class="queue-number" aria-hidden="true">ЗХ</span>
+                      <span class="queue-copy">
+                        <span class="queue-title">2 шинэ захиалга</span>
+                        <span class="queue-detail"
+                          >Төлбөр, хүргэлтийн мэдээллийг шалгаж баталгаажуул.</span
+                        >
+                      </span>
+                      <span class="queue-meta"
+                        ><span class="queue-age">12 мин</span
+                        ><span class="status status--urgent">Яаралтай</span></span
+                      >
+                    </button>
+                    <button
+                      class="queue-item"
+                      type="button"
+                      data-work="preparing"
+                      aria-pressed="false"
+                    >
+                      <span class="queue-number" aria-hidden="true">БТ</span>
+                      <span class="queue-copy">
+                        <span class="queue-title">1 бэлтгэх захиалга</span>
+                        <span class="queue-detail"
+                          >PLG-2026-0812-06-г савлаж, хүргэлтэд шилжүүл.</span
+                        >
+                      </span>
+                      <span class="queue-meta"
+                        ><span class="queue-age">26 мин</span
+                        ><span class="status status--preparing">Бэлтгэл</span></span
+                      >
+                    </button>
+                    <button
+                      class="queue-item"
+                      type="button"
+                      data-work="low-stock"
+                      aria-pressed="false"
+                    >
+                      <span class="queue-number" aria-hidden="true">ҮЛ</span>
+                      <span class="queue-copy">
+                        <span class="queue-title">3 бага үлдэгдэлтэй хувилбар</span>
+                        <span class="queue-detail"
+                          >Дууссан болон 2 ширхэг үлдсэн барааг шалга.</span
+                        >
+                      </span>
+                      <span class="queue-meta"
+                        ><span class="queue-age">1 цаг</span
+                        ><span class="status status--low">Анхаарал</span></span
+                      >
+                    </button>
+                  </div>
+                </section>
+
+                <section class="panel detail-panel" aria-labelledby="selected-work-title">
+                  <header class="detail-head">
+                    <div>
+                      <span class="detail-label">Сонгосон ажил</span>
+                      <h2 id="selected-work-title">Баталгаажуулах дараалал</h2>
+                      <p class="detail-subtitle">
+                        Шинэ захиалгын мэдээллийг шалгаад дараагийн алхмыг сонгоно.
+                      </p>
+                    </div>
+                    <span class="detail-mark" id="selected-work-mark" aria-hidden="true">ЗХ</span>
+                  </header>
+
+                  <article class="detail-view" data-work-detail="new">
+                    <div class="detail-summary">
+                      <div>
+                        <h3>2 шинэ захиалга хүлээж байна</h3>
+                        <p>
+                          Төлбөрийн дүн болон хүргэлтийн мэдээллийг шалгасны дараа захиалгыг
+                          баталгаажуулна.
+                        </p>
+                      </div>
+                      <a class="action-link" href="#dashboard" data-focus="recent-orders"
+                        >Захиалга нээх</a
+                      >
+                    </div>
+                    <dl class="detail-rows">
+                      <div class="detail-row">
+                        <dt>Хүлээгдэж буй</dt>
+                        <dd>2 захиалга</dd>
+                      </div>
+                      <div class="detail-row">
+                        <dt>Эхний шалгалт</dt>
+                        <dd>Төлбөр</dd>
+                      </div>
+                      <div class="detail-row">
+                        <dt>Дараагийн төлөв</dt>
+                        <dd>Баталгаажсан</dd>
+                      </div>
+                    </dl>
+                    <p class="detail-note">
+                      PLG-2026-0812-07 болон дараагийн шинэ захиалгын баримтыг тулгана.
+                    </p>
+                  </article>
+
+                  <article class="detail-view" data-work-detail="preparing" hidden>
+                    <div class="detail-summary">
+                      <div>
+                        <h3>PLG-2026-0812-06 · Батзориг</h3>
+                        <p>
+                          155,000 ₮-ийн захиалга. Барааг савлаж, хүргэлтийн шугамд шилжүүлэхэд бэлэн
+                          болгоно.
+                        </p>
+                      </div>
+                      <a class="action-link" href="#dashboard" data-focus="recent-orders"
+                        >Захиалга нээх</a
+                      >
+                    </div>
+                    <dl class="detail-rows">
+                      <div class="detail-row">
+                        <dt>Захиалагч</dt>
+                        <dd>Батзориг</dd>
+                      </div>
+                      <div class="detail-row">
+                        <dt>Захиалгын дүн</dt>
+                        <dd>155,000 ₮</dd>
+                      </div>
+                      <div class="detail-row">
+                        <dt>Дараагийн алхам</dt>
+                        <dd>Савлах</dd>
+                      </div>
+                    </dl>
+                    <p class="detail-note">
+                      Барааг тоолж савлаад хүргэлтийн мэдээллийг дахин баталгаажуул.
+                    </p>
+                  </article>
+
+                  <article class="detail-view" data-work-detail="low-stock" hidden>
+                    <div class="detail-summary">
+                      <div>
+                        <h3>3 хувилбар бага үлдэгдэлтэй</h3>
+                        <p>
+                          Дууссан хоёр хувилбар болон 2 ширхэг үлдсэн барааг доорх жагсаалтаас
+                          шалгана.
+                        </p>
+                      </div>
+                      <a class="action-link" href="#catalog" data-catalog-inventory="low"
+                        >Бараа шүүх</a
+                      >
+                    </div>
+                    <dl class="detail-rows">
+                      <div class="detail-row">
+                        <dt>Дууссан</dt>
+                        <dd>2 хувилбар</dd>
+                      </div>
+                      <div class="detail-row">
+                        <dt>Бага үлдэгдэл</dt>
+                        <dd>1 хувилбар</dd>
+                      </div>
+                      <div class="detail-row">
+                        <dt>Шалгах хэсэг</dt>
+                        <dd>Үлдэгдэл</dd>
+                      </div>
+                    </dl>
+                    <p class="detail-note">
+                      Үлдэгдлийг бараа тус бүрээр засаж, дахин захиалах шаардлагатайг тэмдэглэнэ.
+                    </p>
+                  </article>
+                </section>
+              </div>
+
+              <div class="records-grid">
+                <section
+                  class="record-panel"
+                  id="recent-orders"
+                  aria-labelledby="recent-orders-title"
+                >
+                  <header class="record-panel__head">
+                    <div>
+                      <span class="route-label">ORDERS / СҮҮЛИЙН БҮРТГЭЛ</span>
+                      <h2 id="recent-orders-title">Сүүлийн захиалга</h2>
+                      <p>Өнөөдөр орсон болон үргэлжилж буй ажил</p>
+                    </div>
+                    <span class="record-panel__count">3 захиалга</span>
+                  </header>
+
+                  <table class="order-table">
+                    <caption>
+                      Plugged дэлгүүрийн сүүлийн захиалгууд
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Захиалга</th>
+                        <th scope="col">Харилцагч</th>
+                        <th scope="col">Дүн</th>
+                        <th scope="col">Төлөв</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <span class="order-id">PLG-2026-0812-07</span
+                          ><span class="order-meta">12 мин</span>
+                        </td>
+                        <td>
+                          <span class="customer-name">Номин</span
+                          ><span class="order-meta">Төлбөр шалгах</span>
+                        </td>
+                        <td class="money">75,000 ₮</td>
+                        <td><span class="status-chip status-chip--new">Шинэ</span></td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span class="order-id">PLG-2026-0812-06</span
+                          ><span class="order-meta">26 мин</span>
+                        </td>
+                        <td>
+                          <span class="customer-name">Батзориг</span
+                          ><span class="order-meta">Савлагаа</span>
+                        </td>
+                        <td class="money">155,000 ₮</td>
+                        <td>
+                          <span class="status-chip status-chip--preparing">Бэлтгэж байна</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span class="order-id">PLG-2026-0812-05</span
+                          ><span class="order-meta">1 цаг</span>
+                        </td>
+                        <td>
+                          <span class="customer-name">Тэмүүлэн</span
+                          ><span class="order-meta">Хүргэлтийн шугам</span>
+                        </td>
+                        <td class="money">110,000 ₮</td>
+                        <td>
+                          <span class="status-chip status-chip--confirmed">Баталгаажсан</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div class="mobile-order-list" aria-label="Сүүлийн захиалгууд">
+                    <article class="mobile-order">
+                      <div class="mobile-order__name">
+                        <span class="order-id">PLG-2026-0812-07</span
+                        ><span class="mobile-order__customer">Номин</span>
+                      </div>
+                      <span class="mobile-order__total">75,000 ₮</span>
+                      <div class="mobile-order__meta">
+                        <span>12 мин · Төлбөр шалгах</span
+                        ><span class="status-chip status-chip--new">Шинэ</span>
+                      </div>
+                    </article>
+                    <article class="mobile-order">
+                      <div class="mobile-order__name">
+                        <span class="order-id">PLG-2026-0812-06</span
+                        ><span class="mobile-order__customer">Батзориг</span>
+                      </div>
+                      <span class="mobile-order__total">155,000 ₮</span>
+                      <div class="mobile-order__meta">
+                        <span>26 мин · Савлагаа</span
+                        ><span class="status-chip status-chip--preparing">Бэлтгэж байна</span>
+                      </div>
+                    </article>
+                    <article class="mobile-order">
+                      <div class="mobile-order__name">
+                        <span class="order-id">PLG-2026-0812-05</span
+                        ><span class="mobile-order__customer">Тэмүүлэн</span>
+                      </div>
+                      <span class="mobile-order__total">110,000 ₮</span>
+                      <div class="mobile-order__meta">
+                        <span>1 цаг · Хүргэлтийн шугам</span
+                        ><span class="status-chip status-chip--confirmed">Баталгаажсан</span>
+                      </div>
+                    </article>
+                  </div>
+
+                  <footer class="panel-foot">
+                    <span>Нийт 340,000 ₮ · 3 захиалга</span
+                    ><a class="text-link" href="#dashboard" data-focus="recent-orders"
+                      >Дарааллыг харах</a
+                    >
+                  </footer>
+                </section>
+
+                <section class="record-panel" id="low-stock" aria-labelledby="low-stock-title">
+                  <header class="record-panel__head">
+                    <div>
+                      <span class="route-label">INVENTORY / ШАЛГАХ</span>
+                      <h2 id="low-stock-title">Бага үлдэгдэл</h2>
+                      <p>Хувилбар тус бүрээр шалгана</p>
+                    </div>
+                    <span class="record-panel__count">3 хувилбар</span>
+                  </header>
+                  <ul class="stock-list">
+                    <li class="stock-item">
+                      <div>
+                        <span class="stock-name">TANGZU Wan'er 2 Red Lion</span
+                        ><span class="stock-status">Дууссан · дахин захиалах түвшин</span>
+                      </div>
+                      <strong class="stock-quantity is-zero" aria-label="0 үлдэгдэл, дууссан"
+                        >0</strong
+                      >
+                    </li>
+                    <li class="stock-item">
+                      <div>
+                        <span class="stock-name">KZ PRX</span
+                        ><span class="stock-status">Бага үлдэгдэл · 2 ширхэг үлдсэн</span>
+                      </div>
+                      <strong class="stock-quantity" aria-label="2 үлдэгдэл, бага">2</strong>
+                    </li>
+                    <li class="stock-item">
+                      <div>
+                        <span class="stock-name">TANCHJIM Bunny</span
+                        ><span class="stock-status">Дууссан · дахин захиалах түвшин</span>
+                      </div>
+                      <strong class="stock-quantity is-zero" aria-label="0 үлдэгдэл, дууссан"
+                        >0</strong
+                      >
+                    </li>
+                  </ul>
+                  <footer class="panel-foot">
+                    <span>2 дууссан · 1 бага</span
+                    ><a class="text-link" href="#catalog" data-catalog-inventory="low"
+                      >Бараа руу очих</a
+                    >
+                  </footer>
+                </section>
+              </div>
+            </section>
+
+            <section
+              id="catalog-view"
+              class="catalog-view"
+              data-view="catalog"
+              aria-labelledby="catalog-title"
+              hidden
+            >
+              <header class="view-header">
+                <div class="view-header__copy">
+                  <span class="route-label">БАРААНЫ БҮРТГЭЛ</span>
+                  <h1 id="catalog-title">Бараа</h1>
+                  <p>Үнэ, үлдэгдэл болон нийтлэх төлвийг нэг бүртгэлийн мөрөөр шалгана.</p>
+                </div>
+                <button class="header-action" type="button" data-unavailable="Шинэ бараа">
+                  + Шинэ бараа
+                </button>
+              </header>
+
+              <form class="filter-toolbar" id="catalog-filter-form" role="search">
+                <div class="field" id="search-field">
+                  <label class="field-label" for="catalog-search">Бараа хайх</label>
+                  <div class="field-control">
+                    <input
+                      id="catalog-search"
+                      name="search"
+                      type="search"
+                      placeholder="Нэр эсвэл SKU-аар хайх"
+                      autocomplete="off"
+                    />
+                  </div>
+                </div>
+                <button
+                  class="mobile-filter-toggle"
+                  id="mobile-filter-toggle"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="mobile-filter-options"
+                >
+                  Шүүлтүүр
+                </button>
+                <div class="mobile-filter-options" id="mobile-filter-options">
+                  <div class="field" id="status-field">
+                    <label class="field-label" for="status-filter">Төлөв</label>
+                    <div class="field-control">
+                      <select id="status-filter" name="status">
+                        <option value="all">Бүгд</option>
+                        <option value="active">Идэвхтэй</option>
+                        <option value="draft">Ноорог</option>
+                      </select>
+                    </div>
+                  </div>
+                  <fieldset class="filter-fieldset" id="inventory-fieldset">
+                    <legend>Үлдэгдэл</legend>
+                    <div class="inventory-filter-buttons" role="group" aria-label="Үлдэгдлээр шүүх">
+                      <button
+                        class="filter-button"
+                        type="button"
+                        data-inventory="all"
+                        aria-pressed="true"
+                      >
+                        Бүгд
+                      </button>
+                      <button
+                        class="filter-button"
+                        type="button"
+                        data-inventory="low"
+                        aria-pressed="false"
+                      >
+                        Бага
+                      </button>
+                      <button
+                        class="filter-button"
+                        type="button"
+                        data-inventory="out"
+                        aria-pressed="false"
+                      >
+                        Дууссан
+                      </button>
+                    </div>
+                  </fieldset>
+                  <button class="clear-button" id="clear-filters" type="button" disabled>
+                    Цэвэрлэх
+                  </button>
+                </div>
+              </form>
+
+              <div class="catalog-meta" aria-live="polite">
+                <span id="catalog-summary"><strong>6</strong> бараа харагдаж байна</span>
+                <span class="filter-summary" id="filter-summary">Шүүлтүүргүй · MNT</span>
+              </div>
+
+              <div class="catalog-table-wrap" id="catalog-table-wrap" aria-label="Барааны хүснэгт">
+                <table class="catalog-table">
+                  <caption>
+                    Plugged дэлгүүрийн барааны бүртгэл
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Бараа</th>
+                      <th scope="col">Үнэ</th>
+                      <th scope="col">Үлдэгдэл</th>
+                      <th scope="col">Төлөв</th>
+                      <th scope="col">Үйлдэл</th>
+                    </tr>
+                  </thead>
+                  <tbody id="catalog-table-body"></tbody>
+                </table>
+              </div>
+
+              <div class="catalog-mobile" id="catalog-mobile" aria-label="Барааны жагсаалт"></div>
+
+              <section
+                class="empty-state"
+                id="catalog-empty"
+                aria-labelledby="catalog-empty-title"
+                hidden
+              >
+                <h2 id="catalog-empty-title">Илэрц олдсонгүй</h2>
+                <p>Хайлтын үг эсвэл шүүлтүүрээ өөрчлөөд дахин шалгана уу.</p>
+                <button class="quiet-action" id="empty-clear" type="button">
+                  Бүх барааг харах
+                </button>
+              </section>
+              <p
+                class="announcement"
+                id="catalog-announcement"
+                role="status"
+                aria-live="polite"
+              ></p>
+            </section>
+          </div>
+        </main>
+
+        <nav class="bottom-nav" aria-label="Гар утасны навигаци">
+          <a class="nav-link" data-route="dashboard" href="#dashboard" aria-current="page"
+            ><span class="nav-glyph" aria-hidden="true">Н</span><span>Нүүр</span></a
+          >
+          <a class="nav-link" data-route="catalog" href="#catalog"
+            ><span class="nav-glyph" aria-hidden="true">Б</span><span>Бараа</span></a
+          >
+          <a class="nav-link" data-route="dashboard" data-focus="recent-orders" href="#dashboard"
+            ><span class="nav-glyph" aria-hidden="true">З</span><span>Захиалга</span></a
+          >
+          <a class="nav-link" data-route="dashboard" data-unavailable="Тохиргоо" href="#dashboard"
+            ><span class="nav-glyph" aria-hidden="true">Т</span><span>Тохиргоо</span></a
+          >
+        </nav>
+      </div>
+    </div>
+
+    <script>
+      ;(() => {
+        const products = [
+          {
+            name: "TANGZU Wan'er 2 Red Lion",
+            sku: 'TNG-W2-RED',
+            price: '135,000–150,000 ₮',
+            stock: 0,
+            status: 'active',
+            fallback: 'TW',
+            image: '../../apps/plugged/public/cut/tangzu-waner-2-red-lion.webp',
+          },
+          {
+            name: 'TRUTHEAR Gate',
+            sku: 'TRU-GATE',
+            price: '65,000–70,000 ₮',
+            stock: 12,
+            status: 'active',
+            fallback: 'TG',
+            image: '../../apps/plugged/public/cut/truthear-gate.webp',
+          },
+          {
+            name: 'KZ PRX',
+            sku: 'KZ-PRX',
+            price: '105,000 ₮',
+            stock: 2,
+            status: 'active',
+            fallback: 'KP',
+            image: '../../apps/plugged/public/cut/kz-prx.webp',
+          },
+          {
+            name: 'TANCHJIM Bunny',
+            sku: 'TJC-BUNNY',
+            price: '65,000 ₮',
+            stock: 0,
+            status: 'active',
+            fallback: 'TB',
+            image: '../../apps/plugged/public/cut/tanchjim-bunny.webp',
+          },
+          {
+            name: 'TRUTHEAR KEYX',
+            sku: 'TRU-KEYX',
+            price: '130,000 ₮',
+            stock: 6,
+            status: 'active',
+            fallback: 'TK',
+            image: '../../apps/plugged/public/cut/truthear-keyx.webp',
+          },
+          {
+            name: 'JCALLY JM12',
+            sku: 'JCA-JM12',
+            price: '25,000 ₮',
+            stock: 8,
+            status: 'draft',
+            fallback: 'JJ',
+            image: '../../apps/plugged/public/cut/jcally-jm12.webp',
+          },
+        ]
+
+        const state = { status: 'all', inventory: 'all' }
+        const dashboardView = document.querySelector('[data-view="dashboard"]')
+        const catalogView = document.querySelector('[data-view="catalog"]')
+        const routeLinks = [...document.querySelectorAll('[data-route]')]
+        const queueItems = [...document.querySelectorAll('[data-work]')]
+        const workDetails = [...document.querySelectorAll('[data-work-detail]')]
+        const detailTitle = document.querySelector('#selected-work-title')
+        const detailSubtitle = document.querySelector('.detail-subtitle')
+        const detailMark = document.querySelector('#selected-work-mark')
+        const searchInput = document.querySelector('#catalog-search')
+        const statusFilter = document.querySelector('#status-filter')
+        const inventoryButtons = [...document.querySelectorAll('[data-inventory]')]
+        const inventoryFieldset = document.querySelector('#inventory-fieldset')
+        const statusField = document.querySelector('#status-field')
+        const clearButton = document.querySelector('#clear-filters')
+        const mobileFilterToggle = document.querySelector('#mobile-filter-toggle')
+        const mobileFilterOptions = document.querySelector('#mobile-filter-options')
+        const emptyClear = document.querySelector('#empty-clear')
+        const catalogSummary = document.querySelector('#catalog-summary')
+        const filterSummary = document.querySelector('#filter-summary')
+        const announcement = document.querySelector('#catalog-announcement')
+        const catalogTableWrap = document.querySelector('#catalog-table-wrap')
+        const catalogTableBody = document.querySelector('#catalog-table-body')
+        const catalogMobile = document.querySelector('#catalog-mobile')
+        const emptyState = document.querySelector('#catalog-empty')
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+        const inventoryFor = stock => (stock === 0 ? 'out' : stock <= 3 ? 'low' : 'all')
+        const inventoryLabel = stock =>
+          stock === 0 ? 'Дууссан' : stock <= 3 ? 'Бага үлдэгдэл' : 'Хангалттай'
+        const statusLabel = status => (status === 'draft' ? 'Ноорог' : 'Идэвхтэй')
+        const stockClass = stock => (stock === 0 ? 'is-out' : stock <= 3 ? 'is-low' : '')
+
+        const imageMarkup = (product, className = '') => `
+          <span class="product-image ${className}">
+            <img src="${product.image}" alt="${product.name}" loading="lazy" decoding="async" />
+            <span class="image-fallback" aria-hidden="true">${product.fallback}</span>
+          </span>`
+
+        const desktopProductMarkup = product => `
+          <tr>
+            <td><div class="table-product">${imageMarkup(product)}<div class="product-copy"><span class="product-name">${product.name}</span><span class="product-sku">${product.sku}</span></div></div></td>
+            <td><span class="catalog-price">${product.price}</span></td>
+            <td><div class="catalog-stock ${stockClass(product.stock)}"><strong>${product.stock}</strong><span>${inventoryLabel(product.stock)}</span></div></td>
+            <td><span class="status ${product.status === 'draft' ? 'status--draft' : 'status--green'}">${statusLabel(product.status)}</span></td>
+            <td><a class="text-link" href="#catalog" data-unavailable="Бараа засах">Засах</a></td>
+          </tr>`
+
+        const mobileProductMarkup = product => `
+          <article class="mobile-product">
+            ${imageMarkup(product)}
+            <div class="mobile-product__main">
+              <div class="mobile-product__top"><div><span class="product-name">${product.name}</span><span class="product-sku">${product.sku}</span></div><span class="status ${product.status === 'draft' ? 'status--draft' : 'status--green'}">${statusLabel(product.status)}</span></div>
+              <span class="mobile-product__price">${product.price}</span>
+              <div class="mobile-product__facts"><div><span class="fact-label">Үлдэгдэл</span><span class="fact-value">${product.stock} · ${inventoryLabel(product.stock)}</span></div><div class="mobile-product__status"><span class="fact-label">Бүртгэл</span><span class="fact-value">${product.status === 'draft' ? 'Ноорог' : 'Нийтэлсэн'}</span></div></div>
+            </div>
+          </article>`
+
+        const attachImageFallbacks = () => {
+          document.querySelectorAll('.product-image img').forEach(image => {
+            image.addEventListener(
+              'error',
+              () => {
+                const shell = image.closest('.product-image')
+                if (shell) shell.classList.add('is-fallback')
+              },
+              { once: true },
+            )
+            if (image.complete && image.naturalWidth === 0) image.dispatchEvent(new Event('error'))
+          })
+        }
+
+        const filteredProducts = () => {
+          const query = searchInput.value.trim().toLocaleLowerCase('mn-MN')
+          return products.filter(product => {
+            const searchable = `${product.name} ${product.sku}`.toLocaleLowerCase('mn-MN')
+            const matchesSearch = !query || searchable.includes(query)
+            const matchesStatus = state.status === 'all' || product.status === state.status
+            const productInventory = inventoryFor(product.stock)
+            const matchesInventory =
+              state.inventory === 'all' || productInventory === state.inventory
+            return matchesSearch && matchesStatus && matchesInventory
+          })
+        }
+
+        const updateFilterFeedback = count => {
+          const hasSearch = searchInput.value.trim().length > 0
+          const hasStatus = state.status !== 'all'
+          const hasInventory = state.inventory !== 'all'
+          const activeFilters = []
+          if (hasSearch) activeFilters.push(`Хайлт: “${searchInput.value.trim()}”`)
+          if (hasStatus) activeFilters.push(state.status === 'active' ? 'Идэвхтэй' : 'Ноорог')
+          if (hasInventory)
+            activeFilters.push(state.inventory === 'out' ? 'Дууссан' : 'Бага үлдэгдэл')
+          filterSummary.textContent = activeFilters.length
+            ? activeFilters.join(' · ')
+            : 'Шүүлтүүргүй · MNT'
+          clearButton.disabled = activeFilters.length === 0
+          statusField.classList.toggle('is-active', hasStatus)
+          inventoryFieldset.classList.toggle('is-active', hasInventory)
+          catalogSummary.innerHTML = `<strong>${count}</strong> бараа харагдаж байна`
+        }
+
+        const renderCatalog = () => {
+          const visibleProducts = filteredProducts()
+          const hasResults = visibleProducts.length > 0
+          catalogTableBody.innerHTML = visibleProducts.map(desktopProductMarkup).join('')
+          catalogMobile.innerHTML = visibleProducts.map(mobileProductMarkup).join('')
+          catalogTableWrap.hidden = !hasResults
+          catalogMobile.hidden = !hasResults
+          emptyState.hidden = hasResults
+          updateFilterFeedback(visibleProducts.length)
+          announcement.textContent = hasResults
+            ? `${visibleProducts.length} бараа харагдаж байна.`
+            : 'Илэрц олдсонгүй.'
+          attachImageFallbacks()
+        }
+
+        const setInventoryButtons = () => {
+          inventoryButtons.forEach(button =>
+            button.setAttribute(
+              'aria-pressed',
+              button.dataset.inventory === state.inventory ? 'true' : 'false',
+            ),
+          )
+        }
+
+        const clearFilters = () => {
+          searchInput.value = ''
+          statusFilter.value = 'all'
+          state.status = 'all'
+          state.inventory = 'all'
+          setInventoryButtons()
+          renderCatalog()
+          searchInput.focus()
+        }
+
+        const focusSection = id => {
+          const target = document.getElementById(id)
+          if (!target) return
+          target.scrollIntoView({
+            behavior: reducedMotion.matches ? 'auto' : 'smooth',
+            block: 'start',
+          })
+        }
+
+        const setRoute = route => {
+          const nextRoute = route === 'catalog' ? 'catalog' : 'dashboard'
+          dashboardView.hidden = nextRoute !== 'dashboard'
+          catalogView.hidden = nextRoute !== 'catalog'
+          routeLinks.forEach(link => {
+            const isCurrent =
+              link.dataset.route === nextRoute && !link.dataset.focus && !link.dataset.unavailable
+            if (isCurrent) link.setAttribute('aria-current', 'page')
+            else link.removeAttribute('aria-current')
+          })
+          document.title =
+            nextRoute === 'catalog' ? 'Бараа — Plugged admin' : 'Өнөөдрийн ажил — Plugged admin'
+          if (nextRoute === 'catalog') renderCatalog()
+        }
+
+        const selectWork = work => {
+          const selected = queueItems.find(item => item.dataset.work === work)
+          if (!selected) return
+          queueItems.forEach(item =>
+            item.setAttribute('aria-pressed', item === selected ? 'true' : 'false'),
+          )
+          workDetails.forEach(detail => {
+            detail.hidden = detail.dataset.workDetail !== work
+          })
+
+          const detailCopy = {
+            'new': {
+              title: 'Баталгаажуулах дараалал',
+              subtitle: 'Шинэ захиалгын мэдээллийг шалгаад дараагийн алхмыг сонгоно.',
+              mark: 'ЗХ',
+            },
+            'preparing': {
+              title: 'Бэлтгэх захиалгын мэдээлэл',
+              subtitle: 'Сонгосон захиалгыг савлаж, хүргэлтэд шилжүүлэхэд бэлдэнэ.',
+              mark: 'БТ',
+            },
+            'low-stock': {
+              title: 'Үлдэгдэл шалгах дараалал',
+              subtitle: 'Дууссан болон бага үлдэгдэлтэй хувилбаруудыг бараа бүрээр шалгана.',
+              mark: 'ҮЛ',
+            },
+          }[work]
+          detailTitle.textContent = detailCopy.title
+          detailSubtitle.textContent = detailCopy.subtitle
+          detailMark.textContent = detailCopy.mark
+
+          if (window.innerWidth < 768) {
+            const detailPanel = document.querySelector('.detail-panel')
+            if (detailPanel && detailPanel.getBoundingClientRect().bottom > window.innerHeight) {
+              detailPanel.scrollIntoView({
+                behavior: reducedMotion.matches ? 'auto' : 'smooth',
+                block: 'nearest',
+              })
+            }
+          }
+        }
+
+        document
+          .querySelector('#catalog-filter-form')
+          .addEventListener('submit', event => event.preventDefault())
+        searchInput.addEventListener('input', renderCatalog)
+        statusFilter.addEventListener('change', () => {
+          state.status = statusFilter.value
+          renderCatalog()
+        })
+        inventoryButtons.forEach(button =>
+          button.addEventListener('click', () => {
+            state.inventory = button.dataset.inventory
+            setInventoryButtons()
+            renderCatalog()
+          }),
+        )
+        clearButton.addEventListener('click', clearFilters)
+        mobileFilterToggle.addEventListener('click', () => {
+          const open = mobileFilterToggle.getAttribute('aria-expanded') !== 'true'
+          mobileFilterToggle.setAttribute('aria-expanded', String(open))
+          mobileFilterOptions.classList.toggle('is-open', open)
+        })
+        emptyClear.addEventListener('click', clearFilters)
+        queueItems.forEach(button =>
+          button.addEventListener('click', () => selectWork(button.dataset.work)),
+        )
+
+        document.addEventListener('click', event => {
+          const link = event.target.closest('a, button')
+          if (!link) return
+
+          const unavailable = link.dataset.unavailable
+          if (unavailable) {
+            event.preventDefault()
+            announcement.textContent = `${unavailable} хэсэг энэ прототипт хараахан идэвхжээгүй байна.`
+            return
+          }
+
+          const inventory = link.dataset.catalogInventory
+          if (inventory) {
+            state.inventory = inventory
+            setInventoryButtons()
+            statusFilter.value = state.status
+          }
+
+          const focusTarget = link.dataset.focus
+          if (focusTarget) {
+            event.preventDefault()
+            if (window.location.hash !== '#dashboard') window.location.hash = 'dashboard'
+            setRoute('dashboard')
+            window.requestAnimationFrame(() => focusSection(focusTarget))
+          }
+
+          if (link.dataset.route === 'catalog' && window.location.hash === '#catalog') {
+            window.requestAnimationFrame(() => searchInput.focus())
+          }
+        })
+
+        window.addEventListener('hashchange', () => setRoute(window.location.hash.slice(1)))
+
+        setInventoryButtons()
+        selectWork('new')
+        renderCatalog()
+        setRoute(window.location.hash.slice(1))
+      })()
+    </script>
+  </body>
+</html>

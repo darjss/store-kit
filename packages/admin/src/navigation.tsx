@@ -28,62 +28,77 @@ import { AdminRouter, adminNavigation } from './router'
 const pageClass = 'store-kit-admin min-h-dvh bg-background text-base text-foreground'
 
 const navigationLinkClass =
-  'admin-navigation-link flex items-center rounded-md px-3 text-sm font-medium text-sidebar-foreground outline-none transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring/70 data-[status=active]:bg-sidebar-accent data-[status=active]:text-sidebar-accent-foreground'
+  'admin-navigation-link flex items-center gap-3 rounded-sm border border-transparent px-3 text-sm font-bold text-sidebar-foreground outline-none transition-colors duration-150 hover:border-sidebar-border hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[status=active]:border-white/45 data-[status=active]:bg-white data-[status=active]:text-sidebar-primary-foreground'
+
+function NavigationGlyph(props: { children: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      class="grid size-6 shrink-0 place-items-center border border-current text-[0.625rem] font-black"
+    >
+      {props.children}
+    </span>
+  )
+}
 
 function AdminNavigation() {
   return (
-    <nav aria-label="Админ цэс" class="space-y-1 px-2 py-4" lang="mn">
-      <Link activeOptions={{ exact: true }} class={navigationLinkClass} to="/">
-        Нүүр
-      </Link>
-      <Link class={navigationLinkClass} to="/catalog">
-        Бараа
-      </Link>
-      <Link class={navigationLinkClass} to="/orders">
-        Захиалга
-      </Link>
-      <Link class={navigationLinkClass} to="/settings">
-        Тохиргоо
-      </Link>
+    <nav aria-label="Админ цэс" class="px-3 py-5" lang="mn">
+      <p class="mb-2 px-3 text-[0.6875rem] font-extrabold tracking-widest text-white/65 uppercase">
+        Чиглэл
+      </p>
+      <div class="space-y-1">
+        <Link activeOptions={{ exact: true }} class={navigationLinkClass} to="/">
+          <NavigationGlyph>Н</NavigationGlyph>
+          Нүүр
+        </Link>
+        <Link class={navigationLinkClass} to="/catalog">
+          <NavigationGlyph>Б</NavigationGlyph>
+          Бараа
+        </Link>
+        <Link class={navigationLinkClass} to="/orders">
+          <NavigationGlyph>З</NavigationGlyph>
+          Захиалга
+        </Link>
+        <Link class={navigationLinkClass} to="/settings">
+          <NavigationGlyph>Т</NavigationGlyph>
+          Тохиргоо
+        </Link>
+      </div>
     </nav>
   )
 }
 
 function AdminBottomNavigation() {
+  const linkClass =
+    'flex flex-col items-center justify-center gap-1 px-1 text-xs font-bold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+
   return (
     <nav
       aria-label="Үндсэн цэс"
-      class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t bg-background lg:hidden"
+      class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-(--border) bg-card px-1 lg:hidden"
       data-admin-bottom-navigation
       lang="mn"
     >
       <Link
         activeOptions={{ exact: true }}
-        class="flex items-center justify-center px-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        class={linkClass}
         data-admin-bottom-navigation-link
         to="/"
       >
+        <NavigationGlyph>Н</NavigationGlyph>
         Нүүр
       </Link>
-      <Link
-        class="flex items-center justify-center px-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        data-admin-bottom-navigation-link
-        to="/catalog"
-      >
+      <Link class={linkClass} data-admin-bottom-navigation-link to="/catalog">
+        <NavigationGlyph>Б</NavigationGlyph>
         Бараа
       </Link>
-      <Link
-        class="flex items-center justify-center px-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        data-admin-bottom-navigation-link
-        to="/orders"
-      >
+      <Link class={linkClass} data-admin-bottom-navigation-link to="/orders">
+        <NavigationGlyph>З</NavigationGlyph>
         Захиалга
       </Link>
-      <Link
-        class="flex items-center justify-center px-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        data-admin-bottom-navigation-link
-        to="/settings"
-      >
+      <Link class={linkClass} data-admin-bottom-navigation-link to="/settings">
+        <NavigationGlyph>Т</NavigationGlyph>
         Тохиргоо
       </Link>
     </nav>
@@ -98,20 +113,19 @@ type SidebarAccountProps = {
 
 function SidebarAccount(props: SidebarAccountProps) {
   return (
-    <div class="mt-auto border-t border-sidebar-border p-3">
-      <p class="truncate text-sm font-semibold text-sidebar-foreground">
-        {props.session.user.name}
-      </p>
-      <p class="mt-0.5 truncate text-xs text-muted-foreground" title={props.session.user.email}>
+    <div class="mt-auto border-t border-sidebar-border p-4">
+      <p class="truncate text-sm font-bold text-sidebar-foreground">{props.session.user.name}</p>
+      <p class="mt-1 truncate text-xs text-white/70" title={props.session.user.email}>
         {props.session.user.email}
       </p>
       <Button
-        class="mt-3 w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        class="mt-3 w-full justify-start border-white/40! bg-transparent! text-white! hover:bg-white/12! hover:text-white! [&_svg]:text-white!"
+        data-admin-sidebar-sign-out
         disabled={props.pending}
         onClick={() => props.onSignOut()}
         size="sm"
         type="button"
-        variant="ghost"
+        variant="outline"
       >
         {props.pending ? <Spinner aria-hidden="true" /> : <Logout2 aria-hidden="true" size={16} />}
         {props.pending ? 'Гарч байна…' : 'Гарах'}
@@ -122,16 +136,28 @@ function SidebarAccount(props: SidebarAccountProps) {
 
 function SidebarBrand(props: { storeName: string }) {
   return (
-    <div class="flex h-14 shrink-0 flex-col justify-center border-b border-sidebar-border px-4">
-      <p class="truncate text-sm font-semibold text-sidebar-foreground">{props.storeName}</p>
-      <p class="text-xs text-muted-foreground">Store Kit</p>
+    <div class="flex min-h-24 shrink-0 items-start justify-between gap-3 border-b border-sidebar-border px-5 py-6">
+      <div class="min-w-0">
+        <p class="truncate text-xl leading-none font-extrabold tracking-[-0.035em] text-white">
+          {props.storeName}
+        </p>
+        <p class="mt-2 text-[0.6875rem] font-bold tracking-widest text-white/70 uppercase">
+          Дэлгүүрийн удирдлага
+        </p>
+      </div>
+      <span
+        aria-hidden="true"
+        class="grid size-6 shrink-0 place-items-center border border-white/70 text-[0.5625rem] font-black"
+      >
+        SK
+      </span>
     </div>
   )
 }
 
 function DesktopSidebar(props: { storeName: string } & SidebarAccountProps) {
   return (
-    <aside class="sticky top-0 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
+    <aside class="sticky top-0 hidden h-dvh flex-col bg-sidebar text-sidebar-foreground lg:flex">
       <SidebarBrand storeName={props.storeName} />
       <AdminNavigation />
       <SidebarAccount onSignOut={props.onSignOut} pending={props.pending} session={props.session} />
@@ -275,7 +301,7 @@ export function ApprovedWorkspace(props: { session: AdminSession; storeName: str
   )
 
   return (
-    <div class={`${pageClass} lg:grid lg:grid-cols-[13rem_minmax(0,1fr)]`}>
+    <div class={`${pageClass} lg:grid lg:grid-cols-[14.75rem_minmax(0,1fr)]`}>
       <DesktopSidebar
         onSignOut={() => signOut.mutate()}
         pending={signOut.isPending}
@@ -284,12 +310,15 @@ export function ApprovedWorkspace(props: { session: AdminSession; storeName: str
       />
       <div class="min-w-0 bg-background pb-[calc(3.75rem+env(safe-area-inset-bottom))] lg:pb-0">
         <header
-          class="sticky top-0 z-30 flex items-center justify-between gap-3 border-b bg-(--admin-topbar) px-3 sm:px-4 lg:px-5"
+          class="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-(--border) bg-(--admin-topbar) px-4 lg:px-8"
           data-admin-topbar
         >
           <div class="min-w-0" lang="mn">
-            <p class="truncate text-xs text-muted-foreground lg:hidden">{props.storeName}</p>
-            <p class="truncate text-base font-semibold text-foreground lg:text-sm">
+            <p class="truncate text-xs font-bold tracking-[0.08em] text-primary uppercase lg:hidden">
+              {props.storeName}
+            </p>
+            <p class="truncate text-base font-extrabold text-foreground lg:text-sm">
+              <span class="hidden lg:inline">{props.storeName} / </span>
               {currentPage()}
             </p>
           </div>

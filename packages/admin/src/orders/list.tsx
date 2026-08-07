@@ -226,14 +226,14 @@ function MobileOrderList(props: { orders: AdminOrderListItem[] }) {
   return (
     <ol
       aria-label="Дэлгүүрийн захиалгууд"
-      class="-mx-4 divide-y border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x lg:hidden"
+      class="divide-y divide-(--border) border border-(--border) bg-card lg:hidden"
     >
       <For each={props.orders}>
         {order => (
           <li>
             <Link
               aria-label={`${order.number}, ${order.customerName}, ${formatMoney(order.totalMnt)}`}
-              class="block min-h-28 px-4 py-4 transition-colors outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              class="block min-h-28 px-4 py-4 transition-colors outline-none hover:bg-background focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
               params={{ orderId: order.id }}
               to="/orders/$orderId"
             >
@@ -299,14 +299,14 @@ export function OrderListPage(props: OrderListPageProps) {
     })
 
   return (
-    <section class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-7">
+    <section class="mx-auto w-full max-w-365 px-4 py-6 sm:px-7 lg:px-10 lg:py-8 xl:px-14">
       <PageHeader
         description="Төлбөр, бэлтгэл, хүргэлтийн явцаар захиалгаа хурдан олж ажиллана."
         title="Захиалга"
         titleId="orders-title"
       />
 
-      <div class="-mx-4 mt-4 border-y bg-card px-4 py-3 sm:mx-0 sm:rounded-lg sm:border-x">
+      <div class="mt-6 border border-(--border) bg-card px-4 py-4">
         <label class="flex min-w-0 flex-col gap-1.5 text-sm font-medium" for="order-search">
           Захиалга хайх
           <div class="relative">
@@ -397,7 +397,7 @@ export function OrderListPage(props: OrderListPageProps) {
                 <div
                   aria-activedescendant={activeTableRowId('store-orders', rowIds(), activeRow())}
                   aria-label="Дэлгүүрийн захиалгууд. Дээш, доош сумын товчоор мөр сонгоод Enter дарж нээнэ."
-                  class="hidden rounded-lg border bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 lg:block"
+                  class="hidden border border-(--border) bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring/70 lg:block"
                   onKeyDown={onTableKeyDown}
                   role="group"
                   tabIndex={0}

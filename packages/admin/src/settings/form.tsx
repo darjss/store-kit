@@ -107,7 +107,7 @@ export function StoreSettingsForm(props: StoreSettingsFormProps) {
   return (
     <form
       aria-label="Дэлгүүрийн төлбөр, хүргэлтийн тохиргоо"
-      class="-mx-4 border-y bg-card sm:mx-0 sm:rounded-lg sm:border-x"
+      class="border border-(--border) bg-card"
       noValidate
       onSubmit={event => {
         event.preventDefault()
@@ -116,7 +116,7 @@ export function StoreSettingsForm(props: StoreSettingsFormProps) {
       }}
     >
       <UnsavedChangesGuard isDirty={() => form.state.isDirty} />
-      <div class="border-b px-4 py-5 sm:px-6">
+      <div class="border-b border-(--border) bg-secondary px-4 py-5 sm:px-6">
         <h2 class="text-base font-semibold">Шинэ захиалгад харагдах мэдээлэл</h2>
         <p class="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">
           Энд хадгалсан хүргэлтийн үнэ, банкны данс дараагийн захиалгуудад ашиглагдана. Өмнөх
@@ -125,7 +125,7 @@ export function StoreSettingsForm(props: StoreSettingsFormProps) {
       </div>
 
       <FieldGroup class="mx-auto max-w-2xl gap-0 px-4 sm:px-6">
-        <section aria-labelledby="delivery-settings-title" class="border-b py-5">
+        <section aria-labelledby="delivery-settings-title" class="border-b border-(--border) py-6">
           <div class="mb-4">
             <h3 class="text-base font-semibold" id="delivery-settings-title">
               Хүргэлт
@@ -159,7 +159,7 @@ export function StoreSettingsForm(props: StoreSettingsFormProps) {
           </form.Field>
         </section>
 
-        <section aria-labelledby="bank-settings-title" class="py-5">
+        <section aria-labelledby="bank-settings-title" class="py-6">
           <div class="mb-4">
             <h3 class="text-base font-semibold" id="bank-settings-title">
               Банкны шилжүүлэг
@@ -277,7 +277,7 @@ export function StoreSettingsForm(props: StoreSettingsFormProps) {
         })}
       >
         {state => (
-          <div class="sticky bottom-0 flex min-h-16 items-center justify-between gap-3 border-t bg-popover px-4 py-2 sm:px-6">
+          <div class="sticky bottom-0 flex min-h-16 items-center justify-between gap-3 border-t border-(--border) bg-secondary px-4 py-2 sm:px-6">
             <p class="text-sm text-muted-foreground" role="status">
               {state().dirty ? 'Хадгалаагүй өөрчлөлт байна' : 'Бүх өөрчлөлт хадгалагдсан'}
             </p>
